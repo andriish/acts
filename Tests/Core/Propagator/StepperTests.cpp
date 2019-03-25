@@ -25,6 +25,8 @@
 #include "Acts/Tools/CuboidVolumeBuilder.hpp"
 #include "Acts/Tools/TrackingGeometryBuilder.hpp"
 #include "Acts/Utilities/Definitions.hpp"
+#include "Acts/Propagator/AtlasSTEPStepper.hpp"
+#include <ctime>
 
 // TODO: Testing of covariances in Integration test - requires N-layer box
 // detector for implementation of DenseEnvironmentExtension
@@ -619,6 +621,94 @@ namespace Test {
 
     CHECK_CLOSE_ABS(endParams.first, endParamsControl.first, 1. * units::_um);
     CHECK_CLOSE_ABS(endParams.second, endParamsControl.second, 1. * units::_um);
+  }
+  
+    // Test case b). The DefaultExtension should state that it is invalid here.
+  BOOST_AUTO_TEST_CASE(step_extension_material_compare_test)
+  {
+    CuboidVolumeBuilder               cvb;
+    CuboidVolumeBuilder::VolumeConfig vConf;
+    vConf.position = {0.5 * units::_m, 0., 0.};
+    vConf.length   = {1. * units::_m, 1. * units::_m, 1. * units::_m};
+    vConf.material = std::make_shared<const Material>(
+        Material(352.8, 394.133, 9.012, 4., 1.848e-3));
+    CuboidVolumeBuilder::Config conf;
+    conf.volumeCfg.push_back(vConf);
+    conf.position = {0.5 * units::_m, 0., 0.};
+    conf.length   = {1. * units::_m, 1. * units::_m, 1. * units::_m};
+
+    // Build detector
+    cvb.setConfig(conf);
+    TrackingGeometryBuilder::Config tgbCfg;
+    tgbCfg.trackingVolumeBuilders.push_back(
+        std::make_shared<const CuboidVolumeBuilder>(cvb));
+    TrackingGeometryBuilder                 tgb(tgbCfg);
+    std::shared_ptr<const TrackingGeometry> material = tgb.trackingGeometry();
+
+    // Build navigator
+    Navigator naviMat(material);
+    naviMat.resolvePassive   = true;
+    naviMat.resolveMaterial  = true;
+    naviMat.resolveSensitive = true;
+
+    // Set initial parameters for the particle track
+    ActsSymMatrixD<5> cov    = ActsSymMatrixD<5>::Identity();
+    auto              covPtr = std::make_unique<const ActsSymMatrixD<5>>(cov);
+    Vector3D startParams(0., 0., 0.), startMom(5. * units::_GeV, 0., 0.);
+    SingleCurvilinearTrackParameters<ChargedPolicy> sbtp(
+        std::move(covPtr), startParams, startMom, 1.);
+
+    // Create action list for surface collection
+    ActionList<StepCollector> aList;
+    AbortList<EndOfWorld>     abortList;
+
+    // Rebuild and check the choice of extension
+    // Set options for propagator
+    DenseStepperPropagatorOptions<ActionList<StepCollector>,
+                                  AbortList<EndOfWorld>>
+        propOptsDense;
+    propOptsDense.actionList  = aList;
+    propOptsDense.abortList   = abortList;
+    propOptsDense.maxSteps    = 100;
+    propOptsDense.maxStepSize = 0.5 * units::_m;
+    propOptsDense.debug       = true;
+
+	ConstantBField bField;
+    bField.setField(0., 1. * units::_T, 0.);
+    
+    EigenStepper<ConstantBField,
+                 VoidIntersectionCorrector,
+                 StepperExtensionList<DenseEnvironmentExtension>>
+        esA(bField);
+    Propagator<EigenStepper<ConstantBField,
+                            VoidIntersectionCorrector,
+                            StepperExtensionList<DenseEnvironmentExtension>>,
+               Navigator>
+        propA(esA, naviMat);
+        
+    clock_t begin = clock();
+    const auto& resultA = propA.propagate(sbtp, propOptsDense);
+    const StepCollector::this_result& stepResultA
+        = resultA.get<typename StepCollector::result_type>();
+    std::cout << "Time EigenStepper: " << ((float) (clock() - begin)) / CLOCKS_PER_SEC << std::endl;
+        
+    AtlasSTEPStepper<ConstantBField> esB(bField);
+    Propagator<AtlasSTEPStepper<ConstantBField>, Navigator> propB(esB, naviMat);
+	
+	begin = clock();
+    const auto& resultB = propB.propagate(sbtp, propOptsDense);
+    const StepCollector::this_result& stepResultB
+        = resultB.get<typename StepCollector::result_type>();
+	std::cout << "Time AtlasSTEPStepper: " << ((float) (clock() - begin)) / CLOCKS_PER_SEC << std::endl;
+
+    // Check that there occured interaction
+    for (const auto& pos : stepResultB.position) {
+		std::cout << "pos: " << pos.x() << "\t" << pos.y() << "\t" << pos.z() << std::endl;
+    }
+    for (const auto& mom : stepResultB.momentum) {
+		std::cout << "mom: " << mom.x() << "\t" << mom.y() << "\t" << mom.z() << std::endl;
+    }
+    std::cout << "end energy: " << std::sqrt(stepResultB.momentum.back().dot(stepResultB.momentum.back()) + 139.57018 * units::_MeV * 139.57018 * units::_MeV) << std::endl;
   }
 }  // namespace Test
 }  // namespace Acts

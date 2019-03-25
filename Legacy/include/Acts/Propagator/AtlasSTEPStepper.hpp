@@ -1146,6 +1146,13 @@ std::cout << steps << std::endl;
     //Repeat step with the new step size if error is too big.
     if (errorEstimate > 4.*state.options.tolerance) continue;
 
+    //Update inverse momentum if energyloss is switched on
+    if (state.stepping.m_energyLoss && state.navigation.currentVolume != nullptr && state.navigation.currentVolume->material() != nullptr) {
+      if (initialMomentum + (distanceStepped/6.)*(dP1 + 2.*dP2 + 2.*dP3 + dP4) <= state.stepping.m_momentumCutOff) { h *= 0.5; state.stepping.stepSize.update(h, detail::ConstrainedStep::accuracy); continue;} //Abort propagation
+      momentum = initialMomentum + (distanceStepped/6.)*(dP1 + 2.*dP2 + 2.*dP3 + dP4);
+      state.stepping.pVector[6] = charge/momentum;
+    }
+    
     //Step was ok. Store solutions.
     //Update positions.
     pos = initialPos + distanceStepped*initialDir + (distanceStepped*distanceStepped/6.)*(k1 + k2 + k3);
@@ -1166,12 +1173,8 @@ std::cout << steps << std::endl;
     state.stepping.pVector[4] = norm*state.stepping.pVector[4];
     state.stepping.pVector[5] = norm*state.stepping.pVector[5];
 
-    //Update inverse momentum if energyloss is switched on
-    if (state.stepping.m_energyLoss && state.navigation.currentVolume != nullptr && state.navigation.currentVolume->material() != nullptr) {
-      momentum = initialMomentum + (distanceStepped/6.)*(dP1 + 2.*dP2 + 2.*dP3 + dP4);
-      if (momentum <= state.stepping.m_momentumCutOff) return 0.;//{ h *= 0.5; state.stepping.stepSize.update(h, detail::ConstrainedStep::accuracy); continue;} //Abort propagation
-      state.stepping.pVector[6] = charge/momentum;
-    }
+
+
 
     //dDir provides a small correction to the final tiny step in PropagateWithJacobian
     Vector3D dDir;

@@ -30,7 +30,7 @@ target_link_libraries (AuctioneerTests PRIVATE ActsCore)
 add_test(NAME AuctioneerUnitTest COMMAND AuctioneerTests)
 
 add_executable (StepperTests StepperTests.cpp)
-target_link_libraries (StepperTests PRIVATE ActsCore ActsTestsCommonHelpers)
+target_link_libraries (StepperTests PRIVATE ActsCore ActsLegacy ActsTestsCommonHelpers)
 add_test(NAME StepperUnitTest COMMAND StepperTests)
 
 # these tests rely on the Legacy code
