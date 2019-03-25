@@ -491,7 +491,7 @@ struct DenseStepperPropagatorOptions
   /// @param aborters The new aborter list to be used (internally)
   template <typename extended_aborter_list_t>
   DenseStepperPropagatorOptions<action_list_t, extended_aborter_list_t>
-  extend(extended_aborter_list_t aborters) const
+  extendAborters(extended_aborter_list_t aborters) const
   {
     DenseStepperPropagatorOptions<action_list_t, extended_aborter_list_t>
         eoptions(this->geoContext, this->magFieldContext);
@@ -511,8 +511,47 @@ struct DenseStepperPropagatorOptions
     eoptions.debugPfxWidth = this->debugPfxWidth;
     eoptions.debugMsgWidth = this->debugMsgWidth;
     // Action / abort list
-    eoptions.actionList = this->actionList;
+    eoptions.actionList = std::move(this->actionList);
     eoptions.abortList  = std::move(aborters);
+    // Copy dense environment specific parameters
+    eoptions.meanEnergyLoss   = meanEnergyLoss;
+    eoptions.includeGgradient = includeGgradient;
+    eoptions.momentumCutOff   = momentumCutOff;
+    // And return the options
+    return eoptions;
+  }
+  
+    /// @brief Expand the Options with extended actors
+  ///
+  /// @tparam extended_actor_list_t Type of the new actor list
+  ///
+  /// @param actors The new actor list to be used (internally)
+  ///
+  /// @return Propagator options with extend actor list
+  template <typename extended_action_list_t>
+  PropagatorOptions<extended_action_list_t, aborter_list_t>
+  extendActors(extended_action_list_t actors) const
+  {
+    PropagatorOptions<extended_action_list_t, aborter_list_t> eoptions(
+        this->geoContext, this->magFieldContext);
+    // Copy the options over
+    eoptions.direction       = this->direction;
+    eoptions.absPdgCode      = this->absPdgCode;
+    eoptions.mass            = this->mass;
+    eoptions.maxSteps        = this->maxSteps;
+    eoptions.maxStepSize     = this->maxStepSize;
+    eoptions.targetTolerance = this->targetTolerance;
+    eoptions.pathLimit       = this->pathLimit;
+    eoptions.loopProtection  = this->loopProtection;
+    eoptions.loopFraction    = this->loopFraction;
+    // Output option
+    eoptions.debug         = this->debug;
+    eoptions.debugString   = this->debugString;
+    eoptions.debugPfxWidth = this->debugPfxWidth;
+    eoptions.debugMsgWidth = this->debugMsgWidth;
+    // Action / abort list
+    eoptions.actionList = std::move(actors);
+    eoptions.abortList  = std::move(this->abortList);
     // Copy dense environment specific parameters
     eoptions.meanEnergyLoss   = meanEnergyLoss;
     eoptions.includeGgradient = includeGgradient;

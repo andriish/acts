@@ -68,6 +68,32 @@ public:
   operator=(ActionList<actors_t...>&& actors)
       = default;
 
+  /// Constructor from tuple
+  ///
+  /// @param extensions Source extensions tuple
+  ActionList(const std::tuple<actors_t...>& actors)
+    : detail::Extendable<actors_t...>(actors)
+  {
+  }
+
+  /// Constructor from tuple move
+  ///
+  /// @param extensions Source extensions tuple
+  ActionList(std::tuple<actors_t...>&& actors)
+    : detail::Extendable<actors_t...>(std::move(actors))
+  {
+  }
+  
+  /// Append new entries and return a new condition
+  template <typename... appendices_t>
+  ActionList<actors_t..., appendices_t...>
+  append(appendices_t... aps) const
+  {
+    auto catTuple
+        = std::tuple_cat(tuple(), std::tuple<appendices_t...>(aps...));
+    return ActionList<actors_t..., appendices_t...>(std::move(catTuple));
+  }
+  
   /// Call operator that is that broadcasts the call to the tuple()
   /// members of the list
   ///

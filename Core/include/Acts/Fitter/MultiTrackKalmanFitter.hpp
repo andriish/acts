@@ -139,11 +139,10 @@ public:
   /// @param sParameters The initial track parameters
   ///
   /// @return the output as an output track
-  template <typename input_measurements_t, typename parameters_t, typename propagator_options_t>
+  template <typename input_measurements_t, typename parameters_t>
   auto
   fit(input_measurements_t       measurements,
       const parameters_t&        sParameters,
-      propagator_options_t& pOptions,
       const KalmanFitterOptions& kfOptions) const
   {
     // Bring the measurements into Acts style
@@ -152,17 +151,21 @@ public:
     // Create the ActionList and AbortList
     using KalmanActor  = Actor<decltype(trackStates)>;
     using KalmanResult = typename KalmanActor::result_type;
-    KalmanActor kActor;
-    PropagatorOptions eOptions(pOptions.extendActors(pOptions.actionList.append(kActor)));
+    using Actors       = ActionList<KalmanActor>;
+    using Aborters     = AbortList<>;
+
+    // Create relevant options for the propagation options
+    PropagatorOptions<Actors, Aborters> kalmanOptions(
+        kfOptions.geoContext, kfOptions.magFieldContext);
 
     // Catch the actor and set the measurements
-    auto& kalmanActor = eOptions.actionList.template get<KalmanActor>();
+    auto& kalmanActor = kalmanOptions.actionList.template get<KalmanActor>();
     kalmanActor.trackStates   = std::move(trackStates);
     kalmanActor.targetSurface = kfOptions.referenceSurface;
 
     // Run the fitter
     const auto& result
-        = m_propagator.template propagate(sParameters, eOptions).value();
+        = m_propagator.template propagate(sParameters, kalmanOptions).value();
 
     /// Get the result of the fit
     auto kalmanResult = result.template get<KalmanResult>();

@@ -110,9 +110,11 @@ struct PropagatorOptions
   /// @tparam extended_aborter_list_t Type of the new aborter list
   ///
   /// @param aborters The new aborter list to be used (internally)
+    ///
+  /// @return Propagator options with extend aborter list
   template <typename extended_aborter_list_t>
   PropagatorOptions<action_list_t, extended_aborter_list_t>
-  extend(extended_aborter_list_t aborters) const
+  extendAborters(extended_aborter_list_t aborters) const
   {
     PropagatorOptions<action_list_t, extended_aborter_list_t> eoptions(
         geoContext, magFieldContext);
@@ -134,6 +136,41 @@ struct PropagatorOptions
     // Action / abort list
     eoptions.actionList = std::move(actionList);
     eoptions.abortList  = std::move(aborters);
+    // And return the options
+    return eoptions;
+  }
+  
+  /// @brief Expand the Options with extended actors
+  ///
+  /// @tparam extended_actor_list_t Type of the new actor list
+  ///
+  /// @param actors The new actor list to be used (internally)
+  ///
+  /// @return Propagator options with extend actor list
+  template <typename extended_action_list_t>
+  PropagatorOptions<extended_action_list_t, aborter_list_t>
+  extendActors(extended_action_list_t actors) const
+  {
+    PropagatorOptions<extended_action_list_t, aborter_list_t> eoptions(
+        geoContext, magFieldContext);
+    // Copy the options over
+    eoptions.direction       = direction;
+    eoptions.absPdgCode      = absPdgCode;
+    eoptions.mass            = mass;
+    eoptions.maxSteps        = maxSteps;
+    eoptions.maxStepSize     = maxStepSize;
+    eoptions.targetTolerance = targetTolerance;
+    eoptions.pathLimit       = pathLimit;
+    eoptions.loopProtection  = loopProtection;
+    eoptions.loopFraction    = loopFraction;
+    // Output option
+    eoptions.debug         = debug;
+    eoptions.debugString   = debugString;
+    eoptions.debugPfxWidth = debugPfxWidth;
+    eoptions.debugMsgWidth = debugMsgWidth;
+    // Action / abort list
+    eoptions.actionList = std::move(actors);
+    eoptions.abortList  = std::move(abortList);
     // And return the options
     return eoptions;
   }
@@ -574,7 +611,7 @@ public:
     auto           abortList = options.abortList.append(pathAborter);
 
     // The expanded options (including path limit)
-    auto eOptions     = options.extend(abortList);
+    auto eOptions     = options.extendAborters(abortList);
     using OptionsType = decltype(eOptions);
     // Initialize the internal propagator state
     using StateType = State<OptionsType>;
@@ -663,7 +700,7 @@ public:
     auto abortList = options.abortList.append(targetAborter, pathAborter);
 
     // Create the extended options and declare their type
-    auto eOptions     = options.extend(abortList);
+    auto eOptions     = options.extendAborters(abortList);
     using OptionsType = decltype(eOptions);
 
     // Type of the full propagation result, including output from actions

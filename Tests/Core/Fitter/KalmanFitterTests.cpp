@@ -318,12 +318,14 @@ namespace Test {
 
     KalmanFitterOptions kfOptions(tgContext, mfContext, calContext, rSurface);
 
+PropagatorOptions pOptions(kfOptions.geoContext, kfOptions.magFieldContext);
+    
     // Fit the track
-    auto fittedTrack      = kFitter.fit(measurements, rStart, kfOptions);
+    auto fittedTrack      = kFitter.fit(measurements, rStart, pOptions, kfOptions);
     auto fittedParameters = fittedTrack.fittedParameters.get();
 
     // Make sure it is deterministic
-    auto fittedAgainTrack      = kFitter.fit(measurements, rStart, kfOptions);
+    auto fittedAgainTrack      = kFitter.fit(measurements, rStart, pOptions, kfOptions);
     auto fittedAgainParameters = fittedAgainTrack.fittedParameters.get();
 
     CHECK_CLOSE_REL(fittedParameters.parameters(),
@@ -340,7 +342,7 @@ namespace Test {
 
     // Make sure it works for shuffled measurements as well
     auto fittedShuffledTrack
-        = kFitter.fit(shuffledMeasurements, rStart, kfOptions);
+        = kFitter.fit(shuffledMeasurements, rStart, pOptions, kfOptions);
     auto fittedShuffledParameters = fittedShuffledTrack.fittedParameters.get();
 
     CHECK_CLOSE_REL(fittedParameters.parameters(),
@@ -356,7 +358,7 @@ namespace Test {
 
     // Make sure it works for shuffled measurements as well
     auto fittedWithHoleTrack
-        = kFitter.fit(measurementsWithHole, rStart, kfOptions);
+        = kFitter.fit(measurementsWithHole, rStart, pOptions, kfOptions);
     auto fittedWithHoleParameters = fittedWithHoleTrack.fittedParameters.get();
 
     // Count one hole
