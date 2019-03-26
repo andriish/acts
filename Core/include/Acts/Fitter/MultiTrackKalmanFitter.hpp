@@ -27,46 +27,6 @@
 
 namespace Acts {
 
-/// @brief Options struct how the Fitter is called
-///
-/// It contains the context of the fitter call and the optional
-/// surface where to express the fit result
-///
-/// @note the context objects must be provided
-struct KalmanFitterOptions
-{
-
-  /// Deleted default constructor
-  KalmanFitterOptions() = delete;
-
-  /// PropagatorOptions with context
-  ///
-  /// @param gctx The goemetry context for this fit
-  /// @param mctx The magnetic context for this fit
-  /// @param cctx The calibration context for this fit
-  /// @param rSurface The reference surface for the fit to be expressed at
-  KalmanFitterOptions(std::reference_wrapper<const GeometryContext>      gctx,
-                      std::reference_wrapper<const MagneticFieldContext> mctx,
-                      std::reference_wrapper<const CalibrationContext>   cctx,
-                      const Surface* rSurface = nullptr)
-    : geoContext(gctx)
-    , magFieldContext(mctx)
-    , calibrationContext(cctx)
-    , referenceSurface(rSurface)
-  {
-  }
-
-  /// Context object for the geometry
-  std::reference_wrapper<const GeometryContext> geoContext;
-  /// Context object for the magnetic field
-  std::reference_wrapper<const MagneticFieldContext> magFieldContext;
-  /// context object for the calibration
-  std::reference_wrapper<const CalibrationContext> calibrationContext;
-
-  /// The reference Surface
-  const Surface* referenceSurface = nullptr;
-};
-
 /// @brief Kalman fitter implementation of Acts as a plugin
 /// to the Propgator
 ///
@@ -139,10 +99,11 @@ public:
   /// @param sParameters The initial track parameters
   ///
   /// @return the output as an output track
-  template <typename input_measurements_t, typename parameters_t>
+  template <typename input_measurements_t, typename parameters_t, typename propagator_options_t>
   auto
   fit(input_measurements_t       measurements,
       const parameters_t&        sParameters,
+      propagator_options_t& pOptions,
       const KalmanFitterOptions& kfOptions) const
   {
     // Bring the measurements into Acts style
@@ -151,21 +112,17 @@ public:
     // Create the ActionList and AbortList
     using KalmanActor  = Actor<decltype(trackStates)>;
     using KalmanResult = typename KalmanActor::result_type;
-    using Actors       = ActionList<KalmanActor>;
-    using Aborters     = AbortList<>;
-
-    // Create relevant options for the propagation options
-    PropagatorOptions<Actors, Aborters> kalmanOptions(
-        kfOptions.geoContext, kfOptions.magFieldContext);
+    KalmanActor kActor;
+    PropagatorOptions eOptions(pOptions.extendActors(pOptions.actionList.append(kActor)));
 
     // Catch the actor and set the measurements
-    auto& kalmanActor = kalmanOptions.actionList.template get<KalmanActor>();
+    auto& kalmanActor = eOptions.actionList.template get<KalmanActor>();
     kalmanActor.trackStates   = std::move(trackStates);
     kalmanActor.targetSurface = kfOptions.referenceSurface;
 
     // Run the fitter
     const auto& result
-        = m_propagator.template propagate(sParameters, kalmanOptions).value();
+        = m_propagator.template propagate(sParameters, eOptions).value();
 
     /// Get the result of the fit
     auto kalmanResult = result.template get<KalmanResult>();

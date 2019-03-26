@@ -466,7 +466,7 @@ private:
   /// @tparam parameters_t Type of the final track parameters
   /// @tparam action_list_t List of propagation action types
   ///
-  template <typename parameters_t, typename action_list_t>
+  template <typename action_list_t, typename parameters_t = void>
   using action_list_t_result_t =
       typename result_type_helper<parameters_t, action_list_t>::type;
 
@@ -585,9 +585,9 @@ public:
             typename aborter_list_t,
             template <typename, typename> class propagator_options_t,
             typename path_aborter_t = detail::PathLimitReached>
-  Result<action_list_t_result_t<
-      typename stepper_t::template return_parameter_type<parameters_t>,
-      action_list_t>>
+  Result<action_list_t_result_t<action_list_t,
+      typename stepper_t::template return_parameter_type<parameters_t>
+      >>
   propagate(
       const parameters_t& start,
       const propagator_options_t<action_list_t, aborter_list_t>& options) const
@@ -599,7 +599,7 @@ public:
 
     // Type of the full propagation result, including output from actions
     using ResultType
-        = action_list_t_result_t<ReturnParameterType, action_list_t>;
+        = action_list_t_result_t<action_list_t, ReturnParameterType>;
 
     static_assert(std::is_copy_constructible<ReturnParameterType>::value,
                   "return track parameter type must be copy-constructible");
@@ -679,10 +679,10 @@ public:
             template <typename, typename> class propagator_options_t,
             typename target_aborter_t = detail::SurfaceReached,
             typename path_aborter_t   = detail::PathLimitReached>
-  Result<action_list_t_result_t<
+  Result<action_list_t_result_t<action_list_t,
       typename stepper_t::template return_parameter_type<parameters_t,
-                                                         surface_t>,
-      action_list_t>>
+                                                         surface_t>
+      >>
   propagate(
       const parameters_t& start,
       const surface_t&    target,
@@ -705,7 +705,7 @@ public:
 
     // Type of the full propagation result, including output from actions
     using ResultType
-        = action_list_t_result_t<return_parameter_type, action_list_t>;
+        = action_list_t_result_t<action_list_t, return_parameter_type>;
 
     // Initialize the internal propagator state
     using StateType = State<OptionsType>;
@@ -746,6 +746,39 @@ public:
     }
   }
 
+  /// @brief Propagate a track state
+  ///
+  /// This function performs the propagation of the track parameters using the
+  /// internal stepper implementation, until at least one abort condition is
+  /// fulfilled or the maximum number of steps/path length provided in the
+  /// propagation options is reached.
+  /// @note This is a rather slim implementation compared to the other propagation functions. This function can be used if a propagation state already exists.
+  /// @tparam propagator_options_t Type of the propagator options
+  ///
+  /// @param [in, out] state The propagation state
+  ///
+  /// @return Propagation result containing the output of actions (if they produce any)
+  ///
+    template <typename propagator_options_t>
+  auto
+  propagate(State<propagator_options_t>& state) const
+  {
+
+    // Type of the full propagation result, including output from actions
+    using ResultType
+        = action_list_t_result_t<decltype(state.options.actionList)>;
+
+    static_assert(
+        has_member_function_step<const stepper_t,
+                                 Result<double>,
+                                 boost::mpl::vector<decltype(state)&>>::value,
+        "Step method of the Stepper is not compatible with the propagator "
+        "state");
+
+    // Perform the actual propagation & return it
+    return propagate_impl<ResultType>(state);
+  }
+  
 private:
   /// Implementation of propagation algorithm
   stepper_t m_stepper;
