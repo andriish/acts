@@ -764,6 +764,8 @@ public:
   propagate(State<propagator_options_t>& state) const
   {
 
+	// TODO: maybe some flags / configs need to be changed before the restart
+
     // Type of the full propagation result, including output from actions
     using ResultType
         = action_list_t_result_t<decltype(state.options.actionList)>;
@@ -777,6 +779,12 @@ public:
 
     // Perform the actual propagation & return it
     return propagate_impl<ResultType>(state);
+  }
+  
+  const stepper_t&
+  stepper()
+  {
+	  return m_stepper;
   }
   
 private:

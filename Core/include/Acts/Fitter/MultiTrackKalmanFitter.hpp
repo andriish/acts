@@ -1,6 +1,6 @@
 // This file is part of the Acts project.
 //
-// Copyright (C) 2016-2019 Acts project team
+// Copyright (C) 2019 Acts project team
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -27,65 +27,88 @@
 
 namespace Acts {
 
-/// @brief Kalman fitter implementation of Acts as a plugin
-/// to the Propgator
-///
-/// @tparam propagator_t Type of the propagation class
-/// @tparam updator_t Type of the kalman updator class
-/// @tparam smoother_t Type of the kalman smoother class
-/// @tparam calibrator_t Type of the calibrator class
-/// @tparam input_converter_t Type of the input converter class
-/// @tparam output_converter_t Type of the output converter class
-///
-/// The Kalman filter contains an Actor and a Sequencer sub-class.
-/// The Sequencer has to be part of the Navigator of the Propagator
-/// in order to initialize and provide the measurement surfaces.
-///
-/// The Actor is part of the Propagation call and does the Kalman update
-/// and eventually the smoothing.  Updator, Smoother and Calibrator are
-/// given to the Actor for further use:
-/// - The Updator is the implemented kalman updator formalism, it
-///   runs via a visitor pattern through the measurements.
-/// - The Smoother is called at the end of the forward fit by the Actor.
-/// - The Calibrator is a dedicated calibration algorithm that allows
-///   to calibrate measurements using track information, this could be
-///    e.g. sagging for wires, module deformations, etc.
-///
-/// Measurements are not required to be ordered for the KalmanFilter,
-/// measurement ordering needs to be figured out by the navigation of
-/// the propagator.
-///
-/// The Input converter is a converter that transforms the input
-/// measurement/track/segments into a set of FittableMeasurements
-///
-/// The Output converter is a converter that transforms the
-/// set of track states into a given track/track particle class
-///
-/// The void components are provided mainly for unit testing.
+//~ /// @brief Kalman fitter implementation of Acts as a plugin
+//~ /// to the Propgator
+//~ ///
+//~ /// @tparam propagator_t Type of the propagation class
+//~ /// @tparam updator_t Type of the kalman updator class
+//~ /// @tparam smoother_t Type of the kalman smoother class
+//~ /// @tparam calibrator_t Type of the calibrator class
+//~ /// @tparam input_converter_t Type of the input converter class
+//~ /// @tparam output_converter_t Type of the output converter class
+//~ ///
+//~ /// The Kalman filter contains an Actor and a Sequencer sub-class.
+//~ /// The Sequencer has to be part of the Navigator of the Propagator
+//~ /// in order to initialize and provide the measurement surfaces.
+//~ ///
+//~ /// The Actor is part of the Propagation call and does the Kalman update
+//~ /// and eventually the smoothing.  Updator, Smoother and Calibrator are
+//~ /// given to the Actor for further use:
+//~ /// - The Updator is the implemented kalman updator formalism, it
+//~ ///   runs via a visitor pattern through the measurements.
+//~ /// - The Smoother is called at the end of the forward fit by the Actor.
+//~ /// - The Calibrator is a dedicated calibration algorithm that allows
+//~ ///   to calibrate measurements using track information, this could be
+//~ ///    e.g. sagging for wires, module deformations, etc.
+//~ ///
+//~ /// Measurements are not required to be ordered for the KalmanFilter,
+//~ /// measurement ordering needs to be figured out by the navigation of
+//~ /// the propagator.
+//~ ///
+//~ /// The Input converter is a converter that transforms the input
+//~ /// measurement/track/segments into a set of FittableMeasurements
+//~ ///
+//~ /// The Output converter is a converter that transforms the
+//~ /// set of track states into a given track/track particle class
+//~ ///
+//~ /// The void components are provided mainly for unit testing.
 template <typename propagator_t,
           typename updator_t          = VoidKalmanUpdator,
           typename smoother_t         = VoidKalmanSmoother,
           typename calibrator_t       = VoidKalmanComponents,
           typename input_converter_t  = VoidKalmanComponents,
           typename output_converter_t = VoidKalmanComponents>
-class KalmanFitter
+class MultiTrackKalmanFitter
 {
 public:
   /// Shorthand definition
   using MeasurementSurfaces = std::multimap<const Layer*, const Surface*>;
 
   /// Default constructor is deleted
-  KalmanFitter() = delete;
+  MultiTrackKalmanFitter() = delete;
 
   /// Constructor from arguments
-  KalmanFitter(propagator_t       pPropagator,
+  MultiTrackKalmanFitter(propagator_t       pPropagator,
+				updator_t    pUpdator    = updator_t(),
+				smoother_t   pSmoother   = smoother_t(),
+				calibrator_t pCalibrator = calibrator_t(),
                input_converter_t  pInputCnv  = input_converter_t(),
                output_converter_t pOutputCnv = output_converter_t())
-    : m_propagator(std::move(pPropagator))
+         : m_propagator(std::move(pPropagator))
+		,m_updator(std::move(pUpdator))
+      , m_smoother(std::move(pSmoother))
+      , m_calibrator(std::move(pCalibrator)))
     , m_inputConverter(std::move(pInputCnv))
     , m_outputConverter(std::move(pOutputCnv))
   {
   }
+  
+      //~ /// Simple result struct to be returned
+    //~ /// It mainly acts as an internal state which is
+    //~ /// created for every propagation/extrapolation step
+    struct TrackSummary
+    {
+      // The optional Parameters at the provided surface
+      boost::optional<BoundParameters> fittedParameters;
+      // Counter for handled states
+      size_t processedStates = 0;
+      // Indicator if you smoothed
+      bool smoothed = false;
+      // Measurement surfaces without hits
+      std::vector<const Surface*> missedActiveSurfaces = {};
+      // The index map for accessing the track state in order
+      std::map<const Surface*, size_t> accessIndices = {}; // TODO: This needs to be modified, the index may be related to the input converter
+    };
 
   /// Fit implementation of the foward filter, calls the
   /// the forward filter and backward smoother
@@ -107,25 +130,16 @@ public:
       const KalmanFitterOptions& kfOptions) const
   {
     // Bring the measurements into Acts style
-    auto trackStates = m_inputConverter(measurements);
+    auto trackStates = m_inputConverter(measurements); // TODO: This needs to be stored somehow
 
-    // Create the ActionList and AbortList
-    using KalmanActor  = Actor<decltype(trackStates)>;
-    using KalmanResult = typename KalmanActor::result_type;
-    KalmanActor kActor;
-    PropagatorOptions eOptions(pOptions.extendActors(pOptions.actionList.append(kActor)));
-
-    // Catch the actor and set the measurements
-    auto& kalmanActor = eOptions.actionList.template get<KalmanActor>();
-    kalmanActor.trackStates   = std::move(trackStates);
-    kalmanActor.targetSurface = kfOptions.referenceSurface;
+    SurfaceAborter surfaceAborter;
+    PropagatorOptions eOptions = pOptions.extendAborters(surfaceAborter);
 
     // Run the fitter
     const auto& result
-        = m_propagator.template propagate(sParameters, eOptions).value();
-
-    /// Get the result of the fit
-    auto kalmanResult = result.template get<KalmanResult>();
+        = m_propagator.propagate(sParameters, eOptions);
+        
+    State<decltype(eOptions)> state = result.template get<SurfaceAborter::result_type>();
 
     // Return the converted Track
     return m_outputConverter(std::move(kalmanResult));
@@ -141,66 +155,51 @@ private:
   /// The output converter into a given format
   output_converter_t m_outputConverter;
 
-  /// @brief Propagator Actor plugin for the KalmanFilter
-  ///
-  /// @tparam track_states_t is any iterable std::container of
-  /// boost::variant TrackState objects.
-  ///
-  /// @tparam updator_t The Kalman updator used for this fitter
-  ///
-  /// @tparam calibrator_t The Measurement calibrator for Fittable
-  /// measurements to be calibrated
-  ///
-  /// The KalmanActor does not rely on the measurements to be
-  /// sorted along the track.
-  template <typename track_states_t>
-  class Actor
-  {
-  public:
-    using TrackState = typename track_states_t::value_type;
+    /// The Kalman updator
+    updator_t m_updator;
 
-    /// Explicit constructor with updator and calibrator
-    Actor(updator_t    pUpdator    = updator_t(),
-          smoother_t   pSmoother   = smoother_t(),
-          calibrator_t pCalibrator = calibrator_t())
-      : m_updator(std::move(pUpdator))
-      , m_smoother(std::move(pSmoother))
-      , m_calibrator(std::move(pCalibrator))
+    /// The Kalman smoother
+    smoother_t m_smoother;
+
+    /// The Measuremetn calibrator
+    calibrator_t m_calibrator;
+
+/// @brief This aborter allows to stop the propagation when a sensitive surface is reached.
+/// @note At the current point, this aborter stops at each surface that is hit
+///
+/// @tparam propagator_state_t Type of the propagation state
+///
+template <typename propagator_state_t>
+struct SurfaceAborter
+{
+	// TODO: Where to do the conversion to bound/curvilinear parameters?
+	/// @brief Default constructor
+	SurfaceAborter() = default;
+	
+	/// Returning type is the state itself
+	using result_type = propagator_state_t;
+
+	/// @brief Aborter function, this function aborts the propagation as soon as a sensitive surface is hit
+	///
+	/// @tparam stepper_t Type of the stepper
+	///
+	/// @param [out] result Resulting propagator state
+	/// @param [in] state State of the propagation
+	/// @param [in[ stepper Stepper of the propagation
+	template <typename stepper_t>
+    bool
+    operator()(const result_type& result,
+               propagator_state_t& state,
+               const stepper_t&    stepper) const
     {
-    }
-
-    /// Simple result struct to be returned
-    /// It mainly acts as an internal state which is
-    /// created for every propagation/extrapolation step
-    struct this_result
-    {
-      // Move the result into the fitted states
-      track_states_t fittedStates = {};
-
-      // The optional Parameters at the provided surface
-      boost::optional<BoundParameters> fittedParameters;
-
-      // Counter for handled states
-      size_t processedStates = 0;
-
-      // Indicator if you smoothed
-      bool smoothed = false;
-
-      // Measurement surfaces without hits
-      std::vector<const Surface*> missedActiveSurfaces = {};
-
-      // The index map for accessing the track state in order
-      std::map<const Surface*, size_t> accessIndices = {};
-    };
-
-    /// Broadcast the result_type
-    using result_type = this_result;
-
-    /// The target surface
-    const Surface* targetSurface = nullptr;
-
-    /// The Track states with which the Actor is initialized
-    track_states_t trackStates = {};
+		if(state.navigation.currentSurface != nullptr) // TODO: The KalmanFitterTests assume an existing detector element is a sensitive surface 
+		{
+			result = state;
+			return true;
+		}
+		return false;
+	}
+};
 
     /// @brief Kalman actor operation
     ///
@@ -260,7 +259,6 @@ private:
       }
     }
 
-  private:
     /// @brief Kalman actor operation : initialize
     ///
     /// @tparam propagator_state_t is the type of Propagagor state
@@ -469,17 +467,7 @@ private:
       }
     }
 
-    /// The Kalman updator
-    updator_t m_updator;
 
-    /// The Kalman smoother
-    smoother_t m_smoother;
-
-    /// The Measuremetn calibrator
-    calibrator_t m_calibrator;
-
-    /// The Surface beeing
-    detail::SurfaceReached targetReached;
   };
 };
 
