@@ -155,29 +155,63 @@ private:
   /// The output converter into a given format
   output_converter_t m_outputConverter;
 
-    /// The Kalman updator
-    updator_t m_updator;
-
-    /// The Kalman smoother
-    smoother_t m_smoother;
-
-    /// The Measuremetn calibrator
-    calibrator_t m_calibrator;
-
 /// @brief This aborter allows to stop the propagation when a sensitive surface is reached.
 /// @note At the current point, this aborter stops at each surface that is hit
 ///
 /// @tparam propagator_state_t Type of the propagation state
 ///
-template <typename propagator_state_t>
-struct SurfaceAborter
+template <typename track_states_t, typename propagator_t>
+struct Actor
 {
-	// TODO: Where to do the conversion to bound/curvilinear parameters?
-	/// @brief Default constructor
-	SurfaceAborter() = default;
-	
-	/// Returning type is the state itself
-	using result_type = propagator_state_t;
+	    using TrackState = typename track_states_t::value_type;
+
+	    /// Explicit constructor with updator and calibrator
+    Actor(updator_t    pUpdator    = updator_t(),
+          smoother_t   pSmoother   = smoother_t(),
+          calibrator_t pCalibrator = calibrator_t())
+      : m_updator(std::move(pUpdator))
+      , m_smoother(std::move(pSmoother))
+      , m_calibrator(std::move(pCalibrator))
+    {
+    }
+    
+    
+        /// Simple result struct to be returned
+    /// It mainly acts as an internal state which is
+    /// created for every propagation/extrapolation step
+    struct this_result
+    {
+		// TODO: propagator states should be stored here
+		
+      // Move the result into the fitted states
+      track_states_t fittedStates = {};
+
+      // The optional Parameters at the provided surface
+      boost::optional<BoundParameters> fittedParameters;
+
+      // Counter for handled states
+      size_t processedStates = 0;
+
+      // Indicator if you smoothed
+      bool smoothed = false;
+
+      // Measurement surfaces without hits
+      std::vector<const Surface*> missedActiveSurfaces = {};
+
+      // The index map for accessing the track state in order
+      std::map<const Surface*, size_t> accessIndices = {};
+    };
+
+    /// Broadcast the result_type
+    using result_type = this_result;
+
+    /// The target surface
+    const Surface* targetSurface = nullptr;
+
+    /// The Track states with which the Actor is initialized
+    track_states_t trackStates = {};
+
+	propagator_t propagator;
 
 	/// @brief Aborter function, this function aborts the propagation as soon as a sensitive surface is hit
 	///
@@ -188,9 +222,8 @@ struct SurfaceAborter
 	/// @param [in[ stepper Stepper of the propagation
 	template <typename stepper_t>
     bool
-    operator()(const result_type& result,
-               propagator_state_t& state,
-               const stepper_t&    stepper) const
+    operator()(propagator_state_t& state,
+               const stepper_t&    stepper, const result_type& result) const
     {
 		if(state.navigation.currentSurface != nullptr) // TODO: The KalmanFitterTests assume an existing detector element is a sensitive surface 
 		{
@@ -199,7 +232,6 @@ struct SurfaceAborter
 		}
 		return false;
 	}
-};
 
     /// @brief Kalman actor operation
     ///
@@ -466,7 +498,15 @@ struct SurfaceAborter
         state.options.debugString += dstream.str();
       }
     }
+    
+    /// The Kalman updator
+    updator_t m_updator;
 
+    /// The Kalman smoother
+    smoother_t m_smoother;
+
+    /// The Measuremetn calibrator
+    calibrator_t m_calibrator;
 
   };
 };
