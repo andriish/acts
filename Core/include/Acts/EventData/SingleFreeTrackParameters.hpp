@@ -91,7 +91,7 @@ class SingleFreeTrackParameters {
   Scalar uncertainty() const {
     return m_oParameters.template getUncertainty<kIndex>();
   }
-
+  
   /// @brief Access covariance matrix of track parameters
   ///
   /// @note The ownership of the covariance matrix is @b not transferred
