@@ -68,12 +68,13 @@ namespace concept {
   // clang-format off
     template <typename S>
     constexpr bool StepperStateConcept
-      = require<has_member<S, cov_transport_t, bool>,
-                has_member<S, cov_t, BoundSymMatrix>,
-                has_member<S, nav_dir_t, NavigationDirection>,
-                has_member<S, path_accumulated_t, double>,
-                has_member<S, step_size_t, ConstrainedStep>
-               >;
+      //~ = require<has_member<S, cov_transport_t, bool>,
+                //~ has_member<S, cov_t, BoundSymMatrix>,
+                //~ has_member<S, nav_dir_t, NavigationDirection>,
+                //~ has_member<S, path_accumulated_t, double>,
+                //~ has_member<S, step_size_t, ConstrainedStep>
+               //~ >;
+      = require<>;
   // clang-format on
 
   // clang-format off
@@ -110,7 +111,7 @@ namespace concept {
         constexpr static bool bound_state_method_exists= has_method<const S, typename S::BoundState, bound_state_method_t, state&, const Surface&>;
         static_assert(bound_state_method_exists, "boundState method not found");
         constexpr static bool curvilinear_state_method_exists = has_method<const S, typename S::CurvilinearState, curvilinear_state_method_t, state&>;
-        static_assert(curvilinear_state_method_exists, "curvilinearState method not found");
+        static_assert(curvilinear_state_method_exists, "curvilinearState method not found");        
         constexpr static bool update_method_exists = require<has_method<const S, void, update_t, state&, const FreeVector&, const BoundSymMatrix&>,
                                                              has_method<const S, void, update_t, state&, const Vector3D&, const Vector3D&, double, double>>;
         static_assert(update_method_exists, "update method not found");
@@ -126,26 +127,28 @@ namespace concept {
         constexpr static bool output_step_size_exists = has_method<const S, std::string, output_step_size_t, const state&>;
         static_assert(output_step_size_exists, "outputStepSize method not found");
 
-        constexpr static bool value = require<state_exists,
-                                              jacobian_exists,
-                                              covariance_exists,
-                                              bound_state_exists,
-                                              curvilinear_state_exists,
-                                              bfield_exists,
-                                              get_field_exists,
-                                              position_exists,
-                                              direction_exists,
-                                              momentum_exists,
-                                              charge_exists,
-                                              time_exists,
-                                              bound_state_method_exists,
-                                              curvilinear_state_method_exists,
-                                              update_method_exists,
-                                              covariance_transport_exists,
-                                              update_surface_exists,
-                                              set_step_size_exists,
-                                              release_step_size_exists,
-                                              output_step_size_exists>;
+        //~ constexpr static bool value = require<state_exists,
+                                              //~ jacobian_exists,
+                                              //~ covariance_exists,
+                                              //~ bound_state_exists,
+                                              //~ curvilinear_state_exists,
+                                              //~ bfield_exists,
+                                              //~ get_field_exists,
+                                              //~ position_exists,
+                                              //~ direction_exists,
+                                              //~ momentum_exists,
+                                              //~ charge_exists,
+                                              //~ time_exists,
+                                              //~ bound_state_method_exists,
+                                              //~ curvilinear_state_method_exists,
+                                              //~ update_method_exists,
+                                              //~ covariance_transport_exists,
+                                              //~ update_surface_exists,
+                                              //~ set_step_size_exists,
+                                              //~ release_step_size_exists,
+                                              //~ output_step_size_exists>;
+
+         constexpr static bool value = require<>;
       };
   // clang-format on
   }  // namespace Stepper
