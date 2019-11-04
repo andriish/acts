@@ -11,7 +11,6 @@
 #include "Acts/EventData/ParameterSet.hpp"
 #include "Acts/EventData/detail/PrintParameters.hpp"
 #include "Acts/Utilities/Definitions.hpp"
-#include "Acts/Surfaces/PlaneSurface.hpp"
 
 #include <iomanip>
 #include <ostream>
