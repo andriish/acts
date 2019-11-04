@@ -36,6 +36,7 @@ class SingleFreeTrackParameters {
                 "'Acts::NeutralPolicy");
 
  public:
+  static constexpr bool is_local_representation = false;
   using Scalar = FreeParametersScalar;
   using ParametersVector = FreeVector;
   using CovarianceMatrix = FreeSymMatrix;
