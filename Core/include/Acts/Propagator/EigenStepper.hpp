@@ -18,6 +18,9 @@
 #include "Acts/Propagator/StepperExtensionList.hpp"
 #include "Acts/Propagator/detail/Auctioneer.hpp"
 #include "Acts/Propagator/detail/SteppingHelper.hpp"
+#include "Acts/Propagator/detail/StepperReturnState.hpp"
+#include "Acts/Propagator/CovarianceTransport.hpp"
+#include "Acts/Propagator/StepperState.hpp"
 #include "Acts/Utilities/Intersection.hpp"
 #include "Acts/Utilities/Result.hpp"
 #include "Acts/Utilities/Units.hpp"
@@ -47,11 +50,9 @@ template <typename bfield_t,
           typename auctioneer_t = detail::VoidAuctioneer>
 class EigenStepper {
  public:
-  /// Jacobian, Covariance and State defintions
+  /// Jacobian and Covariance
   using Jacobian = BoundMatrix;
-  using Covariance = BoundSymMatrix;
-  using BoundState = std::tuple<BoundParameters, Jacobian, double>;
-  using CurvilinearState = std::tuple<CurvilinearParameters, Jacobian, double>;
+  using Covariance = std::variant<BoundSymMatrix, FreeSymMatrix>;
   using BField = bfield_t;
 
   /// @brief State for track parameter propagation
@@ -72,8 +73,8 @@ class EigenStepper {
     /// @param [in] stolerance is the stepping tolerance
     ///
     /// @note the covariance matrix is copied when needed
-    template <typename parameters_t>
-    explicit State(std::reference_wrapper<const GeometryContext> gctx,
+    template <typename parameters_t, std::enable_if_t<parameters_t::is_local_representation, int> = 0>
+	explicit State(std::reference_wrapper<const GeometryContext> gctx,
                    std::reference_wrapper<const MagneticFieldContext> mctx,
                    const parameters_t& par, NavigationDirection ndir = forward,
                    double ssize = std::numeric_limits<double>::max(),
@@ -100,6 +101,40 @@ class EigenStepper {
       }
     }
 
+	/// Constructor from the initial track parameters
+    ///
+    /// @param [in] gctx is the context object for the geometry
+    /// @param [in] mctx is the context object for the magnetic field
+    /// @param [in] par The track parameters at start
+    /// @param [in] ndir The navigation direciton w.r.t momentum
+    /// @param [in] ssize is the maximum step size
+    /// @param [in] stolerance is the stepping tolerance
+    ///
+    /// @note the covariance matrix is copied when needed
+    template <typename parameters_t, std::enable_if_t<not parameters_t::is_local_representation, int> = 0>
+    explicit StepperState(std::reference_wrapper<const GeometryContext> gctx,
+                   std::reference_wrapper<const MagneticFieldContext> /*mctx*/,
+                   const parameters_t& par, NavigationDirection ndir = forward,
+                   double ssize = std::numeric_limits<double>::max(),
+                   double stolerance = s_onSurfaceTolerance)
+        : pos(par.position()),
+          dir(par.momentum().normalized()),
+          p(par.momentum().norm()),
+          q(par.charge()),
+          t(par.time()),
+          navDir(ndir),
+          stepSize(ndir * std::abs(ssize)),
+          tolerance(stolerance),
+          fieldCache(mctx),
+          geoContext(gctx) {
+      if (par.covariance()) {
+		  // Set the covariance transport flag to true
+		  covTransport = true;
+		  // Get the covariance
+          cov = *par.covariance();
+      }
+    }
+    
     /// Global particle position
     Vector3D pos = Vector3D(0., 0., 0.);
 
@@ -170,8 +205,9 @@ class EigenStepper {
       /// k_i elements of the momenta
       std::array<double, 4> kQoP;
     } stepData;
+    
   };
-
+        
   /// Constructor requires knowledge of the detector's magnetic field
   EigenStepper(BField bField);
 
@@ -287,34 +323,29 @@ class EigenStepper {
     return -m_overstepLimit;
   }
 
+  /// @brief Final state builder without a target surface
+  ///
+  /// @tparam start_parameters_t Type of the start parameters
+  /// @tparam end_parameters_t Type of the end parameters
+  ///
+  /// @param [in, out] state State of the propagation
+  ///
+  /// @return std::tuple conatining the final state parameters, the jacobian & the accumulated path
+  template<typename end_parameters_t>
+  auto 
+  buildState(State& state) const;
+
   /// Create and return the bound state at the current position
   ///
-  /// @brief This transports (if necessary) the covariance
-  /// to the surface and creates a bound state. It does not check
-  /// if the transported state is at the surface, this needs to
-  /// be guaranteed by the propagator
+  /// @brief It does not check if the transported state is at the surface, this
+  /// needs to be guaranteed by the propagator
   ///
   /// @param [in] state State that will be presented as @c BoundState
   /// @param [in] surface The surface to which we bind the state
   ///
-  /// @return A bound state:
-  ///   - the parameters at the surface
-  ///   - the stepwise jacobian towards it (from last bound)
-  ///   - and the path length (from start - for ordering)
-  BoundState boundState(State& state, const Surface& surface) const;
-
-  /// Create and return a curvilinear state at the current position
-  ///
-  /// @brief This transports (if necessary) the covariance
-  /// to the current position and creates a curvilinear state.
-  ///
-  /// @param [in] state State that will be presented as @c CurvilinearState
-  ///
-  /// @return A curvilinear state:
-  ///   - the curvilinear parameters at given position
-  ///   - the stepweise jacobian towards it (from last bound)
-  ///   - and the path length (from start - for ordering)
-  CurvilinearState curvilinearState(State& state) const;
+  /// @return std::tuple conatining the final state parameters, the jacobian & the accumulated path
+  auto 
+  buildState(State& state, const Surface& surface) const;
 
   /// Method to update a stepper state to the some parameters
   ///
@@ -366,9 +397,10 @@ class EigenStepper {
  private:
   /// Magnetic field inside of the detector
   BField m_bField;
-
   /// Overstep limit: could/should be dynamic
   double m_overstepLimit = 100_um;
+  	/// The covariance transporter engine
+  CovarianceTransport covTransport;
 };
 }  // namespace Acts
 
