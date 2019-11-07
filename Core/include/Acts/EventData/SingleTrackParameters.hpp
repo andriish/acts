@@ -246,35 +246,6 @@ class SingleTrackParameters {
     m_vPosition = detail::coordinate_transformation::parameters2globalPosition(
         gctx, getParameterSet().getParameters(), this->referenceSurface());
   }
-  
-    /// @brief print information to output stream
-  ///
-  /// @return modified output stream object
-std::ostream& print(std::ostream& sl) const {
-  // set stream output format
-  auto old_precision = sl.precision(7);
-  auto old_flags = sl.setf(std::ios::fixed);
-
-  sl << " * TrackParameters: ";
-  sl << parameters().transpose() << std::endl;
-  sl << " * charge: " << charge() << std::endl;
-  if (covariance()) {
-    sl << " * covariance matrix:\n" << *covariance() << std::endl;
-  } else {
-    sl << " * covariance matrix:\nnull" << std::endl;
-  }
-  sl << " * corresponding global parameters:" << std::endl;
-  sl << " *    position  (x y z) = (" << position().transpose() << ")"
-     << std::endl;
-  sl << " *    momentum  (px py pz) = (" << momentum().transpose() << ")"
-     << std::endl;
-
-  // reset stream format
-  sl.precision(old_precision);
-  sl.setf(old_flags);
-
-  return sl;
-}
 
   ChargePolicy m_oChargePolicy;    ///< charge policy object distinguishing
                                    /// between charged and neutral tracks
