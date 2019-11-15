@@ -336,6 +336,7 @@ struct DenseEnvironmentExtension {
     //~ + h * h / 6. * (dtpp1dl + dtpp2dl + dtpp3dl);
 
     D(3, 7) = (h / 6.) * (dtp1dl + 2. * (dtp2dl + dtp3dl) + dtp4dl);
+std::cout << "D: " << D << std::endl;
     return true;
   }
 

@@ -60,6 +60,7 @@ struct MaterialInteractor {
   bool energyLoss = true;
   /// The energy loss formula struct
   detail::IonisationLoss ionisationloss;
+  detail::RadiationLoss radiationLoss;
 
   /// Record material in detail
   bool recordInteractions = false;
@@ -241,24 +242,42 @@ struct MaterialInteractor {
           // do that even if you had not applied energy loss due to
           // the kineamtic limit to catch the cases of deltE < MOP/MPV
           if (state.stepping.covTransport) {
-            // Calculate the straggling
-            const double sigmaQoverP =
-                mProperties.thickness() * eLoss.second / (lbeta * p * p);
-            // Save the material interaction
-            mInteraction.sigmaQoP2 = sigmaQoverP * sigmaQoverP;
+			  
+			  FreeMatrix D = FreeMatrix::Identity();
+          
+			const double initialMomentum = stepper.momentum(state.stepping);
+			const double energy = std::hypot(initialMomentum, state.options.mass);
+			// Use the same energy loss throughout the step.
+			const double g = dEds(energy, initialMomentum, state.options.mass,
+					 state.options.absPdgCode, true, mat);
+			// Change of the momentum per path length
+			// dPds = dPdE * dEds
+			//~ const double dPds = g * energy / initialMomentum;
+			
+			
+			  // Calculate the change of the energy loss per path length and
+			  // inverse momentum
+			  
+			  //~ if (state.options.includeGgradient) {
+				const double dgdqopValue = 0.;
+					//~ dgdqop(energy[0], state.options.mass, state.options.absPdgCode,
+						   //~ state.options
+							   //~ .meanEnergyLoss);  // Use this value throughout the step.
+			  //~ }
+	        const double qop = stepper.charge(state.stepping) / initialMomentum;
 
-            // Good in any case for positive direction
-            if (state.stepping.navDir == forward) {
-              state.stepping.cov(eQOP, eQOP) +=
-                  state.stepping.navDir * sigmaQoverP * sigmaQoverP;
-            } else {
-              // Check that covariance entry doesn't become negative
-              double sEqop = state.stepping.cov(eQOP, eQOP);
-              if (sEqop > sigmaQoverP * sigmaQoverP) {
-                state.stepping.cov(eQOP, eQOP) +=
-                    state.stepping.navDir * mInteraction.sigmaQoP2;
-              }
-            }
+			  // Calculate term for later error propagation
+			  const double dLdl = (-qop * qop * g * energy *
+							 (3. - (initialMomentum * initialMomentum) /
+									   (energy * energy)) -
+						 qop * qop * qop * energy * dgdqopValue);
+						 
+						 
+			D(7, 7) += dLdl * mProperties.thickness();
+    
+			state.stepping.jacTransport = D * state.stepping.jacTransport;
+			
+			stepper.covarianceTransport(state.stepping, true);
           }
         }
 
@@ -278,6 +297,35 @@ struct MaterialInteractor {
     }
   }
 
+  double dEds(const double energy_, const double momentum, const double mass,
+              const int pdg, const bool meanEnergyLoss, const Material& material) const {
+    // Easy exit if material is invalid
+    if (material.X0() == 0 || material.Z() == 0) {
+      return 0.;
+    }
+
+    // Calculate energy loss by
+    // a) ionisation
+    double ionisationEnergyLoss =
+        ionisationloss
+            .dEds(mass, momentum / energy_, energy_ / mass, material, 1.,
+                  meanEnergyLoss)
+            .first;
+    // b) radiation
+    double radiationEnergyLoss = 0.;
+        //~ radiationLoss.dEds(energy_, mass, material, pdg, 1.);
+
+    // Rescaling for mode evaluation.
+    // C.f. ATL-SOFT-PUB-2008-003 section 3. The mode evaluation for the energy
+    // loss by ionisation can be directly evaluated.
+    if (!meanEnergyLoss) {
+      radiationEnergyLoss *= 0.15;
+    }
+
+    // Return sum of contributions
+    return ionisationEnergyLoss + radiationEnergyLoss;
+  }
+  
   /// Pure observer interface
   /// This does not apply to the surface collector
   template <typename propagator_state_t>
