@@ -238,7 +238,6 @@ BoundState boundState(std::reference_wrapper<const GeometryContext> geoContext,
                                   time, surface.getSharedPtr());
   // Create the bound state
   return std::make_tuple(std::move(boundParameters), jacobian, accumulatedPath);
-  ;
 }
 
 CurvilinearState curvilinearState(Covariance& covarianceMatrix,
