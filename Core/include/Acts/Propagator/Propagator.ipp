@@ -90,7 +90,7 @@ template <typename parameters_t, typename propagator_options_t,
 auto Acts::Propagator<S, N>::propagate(
     const parameters_t& start, const propagator_options_t& options) const
     -> Result<action_list_t_result_t<
-        CurvilinearParameters,
+        return_parameters_t,
         typename propagator_options_t::action_list_type>> {
   static_assert(Concepts::BoundTrackParametersConcept<parameters_t> or Concepts::FreeTrackParametersConcept<parameters_t>,
                 "Parameters do not fulfill bound parameters concept.");
