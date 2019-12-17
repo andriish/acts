@@ -170,7 +170,7 @@ struct PropagatorState {
                 double /*time*/) const {}
 
     void covarianceTransport(State& /*state*/) const {}
-    
+
     void covarianceTransport(State& /*unused*/,
                              const Surface& /*surface*/) const {}
 
