@@ -303,7 +303,7 @@ void covarianceTransport(
 
   // Apply the actual covariance transport
   covarianceMatrix = jacFull * covarianceMatrix * jacFull.transpose();
-
+  
   // Reinitialize jacobian components
   reinitializeJacobians(geoContext, transportJacobian, derivatives,
                         jacobianLocalToGlobal, parameters, surface);
