@@ -13,9 +13,9 @@ namespace {
 /// Some type defs
 using Jacobian = BoundMatrix;
 using Covariance = std::variant<BoundSymMatrix, FreeSymMatrix>;
-using BoundState = std::tuple<BoundParameters, JacobianToBoundPars, double>;
-using CurvilinearState = std::tuple<CurvilinearParameters, JacobianToBoundPars, double>;
-using FreeState = std::tuple<FreeParameters, JacobianNotToSurface, double>;
+using BoundState = std::tuple<BoundParameters, detail::Jacobian, double>;
+using CurvilinearState = std::tuple<CurvilinearParameters, detail::Jacobian, double>;
+using FreeState = std::tuple<FreeParameters, detail::Jacobian, double>;
 
 /// @brief Evaluate the projection Jacobian from free to curvilinear parameters
 ///
@@ -82,7 +82,7 @@ FreeToBoundMatrix freeToCurvilinearJacobian(const Vector3D& direction) {
 /// performed
 ///
 /// @return The projection jacobian from global end parameters to its local
-/// equivalentconst
+/// equivalent
 FreeToBoundMatrix surfaceDerivative(
     std::reference_wrapper<const GeometryContext> geoContext,
     const FreeVector& parameters, std::optional<BoundToFreeMatrix>& jacobianLocalToGlobal, const FreeMatrix& transportJacobian,
@@ -102,7 +102,7 @@ if(jacobianLocalToGlobal.has_value())
   *jacobianLocalToGlobal -= derivatives * sVec;
   // Return the jacobian to local
   return jacToLocal;
-}
+}  
 else
 {
 	// Calculate the form factors for the derivatives
@@ -290,7 +290,7 @@ CurvilinearState curvilinearState(Covariance& covarianceMatrix,
                          accumulatedPath);
 }
 
-FreeState freeState(StepperState& state) const
+FreeState freeState(StepperState& state)
   {
     // Transport the covariance to here
     std::optional<FreeSymMatrix> cov = std::nullopt;
@@ -306,17 +306,8 @@ FreeState freeState(StepperState& state) const
     pars(7) = (state.q / state.p);
     FreeParameters parameters(cov, pars);
     
-    // Create the bound state
-    using jacobian = typename std::tuple_element<1, result_t>::type;
-    jacobian jac;
-    result_t result = std::make_tuple(std::move(parameters), jac,
+    FreeState result = std::make_tuple(std::move(parameters), state.jacobian,
                                state.pathAccumulated);
-    // Reinitialize   
-	  // reset the jacobian
-      state.jacobian = Jacobian::Identity();
-      state.jacTransport = FreeMatrix::Identity();
-      state.derivative = FreeVector::Zero();
-      state.localStart = false;
     return result;
   }
   

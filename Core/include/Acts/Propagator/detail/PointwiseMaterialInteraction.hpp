@@ -7,7 +7,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
-
+#include <variant>
 #include "Acts/Material/ISurfaceMaterial.hpp"
 #include "Acts/Material/MaterialProperties.hpp"
 #include "Acts/Surfaces/Surface.hpp"
@@ -139,12 +139,13 @@ struct PointwiseMaterialInteraction {
     stepper.update(state.stepping, pos, dir, nextP, time);
     // Update covariance matrix
     NoiseUpdateMode mode = (nav == forward) ? addNoise : removeNoise;
-    state.stepping.cov(ePHI, ePHI) =
-        updateVariance(state.stepping.cov(ePHI, ePHI), variancePhi, mode);
-    state.stepping.cov(eTHETA, eTHETA) =
-        updateVariance(state.stepping.cov(eTHETA, eTHETA), varianceTheta, mode);
-    state.stepping.cov(eQOP, eQOP) =
-        updateVariance(state.stepping.cov(eQOP, eQOP), varianceQoverP, mode);
+    BoundSymMatrix& cov = std::get<BoundSymMatrix>(state.stepping.cov);
+    cov(ePHI, ePHI) =
+        updateVariance(cov(ePHI, ePHI), variancePhi, mode);
+    cov(eTHETA, eTHETA) =
+        updateVariance(cov(eTHETA, eTHETA), varianceTheta, mode);
+    cov(eQOP, eQOP) =
+        updateVariance(cov(eQOP, eQOP), varianceQoverP, mode);
   }
 
  private:
