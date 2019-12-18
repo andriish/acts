@@ -17,7 +17,6 @@
 #include "Acts/MagneticField/MagneticFieldContext.hpp"
 #include "Acts/Propagator/ConstrainedStep.hpp"
 #include "Acts/Propagator/detail/SteppingHelper.hpp"
-#include "Acts/Propagator/detail/StepperReturnState.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Utilities/Definitions.hpp"
 #include "Acts/Utilities/Intersection.hpp"
@@ -109,8 +108,7 @@ class AtlasStepper {
       // prepare the jacobian if we have a covariance
       if (pars.covariance()) {
         // copy the covariance matrix
-        covariance =
-            new ActsSymMatrixD<eBoundParametersSize>(*pars.covariance());
+        covariance = new Covariance(*pars.covariance());
         covTransport = true;
         useJacobian = true;
         const auto transform = pars.referenceSurface().referenceFrame(
@@ -239,6 +237,10 @@ class AtlasStepper {
           pVector[34] = Bz3 * Vp[0];  // dZ/
         }
       }
+      else
+      {
+		  cov.emplace<0>(BoundSymMatrix::Zero());
+	  }
       // now declare the state as ready
       state_ready = true;
     }
@@ -272,7 +274,7 @@ class AtlasStepper {
     // result
     double parameters[eBoundParametersSize] = {0., 0., 0., 0., 0., 0.};
     const Covariance* covariance;
-    Covariance cov = Covariance::Zero();
+    Covariance cov;
     bool covTransport = false;
     double jacobian[eBoundParametersSize * eBoundParametersSize];
 
@@ -579,10 +581,10 @@ class AtlasStepper {
 
     // The transport of the covariance
     std::unique_ptr<const Covariance> cov = nullptr;
-    std::optional<Covariance> covOpt = std::nullopt;
+    std::optional<BoundSymMatrix> covOpt = std::nullopt;
     if (state.covTransport) {
       covarianceTransport(state, surface);
-      covOpt = state.cov;
+      covOpt = std::get<BoundSymMatrix>(state.cov);
     }
 
     // Fill the end parameters
@@ -590,7 +592,7 @@ class AtlasStepper {
                                charge(state), state.pVector[3],
                                surface.getSharedPtr());
 
-    return BoundState(std::move(parameters), state.jacobian,
+    return BoundState(std::move(parameters), BoundMatrix(state.jacobian),
                       state.pathAccumulated);
   }
 
@@ -611,16 +613,16 @@ class AtlasStepper {
     Acts::Vector3D mom(state.pVector[4], state.pVector[5], state.pVector[6]);
     mom /= std::abs(state.pVector[7]);
 
-    std::optional<Covariance> covOpt = std::nullopt;
+    std::optional<BoundSymMatrix> covOpt = std::nullopt;
     if (state.covTransport) {
       covarianceTransport(state);
-      covOpt = state.cov;
+      covOpt = std::get<BoundSymMatrix>(state.cov);
     }
 
     CurvilinearParameters parameters(std::move(covOpt), gp, mom, charge(state),
                                      state.pVector[3]);
 
-    return CurvilinearState(std::move(parameters), state.jacobian,
+    return CurvilinearState(std::move(parameters), BoundMatrix(state.jacobian),
                             state.pathAccumulated);
   }
 
@@ -632,10 +634,10 @@ class AtlasStepper {
     Acts::Vector3D mom(state.pVector[4], state.pVector[5], state.pVector[6]);
     mom /= std::abs(state.pVector[7]);
 
-    std::optional<Covariance> covOpt = std::nullopt;
+    std::optional<FreeSymMatrix> covOpt = std::nullopt;
     if (state.covTransport) {
       covarianceTransport(state);
-      covOpt = state.cov;
+      covOpt = std::get<FreeSymMatrix>(state.cov);
     }
 
     FreeVector pars;
@@ -643,9 +645,9 @@ class AtlasStepper {
     pars(3) = state.t0 + state.dt;
     pars.template segment<3>(4) = state.dir;
     pars(7) = (state.q / state.p);
-    FreeParameters parameters(covOpt, pars);
+    FreeParameters parameters(std::move(covOpt), pars);
 
-    return FreeState(std::move(parameters), state.jacobian,
+    return FreeState(std::move(parameters), BoundMatrix(state.jacobian), // TODO: The jacobian needs to be fixed
                             state.pathAccumulated);
   }
 
@@ -848,7 +850,7 @@ class AtlasStepper {
     Eigen::Map<Eigen::Matrix<double, eBoundParametersSize, eBoundParametersSize,
                              Eigen::RowMajor>>
         J(state.jacobian);
-    state.cov = J * (*state.covariance) * J.transpose();
+    state.cov = BoundSymMatrix(J * std::get<BoundSymMatrix>(*state.covariance) * J.transpose());
   }
 
   /// Method for on-demand transport of the covariance
@@ -1106,7 +1108,7 @@ class AtlasStepper {
     Eigen::Map<Eigen::Matrix<double, eBoundParametersSize, eBoundParametersSize,
                              Eigen::RowMajor>>
         J(state.jacobian);
-    state.cov = J * (*state.covariance) * J.transpose();
+    state.cov = BoundSymMatrix(J * std::get<BoundSymMatrix>(*state.covariance) * J.transpose());
   }
 
   /// Perform the actual step on the state
