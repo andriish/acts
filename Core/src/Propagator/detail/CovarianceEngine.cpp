@@ -295,7 +295,7 @@ FreeState freeState(StepperState& state)
     // Transport the covariance to here
     std::optional<FreeSymMatrix> cov = std::nullopt;
     if (state.covTransport) {
-		covarianceTransport(state, reinitialize);
+		covarianceTransport(state);
 		cov = std::get<FreeSymMatrix>(state.cov);
     }
     // Create the free parameters
@@ -306,9 +306,8 @@ FreeState freeState(StepperState& state)
     pars(7) = (state.q / state.p);
     FreeParameters parameters(cov, pars);
     
-    FreeState result = std::make_tuple(std::move(parameters), state.jacobian,
+    return std::make_tuple(std::move(parameters), state.jacobian,
                                state.pathAccumulated);
-    return result;
   }
   
 void covarianceTransport(Covariance& covarianceMatrix, Jacobian& jacobian,
@@ -335,7 +334,8 @@ if(state.jacToGlobal.has_value())
 	}
 	else
 	{
-		state.cov = FreeSymMatrix((*jacobianLocalToGlobal) * std::get<BoundSymMatrix>(state.cov) * (*jacobianLocalToGlobal).transpose());
+		covarianceMatrix = FreeSymMatrix((*jacobianLocalToGlobal) * std::get<BoundSymMatrix>(state.cov) * (*jacobianLocalToGlobal).transpose());
+		jacobian = *jacobianLocalToGlobal;
 	}
 }
 else
@@ -344,16 +344,19 @@ else
 	{
 		const FreeToBoundMatrix jacToLocal =
 			  surfaceDerivative(direction, jacobianLocalToGlobal, transportJacobian, derivatives);
-	  covarianceMatrix = BoundSymMatrix(jacToLocal * std::get<BoundSymMatrix>(covarianceMatrix) * jacToLocal.transpose());
+	  covarianceMatrix = BoundSymMatrix(jacToLocal * std::get<FreeSymMatrix>(covarianceMatrix) * jacToLocal.transpose());
+	  jacobian = jacToLocal;
 	}
 	else
 	{
 		// Apply the actual covariance transport
-		state.cov = FreeSymMatrix(transportJacobian * std::get<FreeSymMatrix>(state.cov) * transportJacobian.transpose());
+		covarianceMatrix = FreeSymMatrix(transportJacobian * std::get<FreeSymMatrix>(state.cov) * transportJacobian.transpose());
+		jacobian = transportJacobian;
 	}
 }
 
 // Reinitialize jacobian components
+if(toLocal)
   reinitializeJacobians(transportJacobian, derivatives, jacobianLocalToGlobal,
                         direction);
 }

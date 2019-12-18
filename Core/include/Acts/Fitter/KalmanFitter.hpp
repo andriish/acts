@@ -465,7 +465,7 @@ class KalmanFitter {
 
         // Transport & bind the state to the current surface
         auto [boundParams, jacobian, pathLength] =
-            stepper.buildState(state.stepping, *surface);
+            stepper.boundState(state.stepping, *surface);
 
         // add a full TrackState entry multi trajectory
         // (this allocates storage for all components, we will set them later)
