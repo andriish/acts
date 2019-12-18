@@ -331,7 +331,7 @@ if(state.jacToGlobal.has_value())
 		  
 			// Store The global and bound jacobian (duplication for the moment)
 		  jacobian = jacFull;
-	}
+	}  
 	else
 	{
 		covarianceMatrix = FreeSymMatrix((*jacobianLocalToGlobal) * std::get<BoundSymMatrix>(state.cov) * (*jacobianLocalToGlobal).transpose());
@@ -353,17 +353,15 @@ else
 		covarianceMatrix = FreeSymMatrix(transportJacobian * std::get<FreeSymMatrix>(state.cov) * transportJacobian.transpose());
 		jacobian = transportJacobian;
 	}
-	
-	if(toLocal)
-		reinitializeJacToGlobal(state);
-	else
-		state.jacToGlobal = std::nullopt;
 }
 
 // Reinitialize jacobian components
 if(toLocal)
   reinitializeJacobians(transportJacobian, derivatives, jacobianLocalToGlobal,
                         direction);
+
+	else
+		state.jacToGlobal = std::nullopt;
 }
 
 void covarianceTransport(
