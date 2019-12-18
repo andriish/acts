@@ -275,7 +275,7 @@ CurvilinearState curvilinearState(Covariance& covarianceMatrix,
   std::optional<BoundSymMatrix> cov = std::nullopt;
   if (covTransport) {
     covarianceTransport(covarianceMatrix, jacobian, transportJacobian,
-                        derivatives, jacobianLocalToGlobal, direction);
+                        derivatives, jacobianLocalToGlobal, direction, true);
     cov = std::get<BoundSymMatrix>(covarianceMatrix);
   }
   // Create the curvilinear parameters
@@ -295,7 +295,7 @@ FreeState freeState(StepperState& state)
     // Transport the covariance to here
     std::optional<FreeSymMatrix> cov = std::nullopt;
     if (state.covTransport) {
-		covarianceTransport(state);
+		covarianceTransport(state, false);
 		cov = std::get<FreeSymMatrix>(state.cov);
     }
     // Create the free parameters
@@ -304,7 +304,7 @@ FreeState freeState(StepperState& state)
     pars(3) = state.t0 + state.dt;
     pars.template segment<3>(4) = state.dir;
     pars(7) = (state.q / state.p);
-    FreeParameters parameters(cov, pars);
+    FreeParameters parameters(std::move(cov), pars);
     
     return std::make_tuple(std::move(parameters), state.jacobian,
                                state.pathAccumulated);
@@ -324,7 +324,7 @@ if(state.jacToGlobal.has_value())
 	{
 		const FreeToBoundMatrix jacToLocal =
 			  surfaceDerivative(direction, jacobianLocalToGlobal, transportJacobian, derivatives);
-		  const Jacobian jacFull = jacToLocal * jacobianLocalToGlobal;
+		  const BoundMatrix jacFull = jacToLocal * jacobianLocalToGlobal;
 
 		  // Apply the actual covariance transport
 		  covarianceMatrix = BoundSymMatrix(jacFull * std::get<BoundSymMatrix>(covarianceMatrix) * jacFull.transpose());
@@ -353,6 +353,11 @@ else
 		covarianceMatrix = FreeSymMatrix(transportJacobian * std::get<FreeSymMatrix>(state.cov) * transportJacobian.transpose());
 		jacobian = transportJacobian;
 	}
+	
+	if(toLocal)
+		reinitializeJacToGlobal(state);
+	else
+		state.jacToGlobal = std::nullopt;
 }
 
 // Reinitialize jacobian components
@@ -374,7 +379,7 @@ void covarianceTransport(
   jacobianLocalToGlobal = transportJacobian * (*jacobianLocalToGlobal);
   const FreeToBoundMatrix jacToLocal = surfaceDerivative(
       geoContext, parameters, jacobianLocalToGlobal, transportJacobian, derivatives, surface);
-  const Jacobian jacFull = jacToLocal * (*jacobianLocalToGlobal);
+  const BoundMatrix jacFull = jacToLocal * (*jacobianLocalToGlobal);
 
   // Apply the actual covariance transport
   covarianceMatrix = BoundSymMatrix(jacFull * std::get<BoundSymMatrix>(covarianceMatrix) * jacFull.transpose());
@@ -388,6 +393,7 @@ void covarianceTransport(
 			geoContext, parameters, jacobianLocalToGlobal, transportJacobian, derivatives, surface);		
 		// Apply the actual covariance transport
 		covarianceMatrix = BoundSymMatrix(jacToLocal * std::get<FreeSymMatrix>(state.cov) * jacToLocal.transpose());
+		jacobian = jacToLocal;
 	}
 
   // Reinitialize jacobian components
