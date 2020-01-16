@@ -105,7 +105,7 @@ class SingleFreeTrackParameters {
   /// @brief Sets a covariance matrix
   ///
   /// @param [in] cov Covariance that will be set
-  void covariance(const CovMatrix_t& cov) { m_covariance = cov; }
+  void covariance(const CovMatrix_t& cov) { m_oParameters.setCovariance(cov); }
 
   /// @brief access position in global coordinate system
   ///
