@@ -67,7 +67,7 @@ struct stepper_extension_list_impl {
     }
 
     // Continue as long as evaluations are 'true'
-    if (std::get<N - 1>(obs_tuple).k(state, stepper, knew, bField, i, h,
+    if (std::get<N - 1>(obs_tuple).k(obs_tuple, state, stepper, knew, bField, i, h,
                                      kprev)) {
       return stepper_extension_list_impl<N - 1>::k(
           obs_tuple, state, stepper, knew, bField, validExtensions, i, h,

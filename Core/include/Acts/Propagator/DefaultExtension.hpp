@@ -18,8 +18,10 @@ struct DefaultExtension {
 	
 	struct State
 	{
-		
+		double qop = 0.;
 	};
+	
+	State state;
 	
   /// @brief Default constructor
   DefaultExtension() = default;
@@ -40,7 +42,7 @@ struct DefaultExtension {
   ///
   /// @tparam propagator_state_t Type of the state of the propagator
   /// @tparam stepper_t Type of the stepper
-  /// @param [in] state State of the propagator
+  /// @param [in] pstate State of the propagator
   /// @param [in] stepper Stepper of the propagation
   /// @param [out] knew Next k_i that is evaluated
   /// @param [in] bField B-Field at the evaluation position
@@ -48,18 +50,18 @@ struct DefaultExtension {
   /// @param [in] h Step size (= 0. ^ 0.5 * StepSize ^ StepSize)
   /// @param [in] kprev Evaluated k_{i - 1}
   /// @return Boolean flag if the calculation is valid
-  template <typename propagator_state_t, typename stepper_t>
-  bool k(const propagator_state_t& state, const stepper_t& stepper,
+  template <typename extensionlist_t, typename propagator_state_t, typename stepper_t>
+  bool k(const extensionlist_t& extensions, const propagator_state_t& pstate, const stepper_t& stepper,
          Vector3D& knew, const Vector3D& bField, const int i = 0,
          const double h = 0., const Vector3D& kprev = Vector3D()) {
-    auto qop =
-        stepper.charge(state.stepping) / stepper.momentum(state.stepping);
+    state.qop =
+        stepper.charge(pstate.stepping) / stepper.momentum(pstate.stepping);
     // First step does not rely on previous data
     if (i == 0) {
-      knew = qop * stepper.direction(state.stepping).cross(bField);
+      knew = state.qop * stepper.direction(pstate.stepping).cross(bField);
     } else {
       knew =
-          qop * (stepper.direction(state.stepping) + h * kprev).cross(bField);
+          state.qop * (stepper.direction(pstate.stepping) + h * kprev).cross(bField);
     }
     return true;
   }
@@ -70,14 +72,14 @@ struct DefaultExtension {
   ///
   /// @tparam propagator_state_t Type of the state of the propagator
   /// @tparam stepper_t Type of the stepper
-  /// @param [in] state State of the propagator
+  /// @param [in] pstate State of the propagator
   /// @param [in] stepper Stepper of the propagation
   /// @param [in] h Step size
   /// @return Boolean flag if the calculation is valid
   template <typename propagator_state_t, typename stepper_t>
-  bool finalize(propagator_state_t& state, const stepper_t& stepper,
+  bool finalize(propagator_state_t& pstate, const stepper_t& stepper,
                 const double h) const {
-    propagateTime(state, stepper, h);
+    propagateTime(pstate, stepper, h);
     return true;
   }
 
@@ -87,16 +89,16 @@ struct DefaultExtension {
   ///
   /// @tparam propagator_state_t Type of the state of the propagator
   /// @tparam stepper_t Type of the stepper
-  /// @param [in] state State of the propagator
+  /// @param [in] pstate State of the propagator
   /// @param [in] stepper Stepper of the propagation
   /// @param [in] h Step size
   /// @param [out] D Transport matrix
   /// @return Boolean flag if the calculation is valid
   template <typename propagator_state_t, typename stepper_t>
-  bool finalize(propagator_state_t& state, const stepper_t& stepper,
+  bool finalize(propagator_state_t& pstate, const stepper_t& stepper,
                 const double h, FreeMatrix& D) const {
-    propagateTime(state, stepper, h);
-    return transportMatrix(state, stepper, h, D);
+    propagateTime(pstate, stepper, h);
+    return transportMatrix(pstate, stepper, h, D);
   }
 
  private:
@@ -104,20 +106,20 @@ struct DefaultExtension {
   ///
   /// @tparam propagator_state_t Type of the state of the propagator
   /// @tparam stepper_t Type of the stepper
-  /// @param [in, out] state State of the propagator
+  /// @param [in, out] pstate State of the propagator
   /// @param [in] stepper Stepper of the propagation
   /// @param [in] h Step size
   template <typename propagator_state_t, typename stepper_t>
-  void propagateTime(propagator_state_t& state, const stepper_t& stepper,
+  void propagateTime(propagator_state_t& pstate, const stepper_t& stepper,
                      const double h) const {
     /// This evaluation is based on dt/ds = 1/v = 1/(beta * c) with the velocity
     /// v, the speed of light c and beta = v/c. This can be re-written as dt/ds
     /// = sqrt(m^2/p^2 + c^{-2}) with the mass m and the momentum p.
     auto derivative =
-        std::hypot(1, state.options.mass / stepper.momentum(state.stepping));
-    state.stepping.dt += h * derivative;
-    if (state.stepping.covTransport) {
-      state.stepping.derivative(3) = derivative;
+        std::hypot(1, pstate.options.mass / stepper.momentum(pstate.stepping));
+    pstate.stepping.dt += h * derivative;
+    if (pstate.stepping.covTransport) {
+      pstate.stepping.derivative(3) = derivative;
     }
   }
 
@@ -125,13 +127,13 @@ struct DefaultExtension {
   ///
   /// @tparam propagator_state_t Type of the state of the propagator
   /// @tparam stepper_t Type of the stepper
-  /// @param [in] state State of the propagator
+  /// @param [in] pstate State of the propagator
   /// @param [in] stepper Stepper of the propagation
   /// @param [in] h Step size
   /// @param [out] D Transport matrix
   /// @return Boolean flag if evaluation is valid
   template <typename propagator_state_t, typename stepper_t>
-  bool transportMatrix(propagator_state_t& state, const stepper_t& stepper,
+  bool transportMatrix(propagator_state_t& pstate, const stepper_t& stepper,
                        const double h, FreeMatrix& D) const {
     /// The calculations are based on ATL-SOFT-PUB-2009-002. The update of the
     /// Jacobian matrix is requires only the calculation of eq. 17 and 18.
@@ -152,10 +154,10 @@ struct DefaultExtension {
     /// constant offset does not exist for rectangular matrix dGdu' (due to the
     /// missing Lambda part) and only exists for dFdu' in dlambda/dlambda.
 
-    auto& sd = state.stepping.stepData;
-    auto dir = stepper.direction(state.stepping);
-    auto qop =
-        stepper.charge(state.stepping) / stepper.momentum(state.stepping);
+    auto& sd = pstate.stepping.stepData;
+    auto dir = stepper.direction(pstate.stepping);
+    //~ state.qop =
+        //~ stepper.charge(pstate.stepping) / stepper.momentum(pstate.stepping); // TODO: What to do with it if it changes along the propagation?
 
     D = FreeMatrix::Identity();
 
@@ -181,11 +183,11 @@ struct DefaultExtension {
     // For the case without energy loss
     dk1dL = dir.cross(sd.B_first);
     dk2dL = (dir + half_h * sd.k1).cross(sd.B_middle) +
-            qop * half_h * dk1dL.cross(sd.B_middle);
+            state.qop * half_h * dk1dL.cross(sd.B_middle);
     dk3dL = (dir + half_h * sd.k2).cross(sd.B_middle) +
-            qop * half_h * dk2dL.cross(sd.B_middle);
+            state.qop * half_h * dk2dL.cross(sd.B_middle);
     dk4dL =
-        (dir + h * sd.k3).cross(sd.B_last) + qop * h * dk3dL.cross(sd.B_last);
+        (dir + h * sd.k3).cross(sd.B_last) + state.qop * h * dk3dL.cross(sd.B_last);
 
     dk1dT(0, 1) = sd.B_first.z();
     dk1dT(0, 2) = -sd.B_first.y();
@@ -193,16 +195,16 @@ struct DefaultExtension {
     dk1dT(1, 2) = sd.B_first.x();
     dk1dT(2, 0) = sd.B_first.y();
     dk1dT(2, 1) = -sd.B_first.x();
-    dk1dT *= qop;
+    dk1dT *= state.qop;
 
     dk2dT += half_h * dk1dT;
-    dk2dT = qop * VectorHelpers::cross(dk2dT, sd.B_middle);
+    dk2dT = state.qop * VectorHelpers::cross(dk2dT, sd.B_middle);
 
     dk3dT += half_h * dk2dT;
-    dk3dT = qop * VectorHelpers::cross(dk3dT, sd.B_middle);
+    dk3dT = state.qop * VectorHelpers::cross(dk3dT, sd.B_middle);
 
     dk4dT += h * dk3dT;
-    dk4dT = qop * VectorHelpers::cross(dk4dT, sd.B_last);
+    dk4dT = state.qop * VectorHelpers::cross(dk4dT, sd.B_last);
 
     dFdT.setIdentity();
     dFdT += h / 6. * (dk1dT + dk2dT + dk3dT);
@@ -215,10 +217,10 @@ struct DefaultExtension {
     dGdL = h / 6. * (dk1dL + 2. * (dk2dL + dk3dL) + dk4dL);
 
     D(3, 7) =
-        h * state.options.mass * state.options.mass *
-        stepper.charge(state.stepping) /
-        (stepper.momentum(state.stepping) *
-         std::hypot(1., state.options.mass / stepper.momentum(state.stepping)));
+        h * pstate.options.mass * pstate.options.mass *
+        stepper.charge(pstate.stepping) /
+        (stepper.momentum(pstate.stepping) *
+         std::hypot(1., pstate.options.mass / stepper.momentum(pstate.stepping)));
     return true;
   }
 };

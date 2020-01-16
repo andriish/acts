@@ -59,7 +59,8 @@ struct DenseEnvironmentExtension {
   ///
   /// @tparam propagator_state_t Type of the state of the propagator
   /// @tparam stepper_t Type of the stepper
-  /// @param [in] state State of the propagator
+  /// @param [in] pstate State of the propagator
+  /// @param [in] stepper The used stepper
   /// @return Boolean flag if the step would be valid
   template <typename propagator_state_t, typename stepper_t>
   int bid(const propagator_state_t& state, const stepper_t& stepper) const {
@@ -80,17 +81,19 @@ struct DenseEnvironmentExtension {
   /// @brief Evaluater of the k_i's of the RKN4. For the case of i = 0 this
   /// step sets up member parameters, too.
   ///
+  /// @tparam extensionlist_t Type of the StepperExtensionList
   /// @tparam stepper_state_t Type of the state of the propagator
   /// @tparam stepper_t Type of the stepper
-  /// @param [in] state State of the propagator
+  /// @param [in] extensions The extensions for a common cache
+  /// @param [in] pstate State of the propagator
   /// @param [out] knew Next k_i that is evaluated
   /// @param [in] bField B-Field at the evaluation position
   /// @param [in] i Index of the k_i, i = [0, 3]
   /// @param [in] h Step size (= 0. ^ 0.5 * StepSize ^ StepSize)
   /// @param [in] kprev Evaluated k_{i - 1}
   /// @return Boolean flag if the calculation is valid
-  template <typename propagator_state_t, typename stepper_t>
-  bool k(const propagator_state_t& pstate, const stepper_t& stepper,
+  template <typename extensionlist_t, typename propagator_state_t, typename stepper_t>
+  bool k(const extensionlist_t& extensions, const propagator_state_t& pstate, const stepper_t& stepper,
          Vector3D& knew, const Vector3D& bField, const int i = 0,
          const double h = 0., const Vector3D& kprev = Vector3D()) {
     // i = 0 is used for setup and evaluation of k
@@ -124,8 +127,7 @@ struct DenseEnvironmentExtension {
       double qopNew = state.qop[0] + h * state.Lambdappi[i - 1];
       state.Lambdappi[i] =
           -qopNew * qopNew * qopNew * state.g * state.energy[i] /
-          (stepper.charge(pstate.stepping) * stepper.charge(pstate.stepping) *
-           UnitConstants::C * UnitConstants::C);
+          (stepper.charge(pstate.stepping) * stepper.charge(pstate.stepping));
       state.tKi[i] = std::hypot(1, pstate.options.mass * qopNew);
     }
     return true;
