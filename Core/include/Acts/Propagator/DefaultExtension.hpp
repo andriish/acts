@@ -15,6 +15,12 @@ namespace Acts {
 /// @brief Default evaluater of the k_i's and elements of the transport matrix
 /// D of the RKN4 stepping. This is a pure implementation by textbook.
 struct DefaultExtension {
+	
+	struct State
+	{
+		
+	};
+	
   /// @brief Default constructor
   DefaultExtension() = default;
 
