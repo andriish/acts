@@ -11,7 +11,6 @@
 #include "Acts/EventData/NeutralTrackParameters.hpp"
 #include "Acts/Material/BinnedSurfaceMaterial.hpp"
 #include "Acts/Material/ProtoSurfaceMaterial.hpp"
-#include "Acts/Material/SurfaceMaterialMapper.hpp"
 #include "Acts/Propagator/ActionList.hpp"
 #include "Acts/Propagator/DebugOutputActor.hpp"
 #include "Acts/Propagator/Navigator.hpp"

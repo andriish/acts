@@ -18,17 +18,17 @@
 #include "Acts/Propagator/ConstrainedStep.hpp"
 #include "Acts/Propagator/detail/SteppingHelper.hpp"
 #include "Acts/Propagator/detail/CovarianceEngine.hpp"
+#include "Acts/Propagator/detail/SteppingHelper.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Utilities/Definitions.hpp"
 #include "Acts/Utilities/Intersection.hpp"
 #include "Acts/Utilities/Result.hpp"
-#include "Acts/Propagator/StepperState.hpp"
 
 #include <cmath>
 #include <functional>
 
 namespace Acts {
-  
+
 /// @brief straight line stepper based on Surface intersection
 ///
 /// The straight line stepper is a simple navigation stepper
@@ -289,23 +289,19 @@ class StraightLineStepper {
   ///
   /// @param [in, out] state State of the propagation
   ///
-  /// @return std::tuple conatining the final state parameters, the jacobian & the accumulated path
-  auto 
-  curvilinearState(State& state) const
-  {	  
-	return detail::curvilinearState(state);
+  /// @return std::tuple conatining the final state parameters, the jacobian &
+  /// the accumulated path
+  auto curvilinearState(State& state) const {
+    return detail::curvilinearState(state);
   }
 
   /// @brief Final state builder without a target surface
   ///
   /// @param [in, out] state State of the propagation
   ///
-  /// @return std::tuple conatining the final state parameters, the jacobian & the accumulated path
-  auto 
-  freeState(State& state) const
-  {	  
-	return detail::freeState(state);
-  }
+  /// @return std::tuple conatining the final state parameters, the jacobian &
+  /// the accumulated path
+  auto freeState(State& state) const { return detail::freeState(state); }
 
   /// Create and return the bound state at the current position
   ///
@@ -315,10 +311,10 @@ class StraightLineStepper {
   /// @param [in] state State that will be presented as @c BoundState
   /// @param [in] surface The surface to which we bind the state
   ///
-  /// @return std::tuple conatining the final state parameters, the jacobian & the accumulated path
-  auto 
-  boundState(State& state, const Surface& surface) const {
-	return detail::boundState(state, surface);
+  /// @return std::tuple conatining the final state parameters, the jacobian &
+  /// the accumulated path
+  auto boundState(State& state, const Surface& surface) const {
+    return detail::boundState(state, surface);
   }
 
   /// Method to update a stepper state to the some parameters
@@ -337,23 +333,23 @@ class StraightLineStepper {
   /// @param [in] time the updated time value
   void update(State& state, const Vector3D& uposition,
               const Vector3D& udirection, double up, double time) const;
-  
-    /// Method for on-demand transport of the covariance
+
+  /// Method for on-demand transport of the covariance
   /// to a new curvilinear or freeframe at current  position,
   /// or direction of the state
   ///
-  /// @tparam end_parameters_t Type of the parameters to which the transport will be performed
+  /// @tparam end_parameters_t Type of the parameters to which the transport
+  /// will be performed
   ///
   /// @param [in,out] state State of the stepper
   /// @param [in] reinitialize is a flag to steer whether the
   ///        state should be reinitialized at the new
   ///        position
-	template <typename end_parameters_t = CurvilinearParameters>
-	void covarianceTransport(State& state) const
-	{
-		  detail::covarianceTransport(state.cov, state.jacobian, state.jacTransport,
+  template <typename end_parameters_t = CurvilinearParameters>
+  void covarianceTransport(State& state) const {
+    detail::covarianceTransport(state.cov, state.jacobian, state.jacTransport,
                               state.derivative, state.jacToGlobal, state.dir, end_parameters_t::is_local_representation);
-	}
+  }
 
   /// Method for on-demand transport of the covariance
   /// to a new curvilinear frame at current  position,
