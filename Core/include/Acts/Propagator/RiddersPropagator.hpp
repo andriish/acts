@@ -160,14 +160,17 @@ class RiddersPropagator {
           derivatives,
       const Covariance& startCov, const std::vector<double>& deviations) const;
 
+  /// @copydoc RiddersPropagator<propagator_t>::calculateCovariance(const std::array<std::vector<BoundVector>, BoundParsDim>&, const Covariance&, const std::vector<double>&)
   const Covariance calculateCovariance(
       const std::array<std::vector<BoundVector>, FreeParsDim>& derivatives,
       const Covariance& startCov, const std::vector<double>& deviations) const;
 
+  /// @copydoc RiddersPropagator<propagator_t>::calculateCovariance(const std::array<std::vector<BoundVector>, BoundParsDim>&, const Covariance&, const std::vector<double>&)
   const Covariance calculateCovariance(
       const std::array<std::vector<FreeVector>, BoundParsDim>& derivatives,
       const Covariance& startCov, const std::vector<double>& deviations) const;
 
+  /// @copydoc RiddersPropagator<propagator_t>::calculateCovariance(const std::array<std::vector<BoundVector>, BoundParsDim>&, const Covariance&, const std::vector<double>&)
   const Covariance calculateCovariance(
       const std::array<std::vector<FreeVector>, FreeParsDim>& derivatives,
       const Covariance& startCov, const std::vector<double>& deviations) const;
