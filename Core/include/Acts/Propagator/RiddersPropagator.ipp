@@ -13,6 +13,7 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
     const parameters_t& start, const propagator_options_t& options) const
     -> Result<action_list_t_result_t<
         return_parameters_t, typename propagator_options_t::action_list_type>> {
+<<<<<<< HEAD
   using ThisResult = Result<action_list_t_result_t<
       CurvilinearParameters, typename propagator_options_t::action_list_type>>;
 
@@ -24,33 +25,40 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
 
   // Extract results from the nominal propagation
   auto nominalResult = std::move(nominalRet).value();
-  const BoundVector& nominalParameters =
+  const auto& nominalParameters& nominalParameters =
       nominalResult.endParameters->parameters();
   // Use the curvilinear surface of the propagated parameters as target
   const Surface& surface = nominalResult.endParameters->referenceSurface();
 
   // Steps for estimating derivatives
-  std::vector<double> deviations = {-4e-4, -2e-4, 2e-4, 4e-4};
+  std::vector<double> deviations = {-4e-4, -2e-4, 2e-4, 4e-4};  
 
   // Allow larger distances for the oscillation
   propagator_options_t opts = options;
   opts.pathLimit *= 2.;
+  
+  if constexpr(return_parameters_t::is_local_representation && parameters_t::is_local_representation)
+  {
+	  // Pick the surface of the propagation as target
+	  const Surface& surface = nominalResult.endParameters->referenceSurface();
+	  
+	  // Derivations of each parameter around the nominal parameters
+	  std::array<std::vector<BoundVector>, eBoundParametersSize> derivatives; // TODO: This requires different dimensions
+  
+      // Wiggle each dimension individually
+	  for (unsigned int i = 0; i < eBoundParametersSize; i++) {
+		derivatives[i] =
+			wiggleDimension(opts, start, i, surface, nominalParameters, deviations); // TODO: This only works if start is local
+	  }
 
-  // Derivations of each parameter around the nominal parameters
-  std::array<std::vector<BoundVector>, eBoundParametersSize> derivatives;
-
-  // Wiggle each dimension individually
-  for (unsigned int i = 0; i < eBoundParametersSize; i++) {
-    derivatives[i] =
-        wiggleDimension(opts, start, i, surface, nominalParameters, deviations);
-  }
-  // Exchange the result by Ridders Covariance
-  const FullParameterSet& parSet =
-      nominalResult.endParameters->getParameterSet();
-  FullParameterSet* mParSet = const_cast<FullParameterSet*>(&parSet);
-  if (start.covariance()) {
-    mParSet->setCovariance(
-        calculateCovariance(derivatives, *start.covariance(), deviations));
+	  // Exchange the result by Ridders Covariance
+	  const FullParameterSet& parSet =
+		  nominalResult.endParameters->getParameterSet();
+	  FullParameterSet* mParSet = const_cast<FullParameterSet*>(&parSet);
+	  if (start.covariance()) {
+		mParSet->setCovariance(
+			std::get<BoundSymMatrix>(calculateCovariance(derivatives, *start.covariance(), deviations)));
+	  }
   }
 
   return ThisResult::success(std::move(nominalResult));
@@ -116,13 +124,18 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
           // Set covariance to zero and return
           // TODO: This should be changed to indicate that something went
           // wrong
+<<<<<<< HEAD
           mParSet->setCovariance(Covariance::Zero());
           return ThisResult::success(std::move(nominalResult));
+=======
+          mParSet->setCovariance(BoundSymMatrix::Zero());
+          return std::move(nominalResult);
+>>>>>>> Ridders cov calculation extended
         }
       }
     }
     mParSet->setCovariance(
-        calculateCovariance(derivatives, *start.covariance(), deviations));
+        std::get<BoundSymMatrix>(calculateCovariance(derivatives, *start.covariance(), deviations)));
   }
   return ThisResult::success(std::move(nominalResult));
 }
@@ -226,27 +239,67 @@ Acts::RiddersPropagator<propagator_t>::wiggleDimension(
 
 template <typename propagator_t>
 auto Acts::RiddersPropagator<propagator_t>::calculateCovariance(
-    const std::array<std::vector<Acts::BoundVector>,
-                     Acts::eBoundParametersSize>& derivatives,
-    const Acts::BoundSymMatrix& startCov,
+    const std::array<std::vector<BoundVector>, Acts::eBoundParametersSize>& derivatives,
+    const std::variant<Acts::BoundSymMatrix, Acts::FreeSymMatrix>& startCov,
     const std::vector<double>& deviations) const -> const Covariance {
-  Jacobian jacobian;
+  BoundMatrix jacobian;
   jacobian.setIdentity();
-  jacobian.col(eLOC_0) = fitLinear(derivatives[eLOC_0], deviations);
-  jacobian.col(eLOC_1) = fitLinear(derivatives[eLOC_1], deviations);
-  jacobian.col(ePHI) = fitLinear(derivatives[ePHI], deviations);
-  jacobian.col(eTHETA) = fitLinear(derivatives[eTHETA], deviations);
-  jacobian.col(eQOP) = fitLinear(derivatives[eQOP], deviations);
-  jacobian.col(eT) = fitLinear(derivatives[eT], deviations);
-  return jacobian * startCov * jacobian.transpose();
+  for(unsigned int i = 0; i < derivatives.size(); i++)
+  {
+	  jacobian.col(i) = fitLinear(derivatives[i], deviations);
+  }
+  return BoundSymMatrix(jacobian * std::get<Acts::BoundSymMatrix>(startCov) * jacobian.transpose());
 }
 
 template <typename propagator_t>
-Acts::BoundVector Acts::RiddersPropagator<propagator_t>::fitLinear(
-    const std::vector<Acts::BoundVector>& values,
+auto Acts::RiddersPropagator<propagator_t>::calculateCovariance(
+    const std::array<std::vector<BoundVector>, Acts::eFreeParametersSize>& derivatives,
+    const std::variant<Acts::BoundSymMatrix, Acts::FreeSymMatrix>& startCov,
+    const std::vector<double>& deviations) const -> const Covariance {
+  FreeToBoundMatrix jacobian;
+  jacobian.setIdentity();
+  for(unsigned int i = 0; i < derivatives.size(); i++)
+  {
+	  jacobian.col(i) = fitLinear(derivatives[i], deviations);
+  }
+  return BoundSymMatrix(jacobian * std::get<Acts::FreeSymMatrix>(startCov) * jacobian.transpose());
+}
+
+template <typename propagator_t>
+auto Acts::RiddersPropagator<propagator_t>::calculateCovariance(
+    const std::array<std::vector<FreeVector>, Acts::eBoundParametersSize>& derivatives,
+    const std::variant<Acts::BoundSymMatrix, Acts::FreeSymMatrix>& startCov,
+    const std::vector<double>& deviations) const -> const Covariance {
+  BoundToFreeMatrix jacobian;
+  jacobian.setIdentity();
+  for(unsigned int i = 0; i < derivatives.size(); i++)
+  {
+	  jacobian.col(i) = fitLinear(derivatives[i], deviations);
+  }
+  return FreeSymMatrix(jacobian * std::get<Acts::BoundSymMatrix>(startCov) * jacobian.transpose());
+}
+
+template <typename propagator_t>
+auto Acts::RiddersPropagator<propagator_t>::calculateCovariance(
+    const std::array<std::vector<FreeVector>, Acts::eFreeParametersSize>& derivatives,
+    const std::variant<Acts::BoundSymMatrix, Acts::FreeSymMatrix>& startCov,
+    const std::vector<double>& deviations) const -> const Covariance {
+  FreeMatrix jacobian;
+  jacobian.setIdentity();
+  for(unsigned int i = 0; i < derivatives.size(); i++)
+  {
+	  jacobian.col(i) = fitLinear(derivatives[i], deviations);
+  }
+  return FreeSymMatrix(jacobian * std::get<Acts::FreeSymMatrix>(startCov) * jacobian.transpose());
+}
+
+template <typename propagator_t>
+template <typename vector_t>
+vector_t Acts::RiddersPropagator<propagator_t>::fitLinear(
+    const std::vector<vector_t>& values,
     const std::vector<double>& deviations) const {
-  BoundVector A;
-  BoundVector C;
+  vector_t A;
+  vector_t C;
   A.setZero();
   C.setZero();
   double B = 0;
@@ -260,8 +313,8 @@ Acts::BoundVector Acts::RiddersPropagator<propagator_t>::fitLinear(
     D += deviations.at(i) * deviations.at(i);
   }
 
-  BoundVector b = (N * A - B * C) / (N * D - B * B);
-  BoundVector a = (C - B * b) / N;
+  vector_t b = (N * A - B * C) / (N * D - B * B);
+  vector_t a = (C - B * b) / N;
 
   return a;
 }
