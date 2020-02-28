@@ -73,9 +73,12 @@ endif()
 if(ACTS_BUILD_TGEO_PLUGIN)
   find_package(ROOT 6.10 REQUIRED COMPONENTS Geom)
 endif()
+if(ACTS_BUILD_LEGACY)
+  find_package(ROOT 6.10 REQUIRED COMPONENTS Core Hist)
+endif()
 if(ACTS_BUILD_DOC)
   find_package(Doxygen 1.8.11 REQUIRED)
-endif()
+endif()  
 
 # core library, core plugins, and other components
 add_component(Core Core)
