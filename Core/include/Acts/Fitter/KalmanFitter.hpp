@@ -575,7 +575,7 @@ class KalmanFitter {
             // Fill the track state
             trackStateProxy.predicted() = boundParams.parameters();
             trackStateProxy.predictedCovariance() = *boundParams.covariance();
-            trackStateProxy.jacobian() = jacobian;
+            trackStateProxy.jacobian() = std::get<BoundMatrix>(jacobian);
             trackStateProxy.pathLength() = pathLength;
           } else {
             ACTS_VERBOSE("Detected in-sensitive surface " << surface->geoID());
@@ -588,7 +588,7 @@ class KalmanFitter {
             trackStateProxy.predicted() = curvilinearParams.parameters();
             trackStateProxy.predictedCovariance() =
                 *curvilinearParams.covariance();
-            trackStateProxy.jacobian() = jacobian;
+            trackStateProxy.jacobian() = std::get<BoundMatrix>(jacobian);
             trackStateProxy.pathLength() = pathLength;
           }
 
@@ -656,7 +656,7 @@ class KalmanFitter {
         // Fill the track state
         trackStateProxy.predicted() = boundParams.parameters();
         trackStateProxy.predictedCovariance() = *boundParams.covariance();
-        trackStateProxy.jacobian() = jacobian;
+        trackStateProxy.jacobian() = std::get<BoundMatrix>(jacobian);
         trackStateProxy.pathLength() = pathLength;
 
         // We have predicted parameters, so calibrate the uncalibrated input
@@ -720,10 +720,6 @@ class KalmanFitter {
             stepper.covarianceTransport(state.stepping);
           }
         }
-
-        // Not creating bound state here, so need manually reinitialize
-        // jacobian
-        state.stepping.jacobian = BoundMatrix::Identity();
 
         // Update state and stepper with material effects
         materialInteractor(surface, state, stepper);
