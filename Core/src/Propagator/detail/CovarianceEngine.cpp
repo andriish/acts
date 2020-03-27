@@ -359,7 +359,6 @@ else
 if(toLocal)
   reinitializeJacobians(transportJacobian, derivatives, jacobianLocalToGlobal,
                         direction);
-
 	else
 		state.jacToGlobal = std::nullopt;
 }
