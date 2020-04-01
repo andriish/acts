@@ -49,11 +49,11 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
 	  // Case I: We start and end bound
 	  if constexpr (parameters_t::is_local_representation) {
 		// Derivations of each parameter around the nominal parameters
-		std::array<std::vector<BoundVector>, BoundParsDim>
+		std::array<std::vector<BoundVector>, eBoundParametersSize>
 			derivatives;
 
 		// Wiggle each dimension individually
-		for (unsigned int i = 0; i < BoundParsDim; i++) {
+		for (unsigned int i = 0; i < eBoundParametersSize; i++) {
 		  derivatives[i] = wiggleDimension(
 			  opts, start, i, nominalParameters,
 			  deviations, surface);
@@ -72,11 +72,11 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
 	  else
 	  {
 			// Derivations of each parameter around the nominal parameters
-			std::array<std::vector<BoundVector>, FreeParsDim>
+			std::array<std::vector<BoundVector>, eFreeParametersSize>
 				derivatives;
 				
 			// Wiggle each dimension individually
-			for (unsigned int i = 0; i < FreeParsDim; i++) {
+			for (unsigned int i = 0; i < eFreeParametersSize; i++) {
 			  derivatives[i] = wiggleDimension(
 				  opts, start, i, nominalParameters,
 				  deviations, surface);
@@ -98,11 +98,11 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
 	  // Case III: We start bound and end free
 	  if constexpr (parameters_t::is_local_representation) {
 		// Derivations of each parameter around the nominal parameters
-		std::array<std::vector<FreeVector>, BoundParsDim>
+		std::array<std::vector<FreeVector>, eBoundParametersSize>
 			derivatives;
 
 		// Wiggle each dimension individually
-		for (unsigned int i = 0; i < BoundParsDim; i++) {
+		for (unsigned int i = 0; i < eBoundParametersSize; i++) {
 		  derivatives[i] = wiggleDimension(
 			  options, start, i, nominalParameters,
 			  deviations);
@@ -120,11 +120,11 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
 	  else
 	  {
 			// Derivations of each parameter around the nominal parameters
-			std::array<std::vector<FreeVector>, FreeParsDim>
+			std::array<std::vector<FreeVector>, eFreeParametersSize>
 				derivatives;
 
 			// Wiggle each dimension individually
-			for (unsigned int i = 0; i < FreeParsDim; i++) {
+			for (unsigned int i = 0; i < eFreeParametersSize; i++) {
 			  derivatives[i] = wiggleDimension(
 				  options, start, i, nominalParameters,
 				  deviations);
