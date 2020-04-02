@@ -181,36 +181,63 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
 
   // Allow larger distances for the oscillation
   propagator_options_t opts = options;
-  opts.pathLimit *= 2.;
+  
+  	  // Case I: We start bound
+	  if constexpr (parameters_t::is_local_representation) {
+		  opts.pathLimit *= 2.;
 
-  // Derivations of each parameter around the nominal parameters
-  std::array<std::vector<BoundVector>, eBoundParametersSize> derivatives;
+		  // Derivations of each parameter around the nominal parameters
+		  std::array<std::vector<BoundVector>, eBoundParametersSize> derivatives;
 
-  // Wiggle each dimension individually
-  for (unsigned int i = 0; i < eBoundParametersSize; i++) {
-    derivatives[i] =
-        wiggleDimension(opts, start, i, nominalParameters, deviations, target);
-  }
-  // Exchange the result by Ridders Covariance
-  const FullParameterSet& parSet =
-      nominalResult.endParameters->getParameterSet();
-  FullParameterSet* mParSet = const_cast<FullParameterSet*>(&parSet);
-  if (start.covariance()) {
-    // Test if target is disc - this may lead to inconsistent results
-    if (target.type() == Surface::Disc) {
-      for (const std::vector<BoundVector>& deriv : derivatives) {
-        if (inconsistentDerivativesOnDisc(deriv)) {
-          // Set covariance to zero and return
-          // TODO: This should be changed to indicate that something went
-          // wrong
-          mParSet->setCovariance(BoundSymMatrix::Zero());
-          return ThisResult::success(std::move(nominalResult));
-        }
-      }
-    }
-    mParSet->setCovariance(std::get<BoundSymMatrix>(
-        calculateCovariance(derivatives, *start.covariance(), deviations)));
-  }
+		  // Wiggle each dimension individually
+		  for (unsigned int i = 0; i < eBoundParametersSize; i++) {
+			derivatives[i] =
+				wiggleDimension(opts, start, i, nominalParameters, deviations, target);
+		  }
+		  // Exchange the result by Ridders Covariance
+		  const FullParameterSet& parSet =
+			  nominalResult.endParameters->getParameterSet();
+		  FullParameterSet* mParSet = const_cast<FullParameterSet*>(&parSet);
+		  if (start.covariance()) {
+			// Test if target is disc - this may lead to inconsistent results
+			if (target.type() == Surface::Disc) {
+			  for (const std::vector<BoundVector>& deriv : derivatives) {
+				if (inconsistentDerivativesOnDisc(deriv)) {
+				  // Set covariance to zero and return
+				  // TODO: This should be changed to indicate that something went
+				  // wrong
+				  mParSet->setCovariance(BoundSymMatrix::Zero());
+				  return std::move(nominalResult);
+				}
+			  }
+			}
+			mParSet->setCovariance(std::get<BoundSymMatrix>(
+				calculateCovariance(derivatives, *start.covariance(), deviations)));
+		  }
+		}
+	// Case II: We start free bound
+	  else
+	  {
+			// Derivations of each parameter around the nominal parameters
+			std::array<std::vector<BoundVector>, eFreeParametersSize>
+				derivatives;
+				
+			// Wiggle each dimension individually
+			for (unsigned int i = 0; i < eFreeParametersSize; i++) {
+			  derivatives[i] = wiggleDimension(
+				  opts, start, i, nominalParameters,
+				  deviations, target);
+			}
+
+			// Exchange the result by Ridders Covariance
+			const FullParameterSet& parSet =
+				nominalResult.endParameters->getParameterSet();
+			FullParameterSet* mParSet = const_cast<FullParameterSet*>(&parSet);
+			if (start.covariance()) {
+			  mParSet->setCovariance(std::get<BoundSymMatrix>(
+				  calculateCovariance(derivatives, *start.covariance(), deviations)));
+			} 
+	  }
   return ThisResult::success(std::move(nominalResult));
 }
 
