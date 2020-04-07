@@ -49,7 +49,6 @@ std::cout << "U: " << U.transpose() << " | V: " << V.transpose() << std::endl;
   Transform3D transform{curvilinearRotation};
   transform.pretranslate(center);
   Surface::m_transform = std::make_shared<const Transform3D>(transform);
-std::cout << "Transform:\n" << Surface::m_transform->matrix() << std::endl;
 }
 
 Acts::PlaneSurface::PlaneSurface(
