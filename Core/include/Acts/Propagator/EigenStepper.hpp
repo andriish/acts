@@ -51,7 +51,7 @@ class EigenStepper {
  public:
   /// Jacobian, Covariance, States and B-field
     using Jacobian =
-    std::variant<BoundMatrix, FreeToBoundMatrix, BoundToFreeMatrix, FreeMatrix>;  using Covariance = std::variant<BoundSymMatrix, FreeSymMatrix>;
+    std::variant<BoundMatrix, FreeToBoundMatrix, BoundToFreeMatrix, FreeMatrix>;
   using Covariance = std::variant<BoundSymMatrix, FreeSymMatrix>;
   using CurvilinearState = std::tuple<CurvilinearParameters, Jacobian, double>;
   using FreeState = std::tuple<FreeParameters, Jacobian, double>;
