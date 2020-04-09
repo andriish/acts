@@ -36,9 +36,14 @@ namespace Acts {
 /// used for simple material mapping, navigation validation
 class StraightLineStepper {
  public:
-  using Jacobian = BoundMatrix;
+  /// Jacobian, Covariance, States and B-field
+  using Jacobian =
+    std::variant<BoundMatrix, FreeToBoundMatrix, BoundToFreeMatrix, FreeMatrix>;  using Covariance = std::variant<BoundSymMatrix, FreeSymMatrix>;
   using Covariance = std::variant<BoundSymMatrix, FreeSymMatrix>;
-  using BField = NullBField;
+  using CurvilinearState = std::tuple<CurvilinearParameters, Jacobian, double>;
+  using FreeState = std::tuple<FreeParameters, Jacobian, double>;
+  using BoundState = std::tuple<BoundParameters, Jacobian, double>;
+  using BField = NullBField;  
 
   /// State for track parameter propagation
   ///
@@ -115,12 +120,16 @@ class StraightLineStepper {
           cov = *par.covariance();
           jacobian.emplace<3>(FreeMatrix::Identity());
          
-          jacDirToAngle = directionsToAnglesJacobian(dir);
+          // Set up transformations between angles and directions in jacobian
+      jacDirToAngle = directionsToAnglesJacobian(dir);
+      jacAngleToDir = anglesToDirectionsJacobian(dir);
       }
     }
     
-     /// Conversion jacobian to transform from directions to angles
-	ActsMatrixD<8, 7> jacDirToAngle;
+       /// Transform from directions to angles in jacobian
+  ActsMatrixD<8, 7> jacDirToAngle;
+  /// Transform from angles to directions in jacobian
+  ActsMatrixD<7, 8> jacAngleToDir;
   
     /// Jacobian from local to the global frame
     std::optional<BoundToFreeMatrix> jacToGlobal;
