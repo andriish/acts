@@ -237,7 +237,7 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
 			const FullParameterSet& parSet =
 				nominalResult.endParameters->getParameterSet();
 			FullParameterSet* mParSet = const_cast<FullParameterSet*>(&parSet);
-			if (start.covariance()) {
+			if (start.covariance()) {			  
 			// Test if target is disc - this may lead to inconsistent results
 			if (target.type() == Surface::Disc) {
 			  for (const std::vector<BoundVector>& deriv : derivatives) {
@@ -298,7 +298,6 @@ Acts::RiddersPropagator<propagator_t>::wiggleDimension(
     const auto& r = m_propagator.propagate(tp, target, options).value();
     // Collect the slope
     derivatives.push_back((r.endParameters->parameters() - nominal) / h);
-    
     // Correct angular results 
     if constexpr (start_parameters_t::is_local_representation) {
       // Correct for a possible variation of phi around
