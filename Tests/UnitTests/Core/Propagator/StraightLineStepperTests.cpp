@@ -58,7 +58,6 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_state_test) {
   BOOST_CHECK_EQUAL(slsState.jacTransport, FreeMatrix::Identity());
   BOOST_CHECK_EQUAL(slsState.derivative, FreeVector::Zero());
   BOOST_CHECK(!slsState.covTransport);
-  BOOST_CHECK_EQUAL(std::get<BoundSymMatrix>(slsState.cov), Covariance::Zero());
   BOOST_CHECK_EQUAL(slsState.pos, pos);
   BOOST_CHECK_EQUAL(slsState.dir, mom.normalized());
   BOOST_CHECK_EQUAL(slsState.p, mom.norm());

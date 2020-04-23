@@ -149,7 +149,6 @@ BOOST_AUTO_TEST_CASE(eigen_stepper_state_test) {
   BOOST_CHECK_EQUAL(esState.jacTransport, FreeMatrix::Identity());
   BOOST_CHECK_EQUAL(esState.derivative, FreeVector::Zero());
   BOOST_CHECK(!esState.covTransport);
-  BOOST_CHECK_EQUAL(std::get<BoundSymMatrix>(esState.cov), BoundSymMatrix(BoundSymMatrix::Zero()));
   BOOST_CHECK_EQUAL(esState.pos, pos);
   BOOST_CHECK_EQUAL(esState.dir, mom.normalized());
   BOOST_CHECK_EQUAL(esState.p, mom.norm());
