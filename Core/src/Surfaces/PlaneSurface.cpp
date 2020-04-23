@@ -44,6 +44,7 @@ Acts::PlaneSurface::PlaneSurface(const Vector3D& center, const Vector3D& normal)
   curvilinearRotation.col(0) = U;
   curvilinearRotation.col(1) = V;
   curvilinearRotation.col(2) = T;
+
   // curvilinear surfaces are boundless
   Transform3D transform{curvilinearRotation};
   transform.pretranslate(center);
