@@ -44,7 +44,7 @@ namespace Test {
 using Covariance = std::variant<BoundSymMatrix, FreeSymMatrix>;
 using Jacobian =
     std::variant<BoundMatrix, FreeToBoundMatrix, BoundToFreeMatrix, FreeMatrix>;
-    
+
 // Create a test context
 GeometryContext tgContext = GeometryContext();
 MagneticFieldContext mfContext = MagneticFieldContext();
@@ -419,7 +419,8 @@ BOOST_AUTO_TEST_CASE(eigen_stepper_test) {
   BOOST_CHECK_EQUAL(esState.p, 2. * mom.norm());
   BOOST_CHECK_EQUAL(esState.q, 1. * charge);
   BOOST_CHECK_EQUAL(esState.t, 2. * time);
-  CHECK_CLOSE_COVARIANCE(std::get<BoundSymMatrix>(esState.cov), BoundSymMatrix(2. * cov), 1e-6);
+  CHECK_CLOSE_COVARIANCE(std::get<BoundSymMatrix>(esState.cov),
+                         BoundSymMatrix(2. * cov), 1e-6);
 
   // Transport the covariance in the context of a surface
   es.covarianceTransport(esState, *plane);

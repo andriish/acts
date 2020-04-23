@@ -339,7 +339,8 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_test) {
   BOOST_CHECK_EQUAL(slsState.p, 2. * mom.norm());
   BOOST_CHECK_EQUAL(slsState.q, 1. * charge);
   BOOST_CHECK_EQUAL(slsState.t, 2. * time);
-  CHECK_CLOSE_COVARIANCE(std::get<BoundSymMatrix>(slsState.cov), Covariance(2. * cov), 1e-6);
+  CHECK_CLOSE_COVARIANCE(std::get<BoundSymMatrix>(slsState.cov),
+                         Covariance(2. * cov), 1e-6);
 
   // Transport the covariance in the context of a surface
   sls.covarianceTransport(slsState, *plane);
