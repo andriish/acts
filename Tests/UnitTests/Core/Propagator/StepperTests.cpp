@@ -41,8 +41,10 @@ using namespace Acts::UnitLiterals;
 namespace Acts {
 namespace Test {
 
-using Covariance = BoundSymMatrix;
-
+using Covariance = std::variant<BoundSymMatrix, FreeSymMatrix>;
+using Jacobian =
+    std::variant<BoundMatrix, FreeToBoundMatrix, BoundToFreeMatrix, FreeMatrix>;
+    
 // Create a test context
 GeometryContext tgContext = GeometryContext();
 MagneticFieldContext mfContext = MagneticFieldContext();
@@ -143,11 +145,11 @@ BOOST_AUTO_TEST_CASE(eigen_stepper_state_test) {
                                               stepSize, tolerance);
 
   // Test the result & compare with the input/test for reasonable members
-  BOOST_CHECK_EQUAL(esState.jacToGlobal, BoundToFreeMatrix::Zero());
+  BOOST_CHECK(!esState.jacToGlobal.has_value());
   BOOST_CHECK_EQUAL(esState.jacTransport, FreeMatrix::Identity());
   BOOST_CHECK_EQUAL(esState.derivative, FreeVector::Zero());
   BOOST_CHECK(!esState.covTransport);
-  BOOST_CHECK_EQUAL(esState.cov, Covariance::Zero());
+  BOOST_CHECK_EQUAL(std::get<BoundSymMatrix>(esState.cov), BoundSymMatrix(BoundSymMatrix::Zero()));
   BOOST_CHECK_EQUAL(esState.pos, pos);
   BOOST_CHECK_EQUAL(esState.dir, mom.normalized());
   BOOST_CHECK_EQUAL(esState.p, mom.norm());
@@ -166,13 +168,13 @@ BOOST_AUTO_TEST_CASE(eigen_stepper_state_test) {
   BOOST_CHECK_EQUAL(esState.q, 0.);
 
   // Test with covariance matrix
-  Covariance cov = 8. * Covariance::Identity();
+  BoundSymMatrix cov = 8. * BoundSymMatrix::Identity();
   ncp = NeutralCurvilinearTrackParameters(cov, pos, mom, time);
   esState = EigenStepper<ConstantBField>::State(tgContext, mfContext, ncp, ndir,
                                                 stepSize, tolerance);
-  BOOST_CHECK_NE(esState.jacToGlobal, BoundToFreeMatrix::Zero());
+  BOOST_CHECK(esState.jacToGlobal.has_value());
   BOOST_CHECK(esState.covTransport);
-  BOOST_CHECK_EQUAL(esState.cov, cov);
+  BOOST_CHECK_EQUAL(std::get<BoundSymMatrix>(esState.cov), cov);
 }
 
 /// These tests are aiming to test the functions of the EigenStepper
@@ -189,7 +191,7 @@ BOOST_AUTO_TEST_CASE(eigen_stepper_test) {
   Vector3D mom(4., 5., 6.);
   double time = 7.;
   double charge = -1.;
-  Covariance cov = 8. * Covariance::Identity();
+  BoundSymMatrix cov = BoundSymMatrix(8. * BoundSymMatrix::Identity());
   CurvilinearParameters cp(cov, pos, mom, charge, time);
 
   // Build the state and the stepper
@@ -226,7 +228,7 @@ BOOST_AUTO_TEST_CASE(eigen_stepper_test) {
   CHECK_CLOSE_ABS(curvPars.time(), cp.time(), 1e-6);
   BOOST_CHECK(curvPars.covariance().has_value());
   BOOST_CHECK_NE(*curvPars.covariance(), cov);
-  CHECK_CLOSE_COVARIANCE(std::get<1>(curvState),
+  CHECK_CLOSE_COVARIANCE(std::get<BoundMatrix>(std::get<1>(curvState)),
                          BoundMatrix(BoundMatrix::Identity()), 1e-6);
   CHECK_CLOSE_ABS(std::get<2>(curvState), 0., 1e-6);
 
@@ -244,8 +246,8 @@ BOOST_AUTO_TEST_CASE(eigen_stepper_test) {
   // The covariance transport
   esState.cov = cov;
   es.covarianceTransport(esState);
-  BOOST_CHECK_NE(esState.cov, cov);
-  BOOST_CHECK_NE(esState.jacToGlobal, BoundToFreeMatrix::Zero());
+  BOOST_CHECK_NE(std::get<BoundSymMatrix>(esState.cov), cov);
+  BOOST_CHECK(esState.jacToGlobal.has_value());
   BOOST_CHECK_EQUAL(esState.jacTransport, FreeMatrix::Identity());
   BOOST_CHECK_EQUAL(esState.derivative, FreeVector::Zero());
 
@@ -256,7 +258,7 @@ BOOST_AUTO_TEST_CASE(eigen_stepper_test) {
   ps.stepping.covTransport = false;
   double h = es.step(ps).value();
   BOOST_CHECK_EQUAL(ps.stepping.stepSize, h);
-  CHECK_CLOSE_COVARIANCE(ps.stepping.cov, cov, 1e-6);
+  CHECK_CLOSE_COVARIANCE(std::get<BoundSymMatrix>(ps.stepping.cov), cov, 1e-6);
   BOOST_CHECK_NE(ps.stepping.pos.norm(), newPos.norm());
   BOOST_CHECK_NE(ps.stepping.dir, newMom.normalized());
   BOOST_CHECK_EQUAL(ps.stepping.q, charge);
@@ -267,7 +269,7 @@ BOOST_AUTO_TEST_CASE(eigen_stepper_test) {
   ps.stepping.covTransport = true;
   double h2 = es.step(ps).value();
   BOOST_CHECK_EQUAL(h2, h);
-  CHECK_CLOSE_COVARIANCE(ps.stepping.cov, cov, 1e-6);
+  CHECK_CLOSE_COVARIANCE(std::get<BoundSymMatrix>(ps.stepping.cov), cov, 1e-6);
   BOOST_CHECK_NE(ps.stepping.pos.norm(), newPos.norm());
   BOOST_CHECK_NE(ps.stepping.dir, newMom.normalized());
   BOOST_CHECK_EQUAL(ps.stepping.q, charge);
@@ -395,7 +397,7 @@ BOOST_AUTO_TEST_CASE(eigen_stepper_test) {
   CHECK_CLOSE_ABS(boundPars.time(), bp.time(), 1e-6);
   BOOST_CHECK(boundPars.covariance().has_value());
   BOOST_CHECK_NE(*boundPars.covariance(), cov);
-  CHECK_CLOSE_COVARIANCE(std::get<1>(boundState),
+  CHECK_CLOSE_COVARIANCE(std::get<BoundMatrix>(std::get<1>(boundState)),
                          BoundMatrix(BoundMatrix::Identity()), 1e-6);
   CHECK_CLOSE_ABS(std::get<2>(boundState), 0., 1e-6);
 
@@ -418,12 +420,12 @@ BOOST_AUTO_TEST_CASE(eigen_stepper_test) {
   BOOST_CHECK_EQUAL(esState.p, 2. * mom.norm());
   BOOST_CHECK_EQUAL(esState.q, 1. * charge);
   BOOST_CHECK_EQUAL(esState.t, 2. * time);
-  CHECK_CLOSE_COVARIANCE(esState.cov, Covariance(2. * cov), 1e-6);
+  CHECK_CLOSE_COVARIANCE(std::get<BoundSymMatrix>(esState.cov), BoundSymMatrix(2. * cov), 1e-6);
 
   // Transport the covariance in the context of a surface
   es.covarianceTransport(esState, *plane);
-  BOOST_CHECK_NE(esState.cov, cov);
-  BOOST_CHECK_NE(esState.jacToGlobal, BoundToFreeMatrix::Zero());
+  BOOST_CHECK_NE(std::get<BoundSymMatrix>(esState.cov), cov);
+  BOOST_CHECK(esState.jacToGlobal.has_value());
   BOOST_CHECK_EQUAL(esState.jacTransport, FreeMatrix::Identity());
   BOOST_CHECK_EQUAL(esState.derivative, FreeVector::Zero());
 
@@ -493,7 +495,7 @@ BOOST_AUTO_TEST_CASE(step_extension_vacuum_test) {
   naviVac.resolveSensitive = true;
 
   // Set initial parameters for the particle track
-  Covariance cov = Covariance::Identity();
+  BoundSymMatrix cov = BoundSymMatrix::Identity();
   Vector3D startParams(0., 0., 0.), startMom(1_GeV, 0., 0.);
   SingleCurvilinearTrackParameters<ChargedPolicy> sbtp(cov, startParams,
                                                        startMom, 1., 0.);
@@ -606,7 +608,7 @@ BOOST_AUTO_TEST_CASE(step_extension_material_test) {
   naviMat.resolveSensitive = true;
 
   // Set initial parameters for the particle track
-  Covariance cov = Covariance::Identity();
+  BoundSymMatrix cov = BoundSymMatrix(BoundSymMatrix::Identity());
   Vector3D startParams(0., 0., 0.), startMom(5_GeV, 0., 0.);
   SingleCurvilinearTrackParameters<ChargedPolicy> sbtp(cov, startParams,
                                                        startMom, 1., 0.);
@@ -780,7 +782,7 @@ BOOST_AUTO_TEST_CASE(step_extension_vacmatvac_test) {
   naviDet.resolveSensitive = true;
 
   // Set initial parameters for the particle track
-  Covariance cov = Covariance::Identity();
+  BoundSymMatrix cov = BoundSymMatrix::Identity();
   Vector3D startParams(0., 0., 0.), startMom(5_GeV, 0., 0.);
   SingleCurvilinearTrackParameters<ChargedPolicy> sbtp(cov, startParams,
                                                        startMom, 1., 0.);
@@ -1050,7 +1052,7 @@ BOOST_AUTO_TEST_CASE(step_extension_trackercalomdt_test) {
   naviVac.resolveSensitive = true;
 
   // Set initial parameters for the particle track
-  Covariance cov = Covariance::Identity();
+  BoundSymMatrix cov = BoundSymMatrix::Identity();
   Vector3D startParams(0., 0., 0.), startMom(1._GeV, 0., 0.);
   SingleCurvilinearTrackParameters<ChargedPolicy> sbtp(cov, startParams,
                                                        startMom, 1., 0.);

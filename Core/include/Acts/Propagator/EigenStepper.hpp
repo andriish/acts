@@ -99,7 +99,7 @@ class EigenStepper {
         // set the covariance transport flag to true and copy
         covTransport = true;
         cov = BoundSymMatrix(*par.covariance());
-        surface.initJacobianToGlobal(gctx, jacToGlobal, pos, dir,
+        surface.initJacobianToGlobal(gctx, *jacToGlobal, pos, dir,
                                      par.parameters());
         jacobian.emplace<0>(BoundMatrix::Identity());
       }
@@ -116,8 +116,8 @@ class EigenStepper {
     ///
     /// @note the covariance matrix is copied when needed
     template <typename parameters_t, std::enable_if_t<not parameters_t::is_local_representation, int> = 0>
-    explicit StepperState(std::reference_wrapper<const GeometryContext> gctx,
-                   std::reference_wrapper<const MagneticFieldContext> /*mctx*/,
+    explicit State(std::reference_wrapper<const GeometryContext> gctx,
+                   std::reference_wrapper<const MagneticFieldContext> mctx,
                    const parameters_t& par, NavigationDirection ndir = forward,
                    double ssize = std::numeric_limits<double>::max(),
                    double stolerance = s_onSurfaceTolerance)
@@ -139,8 +139,8 @@ class EigenStepper {
           jacobian.emplace<3>(FreeMatrix::Identity());
         
           // Set up transformations between angles and directions in jacobian
-      jacDirToAngle = directionsToAnglesJacobian(dir);
-      jacAngleToDir = anglesToDirectionsJacobian(dir);
+      jacDirToAngle = detail::jacobianDirectionsToAngles(dir);
+      jacAngleToDir = detail::jacobianAnglesToDirections(dir);
       }
     }
     
@@ -168,7 +168,7 @@ class EigenStepper {
   ActsMatrixD<7, 8> jacAngleToDir;
   
     /// The full jacobian of the transport entire transport
-    std::variant<BoundMatrix, FreeToBoundMatrix, FreeMatrix, BoundToFreeMatrix> jacobian;
+    Jacobian jacobian;
 
     /// Jacobian from local to the global frame
     std::optional<BoundToFreeMatrix> jacToGlobal;
@@ -182,7 +182,7 @@ class EigenStepper {
     /// Covariance matrix (and indicator)
     //// associated with the initial error on track parameters
     bool covTransport = false;
-    Covariance cov = Covariance::Zero();
+    Covariance cov;
 
     /// Accummulated path length state
     double pathAccumulated = 0.;
@@ -342,9 +342,7 @@ class EigenStepper {
   ///
   /// @return std::tuple conatining the final state parameters, the jacobian &
   /// the accumulated path
-  auto curvilinearState(State& state) const {
-    return detail::curvilinearState(state);
-  }
+  CurvilinearState curvilinearState(State& state) const;
 
   /// @brief Final state builder without a target surface
   ///
@@ -352,7 +350,7 @@ class EigenStepper {
   ///
   /// @return std::tuple conatining the final state parameters, the jacobian &
   /// the accumulated path
-  auto freeState(State& state) const { return detail::freeState(state); }
+  FreeState freeState(State& state) const;
 
   /// Create and return the bound state at the current position
   ///
@@ -364,9 +362,7 @@ class EigenStepper {
   ///
   /// @return std::tuple conatining the final state parameters, the jacobian &
   /// the accumulated path
-  auto boundState(State& state, const Surface& surface) const {
-    return detail::boundState(state, surface);
-  }
+  BoundState boundState(State& state, const Surface& surface) const;
 
   /// Method to update a stepper state to the some parameters
   ///
