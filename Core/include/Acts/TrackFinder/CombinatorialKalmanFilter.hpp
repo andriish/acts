@@ -249,9 +249,10 @@ class CombinatorialKalmanFilter {
   class Actor {
    public:
     using TipState = CombinatorialKalmanFilterTipState;
-    using BoundState = std::tuple<BoundParameters, BoundMatrix, double>;
-    using CurvilinearState =
-        std::tuple<CurvilinearParameters, BoundMatrix, double>;
+     using Jacobian = std::variant<BoundMatrix, FreeToBoundMatrix,
+                                BoundToFreeMatrix, FreeMatrix>;
+  using CurvilinearState = std::tuple<CurvilinearParameters, Jacobian, double>;
+  using BoundState = std::tuple<BoundParameters, Jacobian, double>;
     /// Broadcast the result_type
     using result_type = CombinatorialKalmanFilterResult<source_link_t>;
 
@@ -756,7 +757,7 @@ class CombinatorialKalmanFilter {
         trackStateProxy.predicted() = boundParams.parameters();
         trackStateProxy.predictedCovariance() = *boundParams.covariance();
       }
-      trackStateProxy.jacobian() = jacobian;
+      trackStateProxy.jacobian() = std::get<BoundMatrix>(jacobian);
       trackStateProxy.pathLength() = pathLength;
 
       // Assign the uncalibrated&calibrated measurement to the track
@@ -842,7 +843,7 @@ class CombinatorialKalmanFilter {
       // Fill the track state
       trackStateProxy.predicted() = boundParams.parameters();
       trackStateProxy.predictedCovariance() = *boundParams.covariance();
-      trackStateProxy.jacobian() = jacobian;
+      trackStateProxy.jacobian() = std::get<BoundMatrix>(jacobian);
       trackStateProxy.pathLength() = pathLength;
       // Set the surface
       trackStateProxy.setReferenceSurface(
@@ -887,7 +888,7 @@ class CombinatorialKalmanFilter {
       // Fill the track state
       trackStateProxy.predicted() = curvilinearParams.parameters();
       trackStateProxy.predictedCovariance() = *curvilinearParams.covariance();
-      trackStateProxy.jacobian() = jacobian;
+      trackStateProxy.jacobian() = std::get<BoundMatrix>(jacobian);
       trackStateProxy.pathLength() = pathLength;
       // Set the surface
       trackStateProxy.setReferenceSurface(Surface::makeShared<PlaneSurface>(
