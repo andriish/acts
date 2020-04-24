@@ -42,7 +42,7 @@ auto Acts::EigenStepper<B, E, A>::curvilinearState(State& state) const
     -> CurvilinearState {
   FreeVector parameters;
   parameters << state.pos[0], state.pos[1], state.pos[2], state.t, state.dir[0],
-      state.dir[1], state.dir[2], state.q / state.p;
+      state.dir[1], state.dir[2], (state.q != 0. ? state.q : 1.) / state.p;
   return detail::curvilinearState(
       state.cov, state.jacobian, state.jacTransport, state.derivative,
       state.jacToGlobal, state.jacDirToAngle, state.jacAngleToDir, parameters,
@@ -53,7 +53,7 @@ template <typename B, typename E, typename A>
 auto Acts::EigenStepper<B, E, A>::freeState(State& state) const -> FreeState {
   FreeVector parameters;
   parameters << state.pos[0], state.pos[1], state.pos[2], state.t, state.dir[0],
-      state.dir[1], state.dir[2], state.q / state.p;
+      state.dir[1], state.dir[2], (state.q != 0. ? state.q : 1.) / state.p;
   return detail::freeState(state.cov, state.jacobian, state.jacTransport,
                            state.derivative, state.jacToGlobal,
                            state.jacDirToAngle, state.jacAngleToDir, parameters,
@@ -66,7 +66,7 @@ auto Acts::EigenStepper<B, E, A>::boundState(State& state,
     -> BoundState {
   FreeVector parameters;
   parameters << state.pos[0], state.pos[1], state.pos[2], state.t, state.dir[0],
-      state.dir[1], state.dir[2], state.q / state.p;
+      state.dir[1], state.dir[2], (state.q != 0. ? state.q : 1.) / state.p;
   return detail::boundState(state.geoContext, state.cov, state.jacobian,
                             state.jacTransport, state.derivative,
                             state.jacToGlobal, state.jacDirToAngle,
