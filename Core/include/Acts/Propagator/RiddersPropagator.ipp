@@ -86,8 +86,6 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
       }
     }
   }
-  // TODO: Case III and IV need some propagation distance settings, otherwise
-  // the result should be uncomparable
   else {
     // Case III: We start bound and end free
     if constexpr (parameters_t::is_local_representation) {
