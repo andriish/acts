@@ -140,12 +140,10 @@ struct PointwiseMaterialInteraction {
     // Update covariance matrix
     NoiseUpdateMode mode = (nav == forward) ? addNoise : removeNoise;
     BoundSymMatrix& cov = std::get<BoundSymMatrix>(state.stepping.cov);
-    cov(ePHI, ePHI) =
-        updateVariance(cov(ePHI, ePHI), variancePhi, mode);
+    cov(ePHI, ePHI) = updateVariance(cov(ePHI, ePHI), variancePhi, mode);
     cov(eTHETA, eTHETA) =
         updateVariance(cov(eTHETA, eTHETA), varianceTheta, mode);
-    cov(eQOP, eQOP) =
-        updateVariance(cov(eQOP, eQOP), varianceQoverP, mode);
+    cov(eQOP, eQOP) = updateVariance(cov(eQOP, eQOP), varianceQoverP, mode);
   }
 
  private:
