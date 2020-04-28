@@ -82,8 +82,7 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
                                 start.parameters().template segment<3>(4))));
       }
     }
-  }
-  else {
+  } else {
     // Case III: We start bound and end free
     if constexpr (parameters_t::is_local_representation) {
       // Derivations of each parameter around the nominal parameters
