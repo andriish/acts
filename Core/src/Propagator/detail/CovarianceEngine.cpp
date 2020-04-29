@@ -223,8 +223,8 @@ const FreeToBoundMatrix surfaceDerivative(
 void reinitializeJacobians(
     std::reference_wrapper<const GeometryContext> geoContext,
     FreeMatrix& transportJacobian, FreeVector& derivatives,
-    std::optional<BoundToFreeMatrix>& jacobianLocalToGlobal, const FreeVector& parameters,
-    const Surface& surface) {
+    std::optional<BoundToFreeMatrix>& jacobianLocalToGlobal,
+    const FreeVector& parameters, const Surface& surface) {
   using VectorHelpers::phi;
   using VectorHelpers::theta;
 
@@ -254,10 +254,10 @@ void reinitializeJacobians(
 /// @param [in, out] jacobianLocalToGlobal Projection jacobian of the last bound
 /// parametrisation to free parameters
 /// @param [in] direction Normalised direction vector
-void reinitializeJacobians(FreeMatrix& transportJacobian,
-                           FreeVector& derivatives,
-                           std::optional<BoundToFreeMatrix>& jacobianLocalToGlobal,
-                           const Vector3D& direction) {
+void reinitializeJacobians(
+    FreeMatrix& transportJacobian, FreeVector& derivatives,
+    std::optional<BoundToFreeMatrix>& jacobianLocalToGlobal,
+    const Vector3D& direction) {
   // Reset the jacobians
   transportJacobian = FreeMatrix::Identity();
   derivatives = FreeVector::Zero();
@@ -499,8 +499,8 @@ void covarianceTransport(
 
   // Reinitialize jacobian components
   if (toLocal)
-    reinitializeJacobians(transportJacobian, derivatives,
-                          jacobianLocalToGlobal, direction);
+    reinitializeJacobians(transportJacobian, derivatives, jacobianLocalToGlobal,
+                          direction);
   else
     reinitializeJacobians(transportJacobian, derivatives, jacobianLocalToGlobal,
                           jacobianDirToAngle, jacobianAngleToDir, direction);
