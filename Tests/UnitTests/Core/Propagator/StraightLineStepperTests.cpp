@@ -45,9 +45,13 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_state_test) {
 
   Vector3D pos(1., 2., 3.);
   Vector3D mom(4., 5., 6.);
+  Vector3D dir = mom.normalized();
   double time = 7.;
   double charge = -1.;
 
+  ///
+  /// Test local start parameters
+  ///
   // Test charged parameters without covariance matrix
   CurvilinearParameters cp(std::nullopt, pos, mom, charge, time);
   StraightLineStepper::State slsState(tgContext, mfContext, cp, ndir, stepSize,
@@ -80,9 +84,62 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_state_test) {
   ncp = NeutralCurvilinearTrackParameters(cov, pos, mom, time);
   slsState = StraightLineStepper::State(tgContext, mfContext, ncp, ndir,
                                         stepSize, tolerance);
+<<<<<<< HEAD
   BOOST_CHECK(slsState.jacToGlobal.has_value());
   BOOST_CHECK(slsState.covTransport);
   BOOST_CHECK_EQUAL(std::get<BoundSymMatrix>(slsState.cov), cov);
+=======
+  BOOST_TEST(slsState.jacDirToAngle == decltype(slsState.jacDirToAngle)::Zero());
+  BOOST_TEST(slsState.jacAngleToDir == decltype(slsState.jacAngleToDir)::Zero());
+  BOOST_TEST(slsState.jacToGlobal.has_value());
+  BOOST_TEST(slsState.covTransport);
+  BOOST_REQUIRE_NO_THROW(std::get<BoundSymMatrix>(slsState.cov));
+  BOOST_TEST(std::get<BoundSymMatrix>(slsState.cov) == cov);
+  
+  ///
+  /// Test free parameters
+  ///
+  // Test charged parameters without covariance matrix
+  FreeVector pars;
+  pars << pos.x(), pos.y(), pos.z(), time, dir.x(), dir.y(), dir.z(), charge / mom.norm();
+  FreeParameters fp(std::nullopt, pars);
+  slsState = StraightLineStepper::State(tgContext, mfContext, fp, ndir, stepSize,
+                                      tolerance);
+
+  // Test the result & compare with the input/test for reasonable members
+  BOOST_TEST(!slsState.jacToGlobal.has_value());
+  BOOST_TEST(slsState.jacTransport == FreeMatrix::Identity());
+  BOOST_TEST(slsState.derivative == FreeVector::Zero());
+  BOOST_TEST(!slsState.covTransport);
+  BOOST_TEST(slsState.pos == pos);
+  CHECK_CLOSE_ABS(slsState.dir, mom.normalized(), 1e-8);
+  BOOST_TEST(slsState.p == mom.norm());
+  BOOST_TEST(slsState.q == charge);
+  BOOST_TEST(slsState.t == time);
+  BOOST_TEST(slsState.navDir == ndir);
+  BOOST_TEST(slsState.pathAccumulated == 0.);
+  BOOST_TEST(slsState.stepSize == ndir * stepSize);
+  BOOST_TEST(slsState.previousStepSize == 0.);
+  BOOST_TEST(slsState.tolerance == tolerance);
+
+  // Test without charge and covariance matrix
+  NeutralFreeParameters nfp(std::nullopt, pars);
+  slsState = StraightLineStepper::State(tgContext, mfContext, nfp, ndir,
+                                        stepSize, tolerance);
+  BOOST_TEST(slsState.q == 0.);
+
+  // Test with covariance matrix
+  FreeSymMatrix freeCov = 8. * FreeSymMatrix::Identity();
+  nfp = NeutralFreeParameters(freeCov, pars);
+  slsState = StraightLineStepper::State(tgContext, mfContext, nfp, ndir,
+                                        stepSize, tolerance);
+  BOOST_TEST(slsState.jacDirToAngle != decltype(slsState.jacDirToAngle)::Zero());
+  BOOST_TEST(slsState.jacAngleToDir != decltype(slsState.jacAngleToDir)::Zero());
+  BOOST_TEST(!slsState.jacToGlobal.has_value());
+  BOOST_TEST(slsState.covTransport);
+  BOOST_REQUIRE_NO_THROW(std::get<FreeSymMatrix>(slsState.cov));
+  BOOST_TEST(std::get<FreeSymMatrix>(slsState.cov) == freeCov);
+>>>>>>> Tests for StraightLineStepper added
 }
 
 /// These tests are aiming to test the functions of the StraightLineStepper
@@ -135,9 +192,16 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_test) {
   CHECK_CLOSE_ABS(curvPars.momentum(), cp.momentum(), 1e-6);
   CHECK_CLOSE_ABS(curvPars.charge(), cp.charge(), 1e-6);
   CHECK_CLOSE_ABS(curvPars.time(), cp.time(), 1e-6);
+<<<<<<< HEAD
   BOOST_CHECK(curvPars.covariance().has_value());
   BOOST_CHECK_NE(*curvPars.covariance(), cov);
   CHECK_CLOSE_COVARIANCE(std::get<BoundSymMatrix>(std::get<1>(curvState),
+=======
+  BOOST_TEST(curvPars.covariance().has_value());
+  BOOST_TEST(*curvPars.covariance() != cov);
+  BOOST_REQUIRE_NO_THROW(std::get<BoundMatrix>(std::get<1>(curvState)));
+  CHECK_CLOSE_COVARIANCE(std::get<BoundMatrix>(std::get<1>(curvState)),
+>>>>>>> Tests for StraightLineStepper added
                          BoundMatrix(BoundMatrix::Identity()), 1e-6);
   CHECK_CLOSE_ABS(std::get<2>(curvState), 0., 1e-6);
 
@@ -155,10 +219,18 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_test) {
   // The covariance transport
   slsState.cov = cov;
   sls.covarianceTransport(slsState);
+<<<<<<< HEAD
   BOOST_CHECK_NE(std::get<BoundSymMatrix>(slsState.cov), cov);
   BOOST_CHECK(slsState.jacToGlobal.has_value());
   BOOST_CHECK_EQUAL(slsState.jacTransport, FreeMatrix::Identity());
   BOOST_CHECK_EQUAL(slsState.derivative, FreeVector::Zero());
+=======
+  BOOST_REQUIRE_NO_THROW(std::get<BoundSymMatrix>(slsState.cov));
+  BOOST_TEST(std::get<BoundSymMatrix>(slsState.cov) != cov);
+  BOOST_TEST(slsState.jacToGlobal.has_value());
+  BOOST_TEST(slsState.jacTransport == FreeMatrix::Identity());
+  BOOST_TEST(slsState.derivative == FreeVector::Zero());
+>>>>>>> Tests for StraightLineStepper added
 
   // Perform a step without and with covariance transport
   slsState.cov = cov;
@@ -166,8 +238,14 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_test) {
 
   ps.stepping.covTransport = false;
   double h = sls.step(ps).value();
+<<<<<<< HEAD
   BOOST_CHECK_EQUAL(ps.stepping.stepSize, ndir * stepSize);
   BOOST_CHECK_EQUAL(ps.stepping.stepSize, h);
+=======
+  BOOST_TEST(ps.stepping.stepSize == ndir * stepSize);
+  BOOST_TEST(ps.stepping.stepSize == h);
+  BOOST_REQUIRE_NO_THROW(std::get<BoundSymMatrix>(ps.stepping.cov));
+>>>>>>> Tests for StraightLineStepper added
   CHECK_CLOSE_COVARIANCE(std::get<BoundSymMatrix>(ps.stepping.cov), cov, 1e-6);
   BOOST_CHECK_GT(ps.stepping.pos.norm(), newPos.norm());
   BOOST_CHECK_EQUAL(ps.stepping.dir, newMom.normalized());
@@ -179,8 +257,14 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_test) {
 
   ps.stepping.covTransport = true;
   double h2 = sls.step(ps).value();
+<<<<<<< HEAD
   BOOST_CHECK_EQUAL(ps.stepping.stepSize, ndir * stepSize);
   BOOST_CHECK_EQUAL(h2, h);
+=======
+  BOOST_TEST(ps.stepping.stepSize == ndir * stepSize);
+  BOOST_TEST(h2 == h);
+  BOOST_REQUIRE_NO_THROW(std::get<BoundSymMatrix>(ps.stepping.cov));
+>>>>>>> Tests for StraightLineStepper added
   CHECK_CLOSE_COVARIANCE(std::get<BoundSymMatrix>(ps.stepping.cov), cov, 1e-6);
   BOOST_CHECK_GT(ps.stepping.pos.norm(), newPos.norm());
   BOOST_CHECK_EQUAL(ps.stepping.dir, newMom.normalized());
@@ -316,6 +400,7 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_test) {
   CHECK_CLOSE_ABS(boundPars.time(), bp.time(), 1e-6);
   BOOST_CHECK(boundPars.covariance().has_value());
   BOOST_CHECK_NE(*boundPars.covariance(), cov);
+  BOOST_REQUIRE_NO_THROW(std::get<BoundMatrix>(std::get<1>(boundState)));
   CHECK_CLOSE_COVARIANCE(std::get<BoundSymMatrix>(std::get<1>(boundState)),
                          BoundMatrix(BoundMatrix::Identity()), 1e-6);
   CHECK_CLOSE_ABS(std::get<2>(boundState), 0., 1e-6);
@@ -339,15 +424,38 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_test) {
   BOOST_CHECK_EQUAL(slsState.p, 2. * mom.norm());
   BOOST_CHECK_EQUAL(slsState.q, 1. * charge);
   BOOST_CHECK_EQUAL(slsState.t, 2. * time);
+  BOOST_REQUIRE_NO_THROW(std::get<BoundSymMatrix>(slsState.cov));
   CHECK_CLOSE_COVARIANCE(std::get<BoundSymMatrix>(slsState.cov),
                          Covariance(2. * cov), 1e-6);
 
   // Transport the covariance in the context of a surface
   sls.covarianceTransport(slsState, *plane);
+  BOOST_REQUIRE_NO_THROW(std::get<BoundSymMatrix>(slsState.cov));
   BOOST_CHECK_NE(std::get<BoundSymMatrix>(slsState.cov), cov);
   BOOST_CHECK(slsState.jacToGlobal.has_value());
   BOOST_CHECK_EQUAL(slsState.jacTransport, FreeMatrix::Identity());
   BOOST_CHECK_EQUAL(slsState.derivative, FreeVector::Zero());
+  
+  /// Test methods related to free parameters
+  // Test the free state construction
+  auto freeState = sls.freeState(slsState);
+  auto freePars = std::get<0>(freeState);
+  CHECK_CLOSE_ABS(freePars.position(), 2. * bp.position(), 1e-6);
+  CHECK_CLOSE_ABS(freePars.momentum(), 2. * bp.momentum(), 1e-6);
+  CHECK_CLOSE_ABS(freePars.charge(), bp.charge(), 1e-6);
+  CHECK_CLOSE_ABS(freePars.time(), 2. * bp.time(), 1e-6);
+  BOOST_CHECK(freePars.covariance().has_value());
+  BOOST_REQUIRE_NO_THROW(std::get<BoundToFreeMatrix>(std::get<1>(freeState)));
+  BOOST_CHECK_NE(std::get<BoundToFreeMatrix>(std::get<1>(freeState)),
+                         BoundToFreeMatrix(BoundToFreeMatrix::Identity()));
+  CHECK_CLOSE_ABS(std::get<2>(freeState), 0., 1e-6);
+
+  // Transport the covariance to free parameters
+  sls.covarianceTransport<FreeParameters>(slsState);
+  BOOST_REQUIRE_NO_THROW(std::get<FreeSymMatrix>(slsState.cov));
+  BOOST_CHECK(!slsState.jacToGlobal.has_value());
+  BOOST_CHECK_EQUAL(slsState.jacTransport, FreeMatrix::Identity());
+  BOOST_CHECK(slsState.derivative, FreeVector::Zero());
 }
 }  // namespace Test
 }  // namespace Acts
