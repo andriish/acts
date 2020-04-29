@@ -167,9 +167,9 @@ class EigenStepper {
     NavigationDirection navDir;
 
     /// Transform from directions to angles in jacobian
-    ActsMatrixD<8, 7> jacDirToAngle;
+    ActsMatrixD<8, 7> jacDirToAngle = ActsMatrixD<8, 7>::Zero();
     /// Transform from angles to directions in jacobian
-    ActsMatrixD<7, 8> jacAngleToDir;
+    ActsMatrixD<7, 8> jacAngleToDir = ActsMatrixD<7, 8>::Zero();
 
     /// The full jacobian of the transport entire transport
     Jacobian jacobian;
