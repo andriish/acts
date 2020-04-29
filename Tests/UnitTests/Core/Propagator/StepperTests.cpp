@@ -175,8 +175,8 @@ BOOST_AUTO_TEST_CASE(eigen_stepper_state_test) {
   ncp = NeutralCurvilinearTrackParameters(cov, pos, mom, time);
   esState = EigenStepper<ConstantBField>::State(tgContext, mfContext, ncp, ndir,
                                                 stepSize, tolerance);
-  BOOST_CHECK_EQUAL(esState.jacDirToAngle, decltype(esState.jacDirToAngle)::Zero());
-  BOOST_CHECK_EQUAL(esState.jacAngleToDir, decltype(esState.jacAngleToDir)::Zero());
+  BOOST_CHECK_EQUAL(esState.jacDirToAngle, decltype(esState.jacDirToAngle)::Zero(), 1e-8);
+  BOOST_CHECK_EQUAL(esState.jacAngleToDir, decltype(esState.jacAngleToDir)::Zero(), 1e-8);
   BOOST_CHECK(esState.jacToGlobal.has_value());
   BOOST_CHECK(esState.covTransport);
   BOOST_CHECK_EQUAL(std::get<BoundSymMatrix>(esState.cov), cov);
