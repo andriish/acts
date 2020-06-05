@@ -346,6 +346,16 @@ template <typename source_link_t>
 using FittableMeasurement =
     typename fittable_measurement_helper<source_link_t>::type;
 
+
+// // https://stackoverflow.com/questions/59250481/is-it-ok-to-use-stdvariant-of-stdvariants
+// template <typename Var1, typename Var2> struct variant_flat;
+
+// template <typename ... Ts1, typename ... Ts2>
+// struct variant_flat<std::variant<Ts1...>, std::variant<Ts2...>>
+// {
+//     using type = std::variant<Ts1..., Ts2...>;
+// };
+
 template <typename source_link_t>
 using FittableVolumeMeasurement =
     typename fittable_volume_measurement_helper<source_link_t>::type;
