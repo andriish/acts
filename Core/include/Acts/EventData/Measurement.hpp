@@ -379,7 +379,7 @@ struct fittable_volume_measurement_helper {
 /**
  * @brief Measurement variant types
  */
-template <typename source_link_t>
+template <typename source_link_t, typename parameter_indices_t>
 using FittableMeasurement =
     typename fittable_surface_measurement_helper<source_link_t>::type;
 
