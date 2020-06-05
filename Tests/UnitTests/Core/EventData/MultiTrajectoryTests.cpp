@@ -65,7 +65,7 @@ auto make_trackstate(size_t dim = 3) {
     ActsVectorD<3> mPar;
     // mPar << 2, 3, 4;
     mPar.setRandom();
-    Measurement<SourceLink, eLOC_0, eLOC_1, eQOP> meas{
+    Measurement<SourceLink, BoundParametersIndices, eLOC_0, eLOC_1, eQOP> meas{
         plane, {}, mCov, mPar[0], mPar[1], mPar[2]};
 
     fm = std::make_unique<FittableMeasurement<SourceLink>>(meas);
@@ -91,7 +91,7 @@ auto make_trackstate(size_t dim = 3) {
     ActsVectorD<2> mPar;
     // mPar << 2, 3;
     mPar.setRandom();
-    Measurement<SourceLink, eLOC_0, eLOC_1> meas{
+    Measurement<SourceLink, BoundParametersIndices, eLOC_0, eLOC_1> meas{
         plane, {}, mCov, mPar[0], mPar[1]};
 
     fm = std::make_unique<FittableMeasurement<SourceLink>>(meas);
@@ -491,7 +491,7 @@ BOOST_AUTO_TEST_CASE(trackstate_reassignment) {
   mCov.setRandom();
   ActsVectorD<2> mPar;
   mPar.setRandom();
-  Measurement<SourceLink, eLOC_0, eLOC_1> m2{
+  Measurement<SourceLink, BoundParametersIndices, eLOC_0, eLOC_1> m2{
       ots.referenceSurface().getSharedPtr(), {}, mCov, mPar[0], mPar[1]};
 
   ts.setCalibrated(m2);
