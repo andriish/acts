@@ -29,7 +29,7 @@ using Covariance = BoundSymMatrix;
 using SourceLink = MinimalSourceLink;
 
 template <ParID_t... params>
-using MeasurementType = Measurement<SourceLink, params...>;
+using MeasurementType = Measurement<SourceLink, BoundParametersIndices, params...>;
 using TrackState = TrackState<SourceLink, BoundParameters>;
 
 // Create a test context
