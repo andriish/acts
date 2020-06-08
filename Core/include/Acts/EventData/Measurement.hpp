@@ -18,6 +18,7 @@
 #include "Acts/Geometry/Volume.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Utilities/ParameterDefinitions.hpp"
+#include "Acts/Geometry/Volume.hpp"
 
 namespace Acts {
 
@@ -258,6 +259,7 @@ class Measurement {
   /// must still be valid at the same memory location.
   ///
   /// @return reference to surface at which the measurement took place
+  template <typename T = parameter_indices_t, std::enable_if_t<std::is_same<T, BoundParametersIndices>::value, int> = 0>
   const Acts::Surface& referenceSurface() const { return *m_pSurface; }
 
   /// @brief access associated volume
@@ -306,6 +308,14 @@ class Measurement {
             (*m_pSurface == *rhs.m_pSurface) &&
             (*m_pVolume == *rhs.m_pVolume) &&
             (m_sourceLink == rhs.m_sourceLink));
+    }
+    if constexpr (std::is_same<parameter_indices_t, FreeParametersIndices>::value)
+    {
+    return ((m_oParameters == rhs.m_oParameters) &&
+            (*m_pVolume == *rhs.m_pVolume) &&
+            (m_sourceLink == rhs.m_sourceLink));
+    }
+    return false;
   }
 
   /// @brief inequality operator
