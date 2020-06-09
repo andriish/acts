@@ -18,7 +18,6 @@
 #include "Acts/Geometry/Volume.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Utilities/ParameterDefinitions.hpp"
-#include "Acts/Geometry/Volume.hpp"
 
 namespace Acts {
 
