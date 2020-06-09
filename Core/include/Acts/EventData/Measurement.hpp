@@ -108,14 +108,58 @@ class Measurement {
   /// @param cov covariance matrix of the measurement.
   /// @param head,values consistent number of parameter values of the
   /// measurement
+<<<<<<< HEAD
   template <typename... Tail>
   Measurement(std::shared_ptr<const RefObject> referenceObject,
+=======
+  template <
+      typename T = parameter_indices_t, typename... Tail,
+      std::enable_if_t<std::is_same<T, BoundParametersIndices>::value, int> = 0>
+  Measurement(std::shared_ptr<const Surface> surface,
+>>>>>>> Format fixed
               const source_link_t& source, CovarianceMatrix cov,
               typename std::enable_if<sizeof...(Tail) + 1 == sizeof...(params),
                                       ParValue_t>::type head,
               Tail... values)
       : m_oParameters(std::move(cov), head, values...),
+<<<<<<< HEAD
         m_pReferenceObject(std::move(referenceObject)),
+=======
+        m_pSurface(std::move(surface)),
+        m_sourceLink(source) {
+    assert(m_pSurface);
+  }
+
+  /// @brief standard constructor for volume bound measurements
+  ///
+  /// Concrete class for all possible measurements.
+  ///
+  /// @note Only a reference to the given volume is stored. The user must
+  /// ensure that the lifetime of the @c Volume object surpasses the lifetime
+  /// of this Measurement object.
+  /// The given parameter values are interpreted as values to the
+  /// parameters as defined in the class template argument @c params.
+  ///
+  /// @attention The current design will fail if the in-memory location of
+  /// the @c Volume object is changed (e.g. if it is stored in a
+  /// container and this gets relocated).
+  ///
+  /// @param volume volume in which the measurement took place
+  /// @param source object for this measurement
+  /// @param cov covariance matrix of the measurement.
+  /// @param head,values consistent number of parameter values of the
+  /// measurement
+  template <
+      typename T = parameter_indices_t, typename... Tail,
+      std::enable_if_t<std::is_same<T, FreeParametersIndices>::value, int> = 0>
+  Measurement(std::shared_ptr<const Volume> volume, const source_link_t& source,
+              CovMatrix_t cov,
+              typename std::enable_if<sizeof...(Tail) + 1 == sizeof...(params),
+                                      ParValue_t>::type head,
+              Tail... values)
+      : m_oParameters(std::move(cov), head, values...),
+        m_pVolume(std::move(volume)),
+>>>>>>> Format fixed
         m_sourceLink(source) {
     assert(m_pReferenceObject);
   }
@@ -346,17 +390,22 @@ template <typename source_link_t>
 using FittableMeasurement =
     typename fittable_measurement_helper<source_link_t>::type;
 
-
-// // https://stackoverflow.com/questions/59250481/is-it-ok-to-use-stdvariant-of-stdvariants
-// template <typename Var1, typename Var2> struct variant_flat;
-
-// template <typename ... Ts1, typename ... Ts2>
-// struct variant_flat<std::variant<Ts1...>, std::variant<Ts2...>>
-// {
-//     using type = std::variant<Ts1..., Ts2...>;
-// };
-
 template <typename source_link_t>
 using FittableVolumeMeasurement =
     typename fittable_volume_measurement_helper<source_link_t>::type;
+}  // namespace Acts
+
+// https://stackoverflow.com/questions/59250481/is-it-ok-to-use-stdvariant-of-stdvariants
+template <typename Var1, typename Var2>
+struct variant_flat;
+
+template <typename... Ts1, typename... Ts2>
+struct variant_flat<std::variant<Ts1...>, std::variant<Ts2...>> {
+  using type = std::variant<Ts1..., Ts2...>;
+};
+
+template <typename source_link_t>
+using FittableCombinedMeasurement =
+    typename variant_flat<FittableMeasurement<source_link_t>,
+                          FittableVolumeMeasurement<source_link_t>>::type;
 }  // namespace Acts
