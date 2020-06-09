@@ -368,7 +368,7 @@ template <typename source_link_t>
 struct fittable_surface_measurement_helper {
   template <BoundParametersIndices... pars>
   struct meas_factory {
-    using type = Measurement<source_link_t, BoundParametersIndices, pars...>;
+    using type = Measurement<source_link_t, parameter_indices_t, pars...>;
   };
 
   using type =
