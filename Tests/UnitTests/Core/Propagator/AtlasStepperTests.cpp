@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE(ConstructStateWithCovariance) {
                        navDir, stepSize, tolerance);
 
   BOOST_CHECK(state.covTransport);
-  BOOST_CHECK_EQUAL(*state.covariance, cov);
+  BOOST_CHECK_EQUAL(std::get<BoundSymMatrix>(*state.covariance), cov);
   BOOST_CHECK_EQUAL(state.pVector[0], pos.x());
   BOOST_CHECK_EQUAL(state.pVector[1], pos.y());
   BOOST_CHECK_EQUAL(state.pVector[2], pos.z());
@@ -202,7 +202,7 @@ BOOST_AUTO_TEST_CASE(BuildBound) {
   BOOST_CHECK(pars.covariance().has_value());
   BOOST_CHECK_NE(*pars.covariance(), cov);
   // check Jacobian. should be identity since there was no propagation yet
-  CHECK_CLOSE_ABS(jac, Jacobian(Jacobian::Identity()), eps);
+  CHECK_CLOSE_ABS(std::get<BoundMatrix>(jac), Jacobian(Jacobian::Identity()), eps);
   // check propagation length
   CHECK_CLOSE_ABS(pathLength, 0., eps);
 }
@@ -223,7 +223,7 @@ BOOST_AUTO_TEST_CASE(BuildCurvilinear) {
   BOOST_CHECK(pars.covariance().has_value());
   BOOST_CHECK_NE(*pars.covariance(), cov);
   // check Jacobian. should be identity since there was no propagation yet
-  CHECK_CLOSE_ABS(jac, Jacobian(Jacobian::Identity()), eps);
+  CHECK_CLOSE_ABS(std::get<BoundMatrix>(jac), Jacobian(Jacobian::Identity()), eps);
   // check propagation length
   CHECK_CLOSE_ABS(pathLength, 0., eps);
 }
@@ -292,7 +292,7 @@ BOOST_AUTO_TEST_CASE(StepWithCovariance) {
   BOOST_CHECK_EQUAL(stepper.charge(state.stepping), charge);
 
   stepper.covarianceTransport(state.stepping);
-  BOOST_CHECK_NE(state.stepping.cov, cov);
+  BOOST_CHECK_NE(std::get<BoundSymMatrix>(state.stepping.cov), cov);
 }
 
 // test state reset method
