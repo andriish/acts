@@ -9,6 +9,7 @@
 #pragma once
 
 #include <bitset>
+#include <cassert>
 #include <cstdint>
 #include <type_traits>
 #include <vector>
@@ -470,10 +471,12 @@ class TrackStateProxy {
     std::shared_ptr<const Surface>& refSrf =
         m_traj->m_referenceSurfaces[dataref.irefsurface];
     // either unset, or the same, otherwise this is inconsistent assignment
-    assert(!refSrf || refSrf.get() == &meas.referenceSurface());
+    assert(!refSrf || refSrf.get() == &meas.referenceObject());
     if (!refSrf) {
       // ref surface is not set, set it now
-      refSrf = meas.referenceSurface().getSharedPtr();
+      const auto& object = meas.referenceObject();
+      assert(std::is_same<decltype(object), const Surface&>::value);
+      refSrf = object.getSharedPtr();
     }
 
     assert(dataref.icalibratedsourcelink != IndexData::kInvalid);

@@ -31,13 +31,13 @@ template<>
 struct ReferenceObject<BoundParametersIndices>
 {
 	using type = Surface;
-}
+};
 
 template<>
 struct ReferenceObject<FreeParametersIndices>
 {
 	using type = Volume;
-}
+};
 
 /// @brief base class for Measurements
 ///

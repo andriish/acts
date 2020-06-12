@@ -56,7 +56,7 @@ class TrackState {
   /// Constructor from (uncalibrated) measurement
   ///
   /// @param m The measurement object
-  TrackState(SourceLink m) : m_surface(&m.referenceSurface()) {
+  TrackState(SourceLink m) : m_surface(&m.referenceObject()) {
     measurement.uncalibrated = std::move(m);
     m_typeFlags.set(MeasurementFlag);
   }
