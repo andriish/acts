@@ -76,7 +76,7 @@ auto make_trackstate(size_t dim = 3) {
 
     // "calibrate", keep original source link (stack address)
     ts.measurement.calibrated =
-        decltype(meas){meas.referenceSurface().getSharedPtr(),
+        decltype(meas){meas.referenceObject().getSharedPtr(),
                        sl,
                        meas.covariance(),
                        meas.parameters()[0],
@@ -102,7 +102,7 @@ auto make_trackstate(size_t dim = 3) {
 
     // "calibrate", keep original source link (stack address)
     ts.measurement.calibrated = decltype(meas){
-        meas.referenceSurface().getSharedPtr(), sl, meas.covariance(),
+        meas.referenceObject().getSharedPtr(), sl, meas.covariance(),
         meas.parameters()[0], meas.parameters()[1]};
     tso = ts;
   } else {

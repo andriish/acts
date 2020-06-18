@@ -22,8 +22,8 @@ namespace MeasurementHelpers {
 /// @tparam T The FittableMeasurement type
 /// @return const pointer to the extracted surface
 template <typename T>
-const Surface* getSurface(const T& fittable_measurement) {
-  return std::visit([](const auto& meas) { return &meas.referenceSurface(); },
+const auto* getSurface(const T& fittable_measurement) {
+  return std::visit([](const auto& meas) { return &meas.referenceObject(); },
                     fittable_measurement);
 }
 
@@ -41,7 +41,7 @@ struct MinimalSourceLink {
     return meas == rhs.meas;
   }
 
-  const Surface& referenceSurface() const {
+  const auto& referenceSurface() const {
     return *MeasurementHelpers::getSurface(*meas);
   }
 

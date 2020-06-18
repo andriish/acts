@@ -470,10 +470,10 @@ class TrackStateProxy {
     std::shared_ptr<const Surface>& refSrf =
         m_traj->m_referenceSurfaces[dataref.irefsurface];
     // either unset, or the same, otherwise this is inconsistent assignment
-    assert(!refSrf || refSrf.get() == &meas.referenceSurface());
+    assert(!refSrf || refSrf.get() == &meas.referenceObject());
     if (!refSrf) {
       // ref surface is not set, set it now
-      refSrf = meas.referenceSurface().getSharedPtr();
+      refSrf = meas.referenceObject().getSharedPtr();
     }
 
     assert(dataref.icalibratedsourcelink != IndexData::kInvalid);
