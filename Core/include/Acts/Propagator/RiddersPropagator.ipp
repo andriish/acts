@@ -95,14 +95,14 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
       }
 
       // Exchange the result by Ridders Covariance
-      FreeParameters* parameters =
-          const_cast<FreeParameters*>(nominalResult.endParameters.get());
+      FreeTrackParameters* parameters =
+          const_cast<FreeTrackParameters*>(nominalResult.endParameters.get());
       if (start.covariance()) {
         parameters->covariance(std::get<FreeSymMatrix>(calculateCovariance(
             derivatives, *start.covariance(), deviations, Vector3D())));
       }
       nominalResult.endParameters =
-          std::make_unique<const FreeParameters>(*parameters);
+          std::make_unique<const FreeTrackParameters>(*parameters);
     }
     // Case IV: We start and end free
     else {
@@ -116,15 +116,15 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
       }
 
       // Exchange the result by Ridders Covariance
-      FreeParameters* parameters =
-          const_cast<FreeParameters*>(nominalResult.endParameters.get());
+      FreeTrackParameters* parameters =
+          const_cast<FreeTrackParameters*>(nominalResult.endParameters.get());
       if (start.covariance()) {
         parameters->covariance(std::get<FreeSymMatrix>(
             calculateCovariance(derivatives, *start.covariance(), deviations,
                                 start.parameters().template segment<3>(4))));
       }
       nominalResult.endParameters =
-          std::make_unique<const FreeParameters>(*parameters);
+          std::make_unique<const FreeTrackParameters>(*parameters);
     }
   }
 
@@ -330,7 +330,7 @@ Acts::RiddersPropagator<propagator_t>::wiggleDimension(
         wiggleStartVector(options.geoContext, h, param, startPars);
 
     const auto& r =
-        m_propagator.template propagate<FreeParameters>(tp, options).value();
+        m_propagator.template propagate<FreeTrackParameters>(tp, options).value();
 
     // Collect the slope
     derivatives.push_back((r.endParameters->parameters() - nominal) / h);

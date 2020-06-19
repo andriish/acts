@@ -40,7 +40,7 @@ class AtlasStepper {
                                 BoundToFreeMatrix, FreeMatrix>;
   using Covariance = std::variant<BoundSymMatrix, FreeSymMatrix>;
   using CurvilinearState = std::tuple<CurvilinearParameters, Jacobian, double>;
-  using FreeState = std::tuple<FreeParameters, Jacobian, double>;
+  using FreeState = std::tuple<FreeTrackParameters, Jacobian, double>;
   using BoundState = std::tuple<BoundParameters, Jacobian, double>;
   using BField = bfield_t;
 
@@ -261,7 +261,7 @@ class AtlasStepper {
                        double /*unused*/)
         : geoContext(gctx), fieldCache(mctx) {
       throw std::runtime_error(
-          "AtlasStepper::State with FreeParameters is not implemented");
+          "AtlasStepper::State with FreeTrackParameters is not implemented");
     }
 
     // optimisation that init is not called twice

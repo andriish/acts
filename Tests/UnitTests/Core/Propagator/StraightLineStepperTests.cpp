@@ -100,7 +100,7 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_state_test) {
   FreeVector pars;
   pars << pos.x(), pos.y(), pos.z(), time, dir.x(), dir.y(), dir.z(),
       charge / mom.norm();
-  FreeParameters fp(std::nullopt, pars);
+  FreeTrackParameters fp(std::nullopt, pars);
   slsState = StraightLineStepper::State(tgContext, mfContext, fp, ndir,
                                         stepSize, tolerance);
 
@@ -121,14 +121,14 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_state_test) {
   BOOST_CHECK_EQUAL(slsState.tolerance, tolerance);
 
   // Test without charge and covariance matrix
-  NeutralFreeParameters nfp(std::nullopt, pars);
+  NeutralFreeTrackParameters nfp(std::nullopt, pars);
   slsState = StraightLineStepper::State(tgContext, mfContext, nfp, ndir,
                                         stepSize, tolerance);
   BOOST_CHECK_EQUAL(slsState.q, 0.);
 
   // Test with covariance matrix
   FreeSymMatrix freeCov = 8. * FreeSymMatrix::Identity();
-  nfp = NeutralFreeParameters(freeCov, pars);
+  nfp = NeutralFreeTrackParameters(freeCov, pars);
   slsState = StraightLineStepper::State(tgContext, mfContext, nfp, ndir,
                                         stepSize, tolerance);
   BOOST_CHECK_NE(slsState.jacDirToAngle,
@@ -427,7 +427,7 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_test) {
   CHECK_CLOSE_ABS(std::get<2>(freeState), 0., 1e-6);
 
   // Transport the covariance to free parameters
-  sls.covarianceTransport<FreeParameters>(slsState);
+  sls.covarianceTransport<FreeTrackParameters>(slsState);
   BOOST_REQUIRE_NO_THROW(std::get<FreeSymMatrix>(slsState.cov));
   BOOST_CHECK(!slsState.jacToGlobal.has_value());
   BOOST_CHECK_EQUAL(slsState.jacTransport, FreeMatrix::Identity());

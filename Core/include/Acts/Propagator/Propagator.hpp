@@ -214,7 +214,7 @@ class Propagator final {
   using BoundState = std::tuple<BoundParameters, JacobianToBoundPars, double>;
   using CurvilinearState =
       std::tuple<CurvilinearParameters, JacobianToBoundPars, double>;
-  using FreeState = std::tuple<FreeParameters, JacobianToFreePars, double>;
+  using FreeState = std::tuple<FreeTrackParameters, JacobianToFreePars, double>;
 
   static_assert(StepperStateConcept<typename stepper_t::State>,
                 "Stepper does not fulfill stepper concept.");

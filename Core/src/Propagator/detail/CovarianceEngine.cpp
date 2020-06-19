@@ -15,7 +15,7 @@ using Covariance = std::variant<BoundSymMatrix, FreeSymMatrix>;
 using BoundState = std::tuple<BoundParameters, detail::Jacobian, double>;
 using CurvilinearState =
     std::tuple<CurvilinearParameters, detail::Jacobian, double>;
-using FreeState = std::tuple<FreeParameters, detail::Jacobian, double>;
+using FreeState = std::tuple<FreeTrackParameters, detail::Jacobian, double>;
 
 /// @brief Evaluate the projection Jacobian from free to curvilinear parameters
 ///
@@ -440,7 +440,7 @@ FreeState freeState(Covariance& covarianceMatrix, Jacobian& jacobian,
     cov = std::get<FreeSymMatrix>(covarianceMatrix);
   }
   // Create the free parameters
-  FreeParameters freeParameters(std::move(cov), parameters);
+  FreeTrackParameters freeParameters(std::move(cov), parameters);
 
   return std::make_tuple(std::move(freeParameters), jacobian, accumulatedPath);
 }

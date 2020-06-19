@@ -48,7 +48,7 @@ struct PropagatorState {
     using Covariance = std::variant<BoundSymMatrix, FreeSymMatrix>;
     using CurvilinearState =
         std::tuple<CurvilinearParameters, Jacobian, double>;
-    using FreeState = std::tuple<FreeParameters, Jacobian, double>;
+    using FreeState = std::tuple<FreeTrackParameters, Jacobian, double>;
     using BoundState = std::tuple<BoundParameters, Jacobian, double>;
     using BField = int;
 
@@ -173,7 +173,7 @@ struct PropagatorState {
       pars(3) = state.t;
       pars.template segment<3>(4) = state.dir;
       pars(7) = (state.q == 0. ? 1. : state.q) / state.p;
-      FreeParameters parameters(std::nullopt, pars);
+      FreeTrackParameters parameters(std::nullopt, pars);
 
       Jacobian jacobian = FreeMatrix(FreeMatrix::Identity());
 

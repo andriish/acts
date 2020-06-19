@@ -54,7 +54,7 @@ class EigenStepper {
                                 BoundToFreeMatrix, FreeMatrix>;
   using Covariance = std::variant<BoundSymMatrix, FreeSymMatrix>;
   using CurvilinearState = std::tuple<CurvilinearParameters, Jacobian, double>;
-  using FreeState = std::tuple<FreeParameters, Jacobian, double>;
+  using FreeState = std::tuple<FreeTrackParameters, Jacobian, double>;
   using BoundState = std::tuple<BoundParameters, Jacobian, double>;
   using BField = bfield_t;
 
