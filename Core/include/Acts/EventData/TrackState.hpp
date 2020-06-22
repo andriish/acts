@@ -122,8 +122,8 @@ class TrackState {
     return (*this);
   }
 
-  /// @brief return method for the surface
-  const RefObject& referenceSurface() const { return (*m_referenceObject); }
+  /// @brief return method for the reference object
+  const RefObject& referenceObject() const { return (*m_referenceObject); }
 
   /// @brief set the type flag
   void setType(const TrackStateFlag& flag, bool status = true) {

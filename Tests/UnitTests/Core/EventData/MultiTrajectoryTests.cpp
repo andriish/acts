@@ -492,7 +492,7 @@ BOOST_AUTO_TEST_CASE(trackstate_reassignment) {
   ActsVectorD<2> mPar;
   mPar.setRandom();
   Measurement<SourceLink, BoundParametersIndices, eLOC_0, eLOC_1> m2{
-      ots.referenceSurface().getSharedPtr(), {}, mCov, mPar[0], mPar[1]};
+      ots.referenceObject().getSharedPtr(), {}, mCov, mPar[0], mPar[1]};
 
   ts.setCalibrated(m2);
 
@@ -545,7 +545,7 @@ BOOST_AUTO_TEST_CASE(storage_consistency) {
   BOOST_CHECK_EQUAL(*ts.parameter.smoothed->covariance(),
                     tsProxy.smoothedCovariance());
 
-  BOOST_CHECK_EQUAL(&tsProxy.referenceSurface(), &ts.referenceSurface());
+  BOOST_CHECK_EQUAL(&tsProxy.referenceSurface(), &ts.referenceObject());
 
   BOOST_CHECK(tsProxy.hasJacobian());
   BOOST_CHECK_EQUAL(tsProxy.jacobian(), *ts.parameter.jacobian);
