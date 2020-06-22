@@ -982,7 +982,7 @@ class KalmanFitter {
     std::map<const Surface*, source_link_t> inputMeasurements;
     for (const auto& sl : sourcelinks) {
       const auto* srf = &sl.referenceObject();
-      if(dynamic_cast<const Surface*>(srf) != nullptr)
+      if(std::is_same<decltype(srf), const Surface*>::value)
 		inputMeasurements.emplace(srf, sl);
     }
 
@@ -1084,7 +1084,7 @@ class KalmanFitter {
     std::map<const Surface*, source_link_t> inputMeasurements;
     for (const auto& sl : sourcelinks) {
       const auto* srf = &sl.referenceObject();
-      if(dynamic_cast<const Surface*>(srf) != nullptr)
+      if(std::is_same<decltype(srf), const Surface*>::value)
 		inputMeasurements.emplace(srf, sl);
     }
 

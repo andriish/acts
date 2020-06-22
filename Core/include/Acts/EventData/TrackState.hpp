@@ -8,12 +8,13 @@
 
 #pragma once
 
+#include <cassert>
+#include <optional>
+
 #include "Acts/EventData/Measurement.hpp"
 #include "Acts/EventData/MeasurementHelpers.hpp"
 #include "Acts/EventData/SourceLinkConcept.hpp"
 #include "Acts/Utilities/ParameterDefinitions.hpp"
-
-#include <optional>
 
 namespace Acts {
 
@@ -57,7 +58,10 @@ class TrackState {
   /// Constructor from (uncalibrated) measurement
   ///
   /// @param m The measurement object
-  TrackState(SourceLink m) : m_surface(&m.referenceObject()) {
+  TrackState(SourceLink m) {
+	const auto* obj = &m.referenceObject();
+	assert((std::is_same<decltype(obj), const RefObject*>::value));
+	m_referenceObject = obj;
     measurement.uncalibrated = std::move(m);
     m_typeFlags.set(MeasurementFlag);
   }
@@ -67,7 +71,10 @@ class TrackState {
   /// @tparam parameters_t Type of the predicted parameters
   /// @param p The parameters object
   TrackState(Parameters p) {
-    m_surface = &p.referenceSurface();
+	if constexpr (std::is_same<RefObject, Surface>::value)
+		m_referenceObject = &p.referenceSurface();
+	else
+		m_referenceObject = &p.referenceVolume();
     parameter.predicted = std::move(p);
     m_typeFlags.set(ParameterFlag);
   }
@@ -81,7 +88,7 @@ class TrackState {
   TrackState(const TrackState& rhs)
       : parameter(rhs.parameter),
         measurement(rhs.measurement),
-        m_surface(rhs.m_surface),
+        m_referenceObject(rhs.m_referenceObject),
         m_typeFlags(rhs.m_typeFlags) {}
 
   /// Copy move constructor
@@ -90,7 +97,7 @@ class TrackState {
   TrackState(TrackState&& rhs)
       : parameter(std::move(rhs.parameter)),
         measurement(std::move(rhs.measurement)),
-        m_surface(std::move(rhs.m_surface)),
+        m_referenceObject(std::move(rhs.m_referenceObject)),
         m_typeFlags(std::move(rhs.m_typeFlags)) {}
 
   /// Assignment operator
@@ -99,7 +106,7 @@ class TrackState {
   TrackState& operator=(const TrackState& rhs) {
     parameter = rhs.parameter;
     measurement = rhs.measurement;
-    m_surface = rhs.m_surface;
+    m_referenceObject = rhs.m_referenceObject;
     m_typeFlags = rhs.m_typeFlags;
     return (*this);
   }
@@ -110,13 +117,13 @@ class TrackState {
   TrackState& operator=(TrackState&& rhs) {
     parameter = std::move(rhs.parameter);
     measurement = std::move(rhs.measurement);
-    m_surface = std::move(rhs.m_surface);
+    m_referenceObject = std::move(rhs.m_referenceObject);
     m_typeFlags = std::move(rhs.m_typeFlags);
     return (*this);
   }
 
   /// @brief return method for the surface
-  const RefObject& referenceSurface() const { return (*m_surface); }
+  const RefObject& referenceSurface() const { return (*m_referenceObject); }
 
   /// @brief set the type flag
   void setType(const TrackStateFlag& flag, bool status = true) {
@@ -175,7 +182,7 @@ class TrackState {
 
  private:
   /// The surface of this TrackState
-  const RefObject* m_surface = nullptr;
+  const RefObject* m_referenceObject = nullptr;
   /// The type flag of this TrackState
   TrackStateType m_typeFlags;
 };
