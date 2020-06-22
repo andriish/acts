@@ -53,7 +53,7 @@ struct ExtendedMinimalSourceLink {
     return meas == rhs.meas;
   }
 
-  const Surface& referenceSurface() const {
+  const auto& referenceObject() const {
     return *MeasurementHelpers::getObject(*meas);
   }
 

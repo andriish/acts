@@ -1159,8 +1159,8 @@ class CombinatorialKalmanFilter {
     std::unordered_map<const Surface*, std::vector<SourceLink>>
         inputMeasurements;
     for (const auto& sl : sourcelinks) {
-      const auto* srf = &sl.referenceSurface();
-      if(dynamic_cast<const Surface*>(srf) != nullptr)
+      const auto* srf = &sl.referenceObject();
+      if(std::is_same<decltype(srf), const Surface*>::value)
 		inputMeasurements[srf].emplace_back(sl);
     }
 
