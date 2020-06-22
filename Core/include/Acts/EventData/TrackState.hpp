@@ -52,11 +52,12 @@ class TrackState {
   using SourceLink = source_link_t;
   using Parameters = parameters_t;
   using Jacobian = typename Parameters::CovMatrix_t;
+  using RefObject = typename ReferenceObject<typename Parameters::ParameterIndices>::type;
 
   /// Constructor from (uncalibrated) measurement
   ///
   /// @param m The measurement object
-  TrackState(SourceLink m) : m_surface(&m.referenceSurface()) {
+  TrackState(SourceLink m) : m_surface(&m.referenceObject()) {
     measurement.uncalibrated = std::move(m);
     m_typeFlags.set(MeasurementFlag);
   }
@@ -65,7 +66,7 @@ class TrackState {
   ///
   /// @tparam parameters_t Type of the predicted parameters
   /// @param p The parameters object
-  TrackState(parameters_t p) {
+  TrackState(Parameters p) {
     m_surface = &p.referenceSurface();
     parameter.predicted = std::move(p);
     m_typeFlags.set(ParameterFlag);
@@ -115,7 +116,7 @@ class TrackState {
   }
 
   /// @brief return method for the surface
-  const Surface& referenceSurface() const { return (*m_surface); }
+  const RefObject& referenceSurface() const { return (*m_surface); }
 
   /// @brief set the type flag
   void setType(const TrackStateFlag& flag, bool status = true) {
@@ -174,7 +175,7 @@ class TrackState {
 
  private:
   /// The surface of this TrackState
-  const Surface* m_surface = nullptr;
+  const RefObject* m_surface = nullptr;
   /// The type flag of this TrackState
   TrackStateType m_typeFlags;
 };

@@ -54,7 +54,7 @@ struct ExtendedMinimalSourceLink {
   }
 
   const Surface& referenceSurface() const {
-    return *MeasurementHelpers::getSurface(*meas);
+    return *MeasurementHelpers::getObject(*meas);
   }
 
   const FittableMeasurement<ExtendedMinimalSourceLink>& operator*() const {
