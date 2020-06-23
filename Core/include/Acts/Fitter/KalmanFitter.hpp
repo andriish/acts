@@ -916,8 +916,11 @@ class KalmanFitter {
     ACTS_VERBOSE("Preparing " << sourcelinks.size() << " input measurements");
     std::map<const Surface*, source_link_t> inputMeasurements;
     for (const auto& sl : sourcelinks) {
-      const Surface* srf = &sl.referenceSurface();
-      inputMeasurements.emplace(srf, sl);
+	  if(sl.hasMeasurementOnSurface)
+	  {
+		  const Surface* srf = &sl.referenceSurface();
+		  inputMeasurements.emplace(srf, sl);
+	  }
     }
 
     // Create the ActionList and AbortList
@@ -1009,8 +1012,11 @@ class KalmanFitter {
     ACTS_VERBOSE("Preparing " << sourcelinks.size() << " input measurements");
     std::map<const Surface*, source_link_t> inputMeasurements;
     for (const auto& sl : sourcelinks) {
-      const Surface* srf = &sl.referenceSurface();
-      inputMeasurements.emplace(srf, sl);
+	  if(sl.hasMeasurementOnSurface)
+	  {
+		  const Surface* srf = &sl.referenceSurface();
+		  inputMeasurements.emplace(srf, sl);
+	  }
     }
 
     // Create the ActionList and AbortList

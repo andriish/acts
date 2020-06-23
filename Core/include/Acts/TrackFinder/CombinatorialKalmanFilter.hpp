@@ -1106,8 +1106,11 @@ class CombinatorialKalmanFilter {
     std::unordered_map<const Surface*, std::vector<SourceLink>>
         inputMeasurements;
     for (const auto& sl : sourcelinks) {
-      const Surface* srf = &sl.referenceSurface();
-      inputMeasurements[srf].emplace_back(sl);
+	  if(sl.hasMeasurementOnSurface)
+	  {
+		  const Surface* srf = &sl.referenceSurface();
+          inputMeasurements[srf].emplace_back(sl);
+	  }
     }
 
     // Create the ActionList and AbortList

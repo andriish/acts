@@ -39,12 +39,12 @@ BOOST_AUTO_TEST_CASE(getSurface_test) {
 
   FittableMeasurement fm = m;
 
-  BOOST_CHECK_EQUAL(MeasurementHelpers::getSurface(fm), cylinder.get());
+  BOOST_CHECK_EQUAL(MeasurementHelpers::getObject(fm), cylinder.get());
 
   MeasurementType<ParDef::eLOC_0, ParDef::eLOC_1> m2(
       cylinder2, {}, std::move(cov), -0.1, 0.45);
   fm = m2;
-  BOOST_CHECK_EQUAL(MeasurementHelpers::getSurface(fm), cylinder2.get());
+  BOOST_CHECK_EQUAL(MeasurementHelpers::getObject(fm), cylinder2.get());
 }
 
 BOOST_AUTO_TEST_CASE(getSize_test) {

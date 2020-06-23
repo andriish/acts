@@ -117,7 +117,7 @@ class Measurement {
       : m_oParameters(std::move(cov), head, values...),
         m_pReferenceObject(std::move(referenceObject)),
         m_sourceLink(source) {
-    assert(m_pSurface);
+    assert(m_pReferenceObject);
   }
 
   /// @brief copy constructor
@@ -339,6 +339,16 @@ struct fittable_volume_measurement_helper {
       typename detail::type_generator_t<FreeParametersIndices, meas_factory>;
 };
 
+/// @brief Builds a std::variant with the elements from two std::variant types
+/// https://stackoverflow.com/questions/59250481/is-it-ok-to-use-stdvariant-of-stdvariants
+template <typename Var1, typename Var2>
+struct variant_flat;
+
+template <typename... Ts1, typename... Ts2>
+struct variant_flat<std::variant<Ts1...>, std::variant<Ts2...>> {
+  using type = std::variant<Ts1..., Ts2...>;
+};
+
 /**
  * @brief Measurement variant types
  */
@@ -349,16 +359,6 @@ using FittableMeasurement =
 template <typename source_link_t>
 using FittableVolumeMeasurement =
     typename fittable_volume_measurement_helper<source_link_t>::type;
-}  // namespace Acts
-
-// https://stackoverflow.com/questions/59250481/is-it-ok-to-use-stdvariant-of-stdvariants
-template <typename Var1, typename Var2>
-struct variant_flat;
-
-template <typename... Ts1, typename... Ts2>
-struct variant_flat<std::variant<Ts1...>, std::variant<Ts2...>> {
-  using type = std::variant<Ts1..., Ts2...>;
-};
 
 template <typename source_link_t>
 using FittableCombinedMeasurement =

@@ -13,6 +13,7 @@
 
 #include "Acts/EventData/ParameterSet.hpp"
 #include "Acts/Utilities/Definitions.hpp"
+#include "Acts/Geometry/Volume.hpp"
 
 namespace Acts {
 
@@ -36,6 +37,9 @@ class SingleFreeTrackParameters {
 
  public:
   /// Public typedefs
+  /// Type of indices
+  using ParameterIndices = FreeParametersIndices;
+  
   /// Type of covariance matrix
   using CovMatrix_t = FreeSymMatrix;
 
@@ -136,6 +140,9 @@ class SingleFreeTrackParameters {
   /// covariance matrix
   const FullFreeParameterSet& getParameterSet() const { return m_oParameters; }
 
+  /// @brief access method to the reference volume
+  const Volume& referenceVolume() const { return *m_pVolume; }
+  
   /// @brief Equality operator
   ///
   /// @param [in] rhs Object to compare `*this` to
@@ -219,5 +226,6 @@ class SingleFreeTrackParameters {
                                  /// parameter values and covariance matrix
   ChargePolicy m_oChargePolicy;  ///< charge policy object distinguishing
                                  /// between charged and neutral tracks
+  std::shared_ptr<const Volume> m_pVolume;
 };
 }  // namespace Acts

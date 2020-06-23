@@ -21,8 +21,8 @@ namespace concept {
   template <typename T>
   using comparable_t = decltype(std::declval<T>() == std::declval<T>());
 
-  template <typename T>
-  using dereferenceable_t = decltype(*std::declval<T>());
+  //~ template <typename T>
+  //~ using dereferenceable_t = decltype(*std::declval<T>());
 
   //~ template <typename T>
   //~ using surface_method_t = decltype(std::declval<T>().referenceSurface());

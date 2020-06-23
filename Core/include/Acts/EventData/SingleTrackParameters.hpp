@@ -42,7 +42,9 @@ class SingleTrackParameters {
 
  public:
   // public typedef's
-
+  /// Type of indices
+  using ParameterIndices = BoundParametersIndices;
+  
   /// vector type for stored track parameters
   using ParVector_t = BoundVector;
 

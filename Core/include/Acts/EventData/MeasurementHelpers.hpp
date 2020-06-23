@@ -26,6 +26,11 @@ const auto* getSurface(const T& fittable_measurement) {
   return std::visit([](const auto& meas) { return &meas.referenceObject(); },
                     fittable_measurement);
 }
+template <typename T>
+const Volume* getVolume(const T& fittable_measurement) {
+  return std::visit([](const auto& meas) { return &meas.referenceObject(); },
+                    fittable_measurement);
+}
 
 template <typename T>
 size_t getSize(const T& fittable_measurement) {
@@ -35,7 +40,11 @@ size_t getSize(const T& fittable_measurement) {
 }  // namespace MeasurementHelpers
 
 struct MinimalSourceLink {
-  const FittableMeasurement<MinimalSourceLink>* meas{nullptr};
+  const FittableMeasurement<MinimalSourceLink>* measS{nullptr};
+  const FittableVolumeMeasurement<MinimalSourceLink>* measV{nullptr};
+
+  bool hasMeasurementOnSurface = false;
+  using MeasurementType = FittableCombinedMeasurement<MinimalSourceLink>;
 
   bool operator==(const MinimalSourceLink& rhs) const;
 
@@ -45,7 +54,7 @@ struct MinimalSourceLink {
 };
 
 inline std::ostream& operator<<(std::ostream& os, const MinimalSourceLink& sl) {
-  os << "SourceLink(" << sl.meas << ")";
+  os << "SourceLink(" << (sl.measS != nullptr ? sl.measS : sl.measV) << ")";
   return os;
 }
 
