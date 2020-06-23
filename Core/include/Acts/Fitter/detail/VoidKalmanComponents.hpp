@@ -62,12 +62,12 @@ struct VoidMeasurementCalibrator {
   /// @note This will not make the "calibrated" measurement point to the
   /// uncalibrated measurement via sourcelink, it's just a copy.
   template <typename source_link_t, typename parameters_t>
-  FittableMeasurement<source_link_t> operator()(
+  FittableVolumeMeasurement<source_link_t> operator()(
       const source_link_t& sl, const parameters_t& /*pars*/) const {
     static_assert(SourceLinkConcept<source_link_t>,
                   "Source link does fulfill SourceLinkConcept.");
     static_assert(
-        concept ::converts_to<FittableMeasurement<source_link_t>,
+        concept ::converts_to<FittableVolumeMeasurement<source_link_t>,
                               concept ::detail_slc::dereferenceable_t,
                               source_link_t>,
         "For DefaultMeasurementCalibrator, source link needs to implement "

@@ -203,7 +203,7 @@ static inline std::string testMultiTrajectory(IVisualization& helper) {
   // Create measurements (assuming they are for a linear track parallel to
   // global x-axis)
   std::cout << "Creating measurements:" << std::endl;
-  std::vector<FittableMeasurement<SourceLink>> measurements;
+  std::vector<FittableVolumeMeasurement<SourceLink>> measurements;
   measurements.reserve(6);
   Vector2D lPosCenter{10_mm, 10_mm};
   std::array<double, 2> resolution = {30_um, 50_um};

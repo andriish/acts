@@ -23,7 +23,7 @@ using SourceLink = MinimalSourceLink;
 template <ParID_t... params>
 using MeasurementType =
     Measurement<SourceLink, BoundParametersIndices, params...>;
-using FittableMeasurement = FittableMeasurement<SourceLink>;
+using FittableMeasurement = FittableCombinedMeasurement<SourceLink>;
 
 BOOST_AUTO_TEST_CASE(getObject_test) {
   auto cylinderBounds = std::make_shared<CylinderBounds>(3, 10);

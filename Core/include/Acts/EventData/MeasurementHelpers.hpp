@@ -35,7 +35,7 @@ size_t getSize(const T& fittable_measurement) {
 }  // namespace MeasurementHelpers
 
 struct MinimalSourceLink {
-  const FittableMeasurement<MinimalSourceLink>* meas{nullptr};
+  const FittableCombinedMeasurement<MinimalSourceLink>* meas{nullptr};
 
   bool operator==(const MinimalSourceLink& rhs) const {
     return meas == rhs.meas;
@@ -45,7 +45,7 @@ struct MinimalSourceLink {
     return *MeasurementHelpers::getObject(*meas);
   }
 
-  const FittableMeasurement<MinimalSourceLink>& operator*() const {
+  const FittableCombinedMeasurement<MinimalSourceLink>& operator*() const {
     return *meas;
   }
 };

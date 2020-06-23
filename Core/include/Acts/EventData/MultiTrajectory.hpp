@@ -444,14 +444,12 @@ class TrackStateProxy {
   /// *invalid* (i.e. unset) for this TrackState..
   /// @tparam params The parameter tags of the measurement
   /// @param meas The measurement object to set
-  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>,
-            ParID_t... params>
-  void setCalibrated(const Acts::Measurement<SourceLink, BoundParametersIndices,
-                                             params...>& meas) {
+  template <typename measurement_t, bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  void setCalibrated(const measurement_t& meas) {
+	  static_assert(std::is_same<SourceLink, measurement_t::SourceLink>::value);
     IndexData& dataref = data();
     constexpr size_t measdim =
-        Acts::Measurement<SourceLink, BoundParametersIndices,
-                          params...>::size();
+        measurement_t::size();
 
     dataref.measdim = measdim;
 
@@ -486,11 +484,11 @@ class TrackStateProxy {
   /// they will **not be removed**, but may become unaccessible.
   /// @tparam params The parameter tags of the measurement
   /// @param meas The measurement object to set
-  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>,
-            ParID_t... params>
+  template <typename measurement_t, bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
   void resetCalibrated(
-      const Acts::Measurement<SourceLink, BoundParametersIndices, params...>&
+      const measurement_t&
           meas) {
+    static_assert(std::is_same<SourceLink, measurement_t::SourceLink>::value);
     IndexData& dataref = data();
     auto& traj = *m_traj;
     // force reallocate, whether currently invalid or shared index
@@ -601,13 +599,11 @@ constexpr bool VisitorConcept = concept ::require<
 /// can be easily identified. Some functionality is provided to simplify
 /// iterating over specific sub-components.
 /// @tparam source_link_t Type to link back to an original measurement
-template <typename source_link_t>
+template <typename source_link_t, unsigned int parameters_size_t, unsigned int measurement_size_t>
 class MultiTrajectory {
  public:
-  enum {
-    ParametersSize = eBoundParametersSize,
-    MeasurementSizeMax = eBoundParametersSize,
-  };
+  using ParametersSize = parameters_size_t;
+  using MeasurementSizeMax = measurement_size_t;
   using SourceLink = source_link_t;
   using ConstTrackStateProxy =
       detail_lt::TrackStateProxy<SourceLink, ParametersSize, MeasurementSizeMax,
