@@ -40,8 +40,9 @@ class SimSourceLink {
   SimSourceLink& operator=(SimSourceLink&&) = default;
   SimSourceLink& operator=(const SimSourceLink&) = default;
 
+  using MeasurementType = Acts::FittableMeasurement<SimSourceLink>;
   constexpr Acts::GeometryID geometryId() const { return m_geometryId; }
-  constexpr const Acts::Surface& referenceSurface() const { return *m_surface; }
+  constexpr const Acts::GeometryObject& referenceObject() const { return *m_surface; }
   constexpr const ActsFatras::Hit& truthHit() const { return *m_truthHit; }
 
   Acts::FittableMeasurement<SimSourceLink> operator*() const {
