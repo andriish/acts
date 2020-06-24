@@ -85,7 +85,7 @@ auto fillTrackState(track_state_t& ts, TrackStatePropMask mask,
     Measurement<SourceLink, BoundParametersIndices, eLOC_0, eLOC_1, eQOP> meas{
         plane, {}, mCov, mPar[0], mPar[1], mPar[2]};
 
-    fm = std::make_unique<FittableMeasurement<SourceLink>>(meas);
+    fm = std::make_unique<FittableCombinedMeasurement<SourceLink>>(meas);
 
     SourceLink sourceLink{fm.get()};
     pc.sourceLink = sourceLink;
@@ -112,7 +112,7 @@ auto fillTrackState(track_state_t& ts, TrackStatePropMask mask,
     Measurement<SourceLink, BoundParametersIndices, eLOC_0, eLOC_1> meas{
         plane, {}, mCov, mPar[0], mPar[1]};
 
-    fm = std::make_unique<FittableMeasurement<SourceLink>>(meas);
+    fm = std::make_unique<FittableCombinedMeasurement<SourceLink>>(meas);
 
     SourceLink sourceLink{fm.get()};
     pc.sourceLink = sourceLink;

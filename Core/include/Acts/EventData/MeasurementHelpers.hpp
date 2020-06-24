@@ -1,6 +1,6 @@
 // This file is part of the Acts project.
 //
-// Copyright (C) 2019 CERN for the benefit of the Acts project
+// Copyright (C) 2019-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -23,8 +23,8 @@ namespace MeasurementHelpers {
 /// @tparam T The FittableMeasurement type
 /// @return const pointer to the extracted surface
 template <typename T>
-const GeometryObject* getSurface(const T& fittable_measurement) {
-  return std::visit([](const auto& meas) { return &meas.referenceObject(); },
+const GeometryObject* getObject(const T& fittable_measurement) {
+  return std::visit([](const auto& meas) -> const GeometryObject* { return &meas.referenceObject(); },
                     fittable_measurement);
 }
 
