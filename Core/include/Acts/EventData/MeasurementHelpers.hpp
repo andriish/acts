@@ -9,6 +9,7 @@
 #pragma once
 #include "Acts/EventData/Measurement.hpp"
 #include "Acts/EventData/SourceLinkConcept.hpp"
+#include "Acts/Geometry/GeometryObject.hpp"
 
 #include <variant>
 
@@ -22,12 +23,7 @@ namespace MeasurementHelpers {
 /// @tparam T The FittableMeasurement type
 /// @return const pointer to the extracted surface
 template <typename T>
-const auto* getSurface(const T& fittable_measurement) {
-  return std::visit([](const auto& meas) { return &meas.referenceObject(); },
-                    fittable_measurement);
-}
-template <typename T>
-const Volume* getVolume(const T& fittable_measurement) {
+const GeometryObject* getSurface(const T& fittable_measurement) {
   return std::visit([](const auto& meas) { return &meas.referenceObject(); },
                     fittable_measurement);
 }
@@ -40,21 +36,20 @@ size_t getSize(const T& fittable_measurement) {
 }  // namespace MeasurementHelpers
 
 struct MinimalSourceLink {
-  const FittableMeasurement<MinimalSourceLink>* measS{nullptr};
-  const FittableVolumeMeasurement<MinimalSourceLink>* measV{nullptr};
+  const FittableCombinedMeasurement<MinimalSourceLink>* meas{nullptr};
 
   bool hasMeasurementOnSurface = false;
   using MeasurementType = FittableCombinedMeasurement<MinimalSourceLink>;
 
   bool operator==(const MinimalSourceLink& rhs) const;
 
-  const auto& referenceSurface() const;
+  const GeometryObject& referenceSurface() const;
 
   const FittableMeasurement<MinimalSourceLink>& operator*() const;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const MinimalSourceLink& sl) {
-  os << "SourceLink(" << (sl.measS != nullptr ? sl.measS : sl.measV) << ")";
+  os << "SourceLink(" << sl.meas << ")";
   return os;
 }
 

@@ -14,15 +14,15 @@
 
 namespace Acts {
 
-class Surface;
+class GeometryObject;
 
 namespace concept {
   namespace detail_slc {
   template <typename T>
   using comparable_t = decltype(std::declval<T>() == std::declval<T>());
 
-  //~ template <typename T>
-  //~ using dereferenceable_t = decltype(*std::declval<T>());
+  template <typename T>
+  using dereferenceable_t = decltype(*std::declval<T>());
 
   //~ template <typename T>
   //~ using surface_method_t = decltype(std::declval<T>().referenceSurface());
@@ -34,11 +34,11 @@ namespace concept {
     static_assert(comparison_works,
                   "Source link does not implement equality operator");
 
-    //~ constexpr static bool surface_method_exists =
-        //~ converts_to<const Surface&, surface_method_t, T>;
-    //~ static_assert(
-        //~ surface_method_exists,
-        //~ "Source link does not have compliant referenceSurface method");
+    constexpr static bool surface_method_exists =
+        converts_to<const GeometryObject&, surface_method_t, T>;
+    static_assert(
+        surface_method_exists,
+        "Source link does not have compliant referenceSurface method");
 
     constexpr static bool copyable = std::is_copy_constructible_v<T>;
     static_assert(copyable, "Source link must be copy constructible");
