@@ -48,12 +48,14 @@ struct ExtendedMinimalSourceLink {
 
   const FittableMeasurement<ExtendedMinimalSourceLink>* meas{nullptr};
 
+  using MeasurementType = FittableMeasurement<ExtendedMinimalSourceLink>;
+
   bool operator==(const ExtendedMinimalSourceLink& rhs) const {
     return meas == rhs.meas;
   }
 
-  const Surface& referenceSurface() const {
-    return *MeasurementHelpers::getSurface(*meas);
+  const GeometryObject& referenceObject() const {
+    return *MeasurementHelpers::getObject(*meas);
   }
 
   const FittableMeasurement<ExtendedMinimalSourceLink>& operator*() const {

@@ -23,7 +23,7 @@ using SourceLink = MinimalSourceLink;
 template <ParID_t... params>
 using MeasurementType =
     Measurement<SourceLink, BoundParametersIndices, params...>;
-using FittableCombinedMeasurement = FittableCombinedMeasurement<SourceLink>;
+using FittableMeasurement = FittableMeasurement<SourceLink>;
 
 BOOST_AUTO_TEST_CASE(getSurface_test) {
   auto cylinderBounds = std::make_shared<CylinderBounds>(3, 10);
@@ -37,7 +37,7 @@ BOOST_AUTO_TEST_CASE(getSurface_test) {
   MeasurementType<ParDef::eLOC_0, ParDef::eLOC_1> m(cylinder, {},
                                                     std::move(cov), -0.1, 0.45);
 
-  FittableCombinedMeasurement fm = m;
+  FittableMeasurement fm = m;
 
   BOOST_CHECK_EQUAL(MeasurementHelpers::getObject(fm), cylinder.get());
 
@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE(getSize_test) {
   MeasurementType<ParDef::eLOC_0, ParDef::eLOC_1> m(cylinder, {},
                                                     std::move(cov), -0.1, 0.45);
 
-  FittableCombinedMeasurement fm = m;
+  FittableMeasurement fm = m;
   BOOST_CHECK_EQUAL(MeasurementHelpers::getSize(fm), 2u);
 
   ActsSymMatrixD<3> cov3;
@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE(MinimalSourceLinkTest) {
   MeasurementType<ParDef::eLOC_0, ParDef::eLOC_1> m(cylinder, {},
                                                     std::move(cov), -0.1, 0.45);
 
-  FittableCombinedMeasurement fm = m;
+  FittableMeasurement fm = m;
   MinimalSourceLink msl{&fm};
 
   BOOST_CHECK_EQUAL(&msl.referenceObject(), cylinder.get());
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(MinimalSourceLinkTest) {
 
   MeasurementType<ParDef::eLOC_0, ParDef::eLOC_1> m2(
       cylinder, {}, std::move(cov), -0.1, 0.45);
-  FittableCombinedMeasurement fm2 = m2;
+  FittableMeasurement fm2 = m2;
   MinimalSourceLink msl3{&fm2};
   BOOST_CHECK_NE(msl, msl3);
 

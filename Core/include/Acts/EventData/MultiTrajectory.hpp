@@ -460,7 +460,7 @@ class TrackStateProxy {
   /// @param meas The measurement object to set
   template <typename measurement_t, bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
   void setCalibrated(const measurement_t& meas) {
-												 	  static_assert(std::is_same<SourceLink, typename measurement_t::SourceLink>::value);
+		static_assert(std::is_same<SourceLink, typename measurement_t::SourceLink>::value);
     IndexData& dataref = data();
     constexpr size_t measdim = measurement_t::size();
 
