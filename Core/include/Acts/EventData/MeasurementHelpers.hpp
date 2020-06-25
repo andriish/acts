@@ -14,9 +14,6 @@
 #include <variant>
 
 namespace Acts {
-
-class Surface;
-
 namespace MeasurementHelpers {
 
 /// @brief Extract surface from a type erased measurement object
@@ -45,6 +42,18 @@ struct MinimalSourceLink {
   const GeometryObject& referenceSurface() const;
 
   const FittableMeasurement<MinimalSourceLink>& operator*() const;
+};
+
+struct MinimalCompleteSourceLink {
+  const FittableCombinedMeasurement<MinimalCompleteSourceLink>* meas{nullptr};
+
+  using MeasurementType = FittableCombinedMeasurement<MinimalCompleteSourceLink>;
+
+  bool operator==(const MinimalCompleteSourceLink& rhs) const;
+
+  const GeometryObject& referenceObject() const;
+
+  const FittableCombinedMeasurement<MinimalCompleteSourceLink>& operator*() const;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const MinimalSourceLink& sl) {

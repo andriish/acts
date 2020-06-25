@@ -13,11 +13,23 @@ bool Acts::MinimalSourceLink::operator==(
   return meas == rhs.meas;
 }
 
-const Acts::Surface& Acts::MinimalSourceLink::referenceSurface() const {
-  return *MeasurementHelpers::getSurface(*meas);
+const Acts::Surface& Acts::MinimalSourceLink::referenceObject() const {
+  return *MeasurementHelpers::getObject(*meas);
 }
 
 const Acts::FittableMeasurement<Acts::MinimalSourceLink>&
     Acts::MinimalSourceLink::operator*() const {
   return *meas;
 }
+
+  //~ bool MinimalCompleteSourceLink::operator==(const MinimalCompleteSourceLink& rhs) const {
+    //~ return meas == rhs.meas;
+  //~ }
+
+  //~ const GeometryObject& MinimalCompleteSourceLink::referenceObject() const {
+    //~ return *MeasurementHelpers::getObject(*meas);
+  //~ }
+
+  //~ const FittableCombinedMeasurement<MinimalCompleteSourceLink>& MinimalCompleteSourceLink::operator*() const {
+    //~ return *meas;
+  //~ }

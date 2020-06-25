@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <type_traits>
 #include <vector>
+#include <memory>
 
 #include <Eigen/Core>
 
@@ -96,7 +97,7 @@ template <typename SL, size_t N, size_t M, bool ReadOnly>
 inline BoundParameters TrackStateProxy<SL, N, M, ReadOnly>::predictedParameters(
     const Acts::GeometryContext& gctx) const {
   return {gctx, predictedCovariance(), predicted(),
-          m_traj->m_referenceSurfaces[data().irefsurface]};
+          m_traj->m_referenceObjects[data().irefobject]};
 }
 
 template <typename SL, size_t N, size_t M, bool ReadOnly>
@@ -117,7 +118,7 @@ template <typename SL, size_t N, size_t M, bool ReadOnly>
 inline BoundParameters TrackStateProxy<SL, N, M, ReadOnly>::filteredParameters(
     const Acts::GeometryContext& gctx) const {
   return {gctx, filteredCovariance(), filtered(),
-          m_traj->m_referenceSurfaces[data().irefsurface]};
+          std::dynamic_pointer_cast<const Surface>(m_traj->m_referenceObjects[data().irefobject])};
 }
 
 template <typename SL, size_t N, size_t M, bool ReadOnly>
@@ -138,7 +139,7 @@ template <typename SL, size_t N, size_t M, bool ReadOnly>
 inline BoundParameters TrackStateProxy<SL, N, M, ReadOnly>::smoothedParameters(
     const Acts::GeometryContext& gctx) const {
   return {gctx, smoothedCovariance(), smoothed(),
-          m_traj->m_referenceSurfaces[data().irefsurface]};
+          std::dynamic_pointer_cast<const Surface>(m_traj->m_referenceObjects[data().irefobject])};
 }
 
 template <typename SL, size_t N, size_t M, bool ReadOnly>
@@ -200,8 +201,8 @@ inline size_t MultiTrajectory<SL>::addTrackState(TrackStatePropMask mask,
   }
 
   // always set, but can be null
-  m_referenceSurfaces.emplace_back(nullptr);
-  p.irefsurface = m_referenceSurfaces.size() - 1;
+  m_referenceObjects.emplace_back(nullptr);
+  p.irefobject = m_referenceObjects.size() - 1;
 
   if (ACTS_CHECK_BIT(mask, PropMask::Predicted)) {
     m_params.addCol();

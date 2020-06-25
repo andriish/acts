@@ -458,7 +458,7 @@ class CombinatorialKalmanFilter {
           result.fittedStates.getTrackState(result.activeTips.back().first);
       // Reset the navigation state
       state.navigation = typename propagator_t::NavigatorState();
-      state.navigation.startSurface = &currentState.referenceSurface();
+      state.navigation.startSurface = dynamic_cast<const Surface*>(&currentState.referenceObject());
       if (state.navigation.startSurface->associatedLayer() != nullptr) {
         state.navigation.startLayer =
             state.navigation.startSurface->associatedLayer();
@@ -473,7 +473,7 @@ class CombinatorialKalmanFilter {
       stepper.update(state.stepping,
                      currentState.filteredParameters(state.options.geoContext));
       // Reinitialize the stepping jacobian
-      currentState.referenceSurface().initJacobianToGlobal(
+      dynamic_cast<const Surface*>(&currentState.referenceObject())->initJacobianToGlobal(
           state.options.geoContext, state.stepping.jacToGlobal,
           state.stepping.pos, state.stepping.dir,
           currentState.filteredParameters(state.options.geoContext)
@@ -847,7 +847,7 @@ class CombinatorialKalmanFilter {
       trackStateProxy.jacobian() = jacobian;
       trackStateProxy.pathLength() = pathLength;
       // Set the surface
-      trackStateProxy.setReferenceSurface(
+      trackStateProxy.setReferenceObject(
           boundParams.referenceSurface().getSharedPtr());
       // Set the filtered parameter index to be the same with predicted
       // parameter
@@ -892,7 +892,7 @@ class CombinatorialKalmanFilter {
       trackStateProxy.jacobian() = jacobian;
       trackStateProxy.pathLength() = pathLength;
       // Set the surface
-      trackStateProxy.setReferenceSurface(Surface::makeShared<PlaneSurface>(
+      trackStateProxy.setReferenceObject(Surface::makeShared<PlaneSurface>(
           curvilinearParams.position(), curvilinearParams.momentum()));
       // Set the filtered parameter index to be the same with predicted
       // parameter

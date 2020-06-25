@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE(gain_matrix_smoother) {
 
   ts_idx = traj.addTrackState(TrackStatePropMask::All);
   auto ts = traj.getTrackState(ts_idx);
-  ts.setReferenceSurface(plane1);
+  ts.setReferenceObject(plane1);
 
   // Make dummy track parameter
   Covariance covTrk;
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(gain_matrix_smoother) {
 
   ts_idx = traj.addTrackState(TrackStatePropMask::All, ts_idx);
   ts = traj.getTrackState(ts_idx);
-  ts.setReferenceSurface(plane2);
+  ts.setReferenceObject(plane2);
 
   parValues << 0.2, 0.5, 0.5 * M_PI, 0., 1 / 100., 0.;
   ts.predicted() = parValues;
@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(gain_matrix_smoother) {
 
   ts_idx = traj.addTrackState(TrackStatePropMask::All, ts_idx);
   ts = traj.getTrackState(ts_idx);
-  ts.setReferenceSurface(plane3);
+  ts.setReferenceObject(plane3);
 
   parValues << 0.35, 0.49, 0.5 * M_PI, 0., 1 / 100., 0.;
   ts.predicted() = parValues;

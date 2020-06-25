@@ -341,19 +341,18 @@ class KalmanFitter {
 
         // Reset smoothed status of states missed in backward filtering
         if (backwardFiltering) {
-          result.fittedStates.applyBackwards(
-              result.trackTip, [&](auto trackState) {
-                auto fSurface = &trackState.referenceSurface();
-                auto surface_it = std::find_if(
-                    result.passedAgainSurfaces.begin(),
-                    result.passedAgainSurfaces.end(),
-                    [=](const Surface* s) { return s == fSurface; });
-                if (surface_it == result.passedAgainSurfaces.end()) {
-                  // If backward filtering missed this surface, then there is
-                  // no smoothed parameter
-                  trackState.data().ismoothed = detail_lt::IndexData::kInvalid;
-                }
-              });
+          result.fittedStates.applyBackwards(result.trackTip, [&](auto state) {
+            auto fSurface = &state.referenceObject();
+            auto surface_it = std::find_if(
+                result.passedAgainSurfaces.begin(),
+                result.passedAgainSurfaces.end(),
+                [=](const Surface* surface) { return surface == fSurface; });
+            if (surface_it == result.passedAgainSurfaces.end()) {
+              // If backward filtering missed this surface, then there is
+              // no smoothed parameter
+              state.data().ismoothed = detail_lt::IndexData::kInvalid;
+            }
+          });
         }
         // Remember the track fitting is done
         result.finished = true;
@@ -386,7 +385,7 @@ class KalmanFitter {
       result.fittedStates.applyBackwards(result.trackTip, [&](auto st) {
         if (st.typeFlags().test(Acts::TrackStateFlag::MeasurementFlag)) {
           // Set the navigation state
-          state.navigation.startSurface = &st.referenceSurface();
+          state.navigation.startSurface = dynamic_cast<const Surface*>(&st.referenceObject());
           if (state.navigation.startSurface->associatedLayer() != nullptr) {
             state.navigation.startLayer =
                 state.navigation.startSurface->associatedLayer();
@@ -405,7 +404,7 @@ class KalmanFitter {
           state.stepping.stepSize = ConstrainedStep(state.options.maxStepSize);
           state.stepping.pathAccumulated = 0.;
           // Reinitialize the stepping jacobian
-          st.referenceSurface().initJacobianToGlobal(
+          dynamic_cast<const Surface*>(&st.referenceObject())->initJacobianToGlobal(
               state.options.geoContext, state.stepping.jacToGlobal,
               state.stepping.pos, state.stepping.dir,
               st.filteredParameters(state.options.geoContext).parameters());
@@ -416,7 +415,7 @@ class KalmanFitter {
           // For the last measurement state, smoothed is filtered
           st.smoothed() = st.filtered();
           st.smoothedCovariance() = st.filteredCovariance();
-          result.passedAgainSurfaces.push_back(&st.referenceSurface());
+          result.passedAgainSurfaces.push_back(dynamic_cast<const Surface*>(&st.referenceObject()));
 
           // Update material effects for last measurement state in backward
           // direction
@@ -537,7 +536,7 @@ class KalmanFitter {
               result.fittedStates.getTrackState(result.trackTip);
 
           // Set the surface
-          trackStateProxy.setReferenceSurface(surface->getSharedPtr());
+          trackStateProxy.setReferenceObject(surface->getSharedPtr());
 
           // Set the track state flags
           auto& typeFlags = trackStateProxy.typeFlags();
@@ -665,18 +664,16 @@ class KalmanFitter {
               << trackStateProxy.filtered().transpose());
 
           // Fill the smoothed parameter for the existing track state
-          result.fittedStates.applyBackwards(
-              result.trackTip, [&](auto trackState) {
-                auto fSurface = &trackState.referenceSurface();
-                if (fSurface == surface) {
-                  result.passedAgainSurfaces.push_back(surface);
-                  trackState.smoothed() = trackStateProxy.filtered();
-                  trackState.smoothedCovariance() =
-                      trackStateProxy.filteredCovariance();
-                  return false;
-                }
-                return true;
-              });
+          result.fittedStates.applyBackwards(result.trackTip, [&](auto state) {
+            auto fSurface = &state.referenceObject();
+            if (fSurface == surface) {
+              result.passedAgainSurfaces.push_back(surface);
+              state.smoothed() = trackStateProxy.filtered();
+              state.smoothedCovariance() = trackStateProxy.filteredCovariance();
+              return false;
+            }
+            return true;
+          });
 
           // update stepping state using filtered parameters after kalman
           // update We need to (re-)construct a BoundParameters instance here,
