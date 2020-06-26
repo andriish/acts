@@ -15,6 +15,7 @@
 #include "Acts/Fitter/KalmanFitterError.hpp"
 #include "Acts/Fitter/detail/VoidKalmanComponents.hpp"
 #include "Acts/Geometry/GeometryContext.hpp"
+#include "Acts/Geometry/GeometryObject.hpp"
 #include "Acts/MagneticField/MagneticFieldContext.hpp"
 #include "Acts/Material/MaterialProperties.hpp"
 #include "Acts/Propagator/AbortList.hpp"
@@ -136,7 +137,7 @@ struct KalmanFitterResult {
   bool forwardFiltered = false;
 
   // Measurement surfaces handled in both forward and backward filtering
-  std::vector<const Surface*> passedAgainSurfaces;
+  std::vector<const GeometryObject*> passedAgainObject;
 
   Result<void> result{Result<void>::success()};
 };
@@ -344,10 +345,10 @@ class KalmanFitter {
           result.fittedStates.applyBackwards(result.trackTip, [&](auto state) {
             auto fSurface = &state.referenceObject();
             auto surface_it = std::find_if(
-                result.passedAgainSurfaces.begin(),
-                result.passedAgainSurfaces.end(),
-                [=](const Surface* surface) { return surface == fSurface; });
-            if (surface_it == result.passedAgainSurfaces.end()) {
+                result.passedAgainObject.begin(),
+                result.passedAgainObject.end(),
+                [=](const GeometryObject* object) { return object == fSurface; });
+            if (surface_it == result.passedAgainObject.end()) {
               // If backward filtering missed this surface, then there is
               // no smoothed parameter
               state.data().ismoothed = detail_lt::IndexData::kInvalid;
@@ -384,8 +385,9 @@ class KalmanFitter {
       state.navigation = typename propagator_t::NavigatorState();
       result.fittedStates.applyBackwards(result.trackTip, [&](auto st) {
         if (st.typeFlags().test(Acts::TrackStateFlag::MeasurementFlag)) {
+		  const Surface* startSurface = dynamic_cast<const Surface*>(&st.referenceObject());
           // Set the navigation state
-          state.navigation.startSurface = dynamic_cast<const Surface*>(&st.referenceObject());
+          state.navigation.startSurface = startSurface;
           if (state.navigation.startSurface->associatedLayer() != nullptr) {
             state.navigation.startLayer =
                 state.navigation.startSurface->associatedLayer();
@@ -404,7 +406,7 @@ class KalmanFitter {
           state.stepping.stepSize = ConstrainedStep(state.options.maxStepSize);
           state.stepping.pathAccumulated = 0.;
           // Reinitialize the stepping jacobian
-          dynamic_cast<const Surface*>(&st.referenceObject())->initJacobianToGlobal(
+          startSurface->initJacobianToGlobal(
               state.options.geoContext, state.stepping.jacToGlobal,
               state.stepping.pos, state.stepping.dir,
               st.filteredParameters(state.options.geoContext).parameters());
@@ -415,7 +417,7 @@ class KalmanFitter {
           // For the last measurement state, smoothed is filtered
           st.smoothed() = st.filtered();
           st.smoothedCovariance() = st.filteredCovariance();
-          result.passedAgainSurfaces.push_back(dynamic_cast<const Surface*>(&st.referenceObject()));
+          result.passedAgainObject.push_back(startSurface);
 
           // Update material effects for last measurement state in backward
           // direction
@@ -667,7 +669,7 @@ class KalmanFitter {
           result.fittedStates.applyBackwards(result.trackTip, [&](auto state) {
             auto fSurface = &state.referenceObject();
             if (fSurface == surface) {
-              result.passedAgainSurfaces.push_back(surface);
+              result.passedAgainObject.push_back(surface);
               state.smoothed() = trackStateProxy.filtered();
               state.smoothedCovariance() = trackStateProxy.filteredCovariance();
               return false;
