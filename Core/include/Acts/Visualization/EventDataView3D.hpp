@@ -216,10 +216,15 @@ struct EventDataView3D {
         angularErrorScale = 1;
       }
 
+      const Surface* surface = dynamic_cast<const Surface*>(&state.referenceObject());
+      if(surface == nullptr) {
+		return true;
+	}
+      
       // First, if necessary, draw the surface
       if (surfaceConfig.visible) {
-        GeometryView3D::drawSurface(helper, state.referenceSurface(), gctx,
-                                    Transform3D::Identity(), surfaceConfig);
+        GeometryView::drawSurface(helper, *surface, gctx,
+                                  Transform3D::Identity(), surfaceConfig);
       }
 
       // Second, if necessary and present, draw the calibrated measurement (only
@@ -231,7 +236,7 @@ struct EventDataView3D {
         ActsSymMatrixD<2> covariance =
             state.calibratedCovariance().template topLeftCorner<2, 2>();
         drawCovarianceCartesian(helper, lposition, covariance,
-                                state.referenceSurface().transform(gctx),
+                                surface->transform(gctx),
                                 locErrorScale, measurementConfig);
       }
 
@@ -242,7 +247,7 @@ struct EventDataView3D {
             helper,
             BoundParameters(gctx, state.predictedCovariance(),
                             state.predicted(),
-                            state.referenceSurface().getSharedPtr()),
+                            surface->getSharedPtr()),
             gctx, momentumScale, locErrorScale, angularErrorScale,
             predictedConfig, predictedConfig, ViewConfig(false));
       }
@@ -251,7 +256,7 @@ struct EventDataView3D {
         drawBoundParameters(
             helper,
             BoundParameters(gctx, state.filteredCovariance(), state.filtered(),
-                            state.referenceSurface().getSharedPtr()),
+                            surface->getSharedPtr()),
             gctx, momentumScale, locErrorScale, angularErrorScale,
             filteredConfig, filteredConfig, ViewConfig(false));
       }
@@ -260,7 +265,7 @@ struct EventDataView3D {
         drawBoundParameters(
             helper,
             BoundParameters(gctx, state.smoothedCovariance(), state.smoothed(),
-                            state.referenceSurface().getSharedPtr()),
+                            surface->getSharedPtr()),
             gctx, momentumScale, locErrorScale, angularErrorScale,
             smoothedConfig, smoothedConfig, ViewConfig(false));
       }

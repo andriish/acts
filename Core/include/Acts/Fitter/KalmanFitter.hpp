@@ -19,6 +19,7 @@
 #include "Acts/Fitter/KalmanFitterError.hpp"
 #include "Acts/Fitter/detail/VoidKalmanComponents.hpp"
 #include "Acts/Geometry/GeometryContext.hpp"
+#include "Acts/Geometry/GeometryObject.hpp"
 #include "Acts/MagneticField/MagneticFieldContext.hpp"
 #include "Acts/Material/MaterialProperties.hpp"
 #include "Acts/Propagator/AbortList.hpp"
@@ -69,14 +70,14 @@ struct KalmanFitterOptions {
   KalmanFitterOptions(std::reference_wrapper<const GeometryContext> gctx,
                       std::reference_wrapper<const MagneticFieldContext> mctx,
                       std::reference_wrapper<const CalibrationContext> cctx,
-                      const OutlierFinder& outlierFinder_,
+                      const OutlierFinder& outlierFinder,
                       const Surface* rSurface = nullptr,
                       bool mScattering = true, bool eLoss = true,
                       bool bwdFiltering = false)
       : geoContext(gctx),
         magFieldContext(mctx),
         calibrationContext(cctx),
-        outlierFinder(outlierFinder_),
+        outlierFinder(outlierFinder),
         referenceSurface(rSurface),
         multipleScattering(mScattering),
         energyLoss(eLoss),
@@ -140,7 +141,7 @@ struct KalmanFitterResult {
   bool forwardFiltered = false;
 
   // Measurement surfaces handled in both forward and backward filtering
-  std::vector<const Surface*> passedAgainSurfaces;
+  std::vector<const GeometryObject*> passedAgainObject;
 
   Result<void> result{Result<void>::success()};
 };
@@ -227,7 +228,7 @@ class KalmanFitter {
     const Surface* targetSurface = nullptr;
 
     /// Allows retrieving measurements for a surface
-    std::map<const Surface*, source_link_t> inputMeasurements;
+    std::map<const GeometryObject*, source_link_t> inputMeasurements;
 
     /// Whether to consider multiple scattering.
     bool multipleScattering = true;
@@ -392,7 +393,7 @@ class KalmanFitter {
     ///
     /// @param state is the mutable propagator state object
     /// @param stepper The stepper in use
-    /// @param result is the mutable result state objecte
+    /// @param result is the mutable result state object
     template <typename propagator_state_t, typename stepper_t>
     void reverse(propagator_state_t& state, stepper_t& stepper,
                  result_type& result) const {
@@ -409,8 +410,9 @@ class KalmanFitter {
       state.navigation = typename propagator_t::NavigatorState();
       result.fittedStates.applyBackwards(result.trackTip, [&](auto st) {
         if (st.typeFlags().test(Acts::TrackStateFlag::MeasurementFlag)) {
+		  const Surface* startSurface = dynamic_cast<const Surface*>(&st.referenceObject());
           // Set the navigation state
-          state.navigation.startSurface = &st.referenceSurface();
+          state.navigation.startSurface = startSurface;
           if (state.navigation.startSurface->associatedLayer() != nullptr) {
             state.navigation.startLayer =
                 state.navigation.startSurface->associatedLayer();
@@ -430,7 +432,7 @@ class KalmanFitter {
           // For the last measurement state, smoothed is filtered
           st.smoothed() = st.filtered();
           st.smoothedCovariance() = st.filteredCovariance();
-          result.passedAgainSurfaces.push_back(&st.referenceSurface());
+          result.passedAgainObject.push_back(startSurface);
 
           // Update material effects for last measurement state in backward
           // direction
@@ -554,7 +556,7 @@ class KalmanFitter {
               result.fittedStates.getTrackState(result.trackTip);
 
           // Set the surface
-          trackStateProxy.setReferenceSurface(surface->getSharedPtr());
+          trackStateProxy.setReferenceObject(surface->getSharedPtr());
 
           // Set the track state flags
           auto& typeFlags = trackStateProxy.typeFlags();
@@ -682,18 +684,16 @@ class KalmanFitter {
               << trackStateProxy.filtered().transpose());
 
           // Fill the smoothed parameter for the existing track state
-          result.fittedStates.applyBackwards(
-              result.trackTip, [&](auto trackState) {
-                auto fSurface = &trackState.referenceSurface();
-                if (fSurface == surface) {
-                  result.passedAgainSurfaces.push_back(surface);
-                  trackState.smoothed() = trackStateProxy.filtered();
-                  trackState.smoothedCovariance() =
-                      trackStateProxy.filteredCovariance();
-                  return false;
-                }
-                return true;
-              });
+          result.fittedStates.applyBackwards(result.trackTip, [&](auto state) {
+            auto fSurface = &state.referenceObject();
+            if (fSurface == surface) {
+              result.passedAgainObject.push_back(surface);
+              state.smoothed() = trackStateProxy.filtered();
+              state.smoothedCovariance() = trackStateProxy.filteredCovariance();
+              return false;
+            }
+            return true;
+          });
 
           // update stepping state using filtered parameters after kalman
           // update We need to (re-)construct a BoundParameters instance here,
@@ -928,10 +928,10 @@ class KalmanFitter {
     // To be able to find measurements later, we put them into a map
     // We need to copy input SourceLinks anyways, so the map can own them.
     ACTS_VERBOSE("Preparing " << sourcelinks.size() << " input measurements");
-    std::map<const Surface*, source_link_t> inputMeasurements;
+    std::map<const GeometryObject*, source_link_t> inputMeasurements;
     for (const auto& sl : sourcelinks) {
-      const Surface* srf = &sl.referenceSurface();
-      inputMeasurements.emplace(srf, sl);
+	  const GeometryObject* srf = &sl.referenceObject();
+	  inputMeasurements.emplace(srf, sl);
     }
 
     // Create the ActionList and AbortList
@@ -1021,10 +1021,10 @@ class KalmanFitter {
     // To be able to find measurements later, we put them into a map
     // We need to copy input SourceLinks anyways, so the map can own them.
     ACTS_VERBOSE("Preparing " << sourcelinks.size() << " input measurements");
-    std::map<const Surface*, source_link_t> inputMeasurements;
+    std::map<const GeometryObject*, source_link_t> inputMeasurements;
     for (const auto& sl : sourcelinks) {
-      const Surface* srf = &sl.referenceSurface();
-      inputMeasurements.emplace(srf, sl);
+	  const GeometryObject* srf = &sl.referenceObject();
+	  inputMeasurements.emplace(srf, sl);
     }
 
     // Create the ActionList and AbortList

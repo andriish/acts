@@ -261,7 +261,7 @@ class CombinatorialKalmanFilter {
     const Surface* targetSurface = nullptr;
 
     /// Allows retrieving measurements for a surface
-    std::unordered_map<const Surface*, std::vector<source_link_t>>
+    std::unordered_map<const GeometryObject*, std::vector<source_link_t>>
         inputMeasurements;
 
     /// Whether to consider multiple scattering.
@@ -466,7 +466,7 @@ class CombinatorialKalmanFilter {
 
       // Reset the navigation state
       state.navigation = typename propagator_t::NavigatorState();
-      state.navigation.startSurface = &currentState.referenceSurface();
+      state.navigation.startSurface = dynamic_cast<const Surface*>(&currentState.referenceObject());
       if (state.navigation.startSurface->associatedLayer() != nullptr) {
         state.navigation.startLayer =
             state.navigation.startSurface->associatedLayer();
@@ -847,7 +847,7 @@ class CombinatorialKalmanFilter {
       trackStateProxy.jacobian() = std::get<BoundMatrix>(jacobian);
       trackStateProxy.pathLength() = pathLength;
       // Set the surface
-      trackStateProxy.setReferenceSurface(
+      trackStateProxy.setReferenceObject(
           boundParams.referenceSurface().getSharedPtr());
       // Set the filtered parameter index to be the same with predicted
       // parameter
@@ -892,7 +892,7 @@ class CombinatorialKalmanFilter {
       trackStateProxy.jacobian() = std::get<BoundMatrix>(jacobian);
       trackStateProxy.pathLength() = pathLength;
       // Set the surface
-      trackStateProxy.setReferenceSurface(Surface::makeShared<PlaneSurface>(
+      trackStateProxy.setReferenceObject(Surface::makeShared<PlaneSurface>(
           curvilinearParams.position(), curvilinearParams.momentum()));
       // Set the filtered parameter index to be the same with predicted
       // parameter
@@ -1102,11 +1102,11 @@ class CombinatorialKalmanFilter {
     // To be able to find measurements later, we put them into a map
     // We need to copy input SourceLinks anyways, so the map can own them.
     ACTS_VERBOSE("Preparing " << sourcelinks.size() << " input measurements");
-    std::unordered_map<const Surface*, std::vector<SourceLink>>
+    std::unordered_map<const GeometryObject*, std::vector<SourceLink>>
         inputMeasurements;
     for (const auto& sl : sourcelinks) {
-      const Surface* srf = &sl.referenceSurface();
-      inputMeasurements[srf].emplace_back(sl);
+	  const GeometryObject* srf = &sl.referenceObject();
+	  inputMeasurements[srf].emplace_back(sl);
     }
 
     // Create the ActionList and AbortList

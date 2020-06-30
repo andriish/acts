@@ -353,6 +353,14 @@ FW::ProcessCode FW::RootTrajectoryWriter::writeT(
       if (not typeFlags.test(Acts::TrackStateFlag::MeasurementFlag)) {
         return true;
       }
+      
+      // get the Surface
+      const Acts::Surface* surfacePtr = dynamic_cast<const Acts::Surface*>(&state.referenceObject());
+      if(surfacePtr == nullptr)
+      {
+		return true;
+	}
+      auto surface = surfacePtr->getSharedPtr();
 
       auto meas = std::get<Measurement>(*state.uncalibrated());
       auto& surface = meas.referenceObject();
@@ -417,7 +425,7 @@ FW::ProcessCode FW::RootTrajectoryWriter::writeT(
       m_t_eTHETA.push_back(truthTHETA);
       m_t_eQOP.push_back(truthQOP);
       m_t_eT.push_back(truthTIME);
-
+      
       // get the predicted parameter
       bool predicted = false;
       if (state.hasPredicted()) {
