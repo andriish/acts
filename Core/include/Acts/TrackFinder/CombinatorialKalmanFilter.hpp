@@ -1105,7 +1105,7 @@ class CombinatorialKalmanFilter {
     std::unordered_map<const GeometryObject*, std::vector<SourceLink>>
         inputMeasurements;
     for (const auto& sl : sourcelinks) {
-	  const GeometryObject* srf = &sl.referenceObject();
+	  const GeometryObject* srf = &sl.referenceSurface();
 	  inputMeasurements[srf].emplace_back(sl);
     }
 
