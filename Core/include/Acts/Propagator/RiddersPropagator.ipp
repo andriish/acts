@@ -194,7 +194,7 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
             // TODO: This should be changed to indicate that something went
             // wrong
             mParSet->setCovariance(BoundSymMatrix::Zero());
-            return std::move(nominalResult);
+            return ThisResult::success(std::move(nominalResult));
           }
         }
       }
@@ -226,7 +226,7 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
             // TODO: This should be changed to indicate that something went
             // wrong
             mParSet->setCovariance(BoundSymMatrix::Zero());
-            return std::move(nominalResult);
+            return ThisResult::success(std::move(nominalResult));
           }
         }
       }
