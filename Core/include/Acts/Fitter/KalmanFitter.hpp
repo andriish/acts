@@ -520,7 +520,7 @@ class KalmanFitter {
           stepper.update(state.stepping,
                          MultiTrajectoryHelpers::freeFiltered(
                              state.options.geoContext, trackStateProxy),
-                         trackStateProxy.filteredCovariance());
+                         BoundSymMatrix(trackStateProxy.filteredCovariance()));
           // We count the state with measurement
           ++result.measurementStates;
         } else {
@@ -700,7 +700,7 @@ class KalmanFitter {
           stepper.update(state.stepping,
                          MultiTrajectoryHelpers::freeFiltered(
                              state.options.geoContext, trackStateProxy),
-                         trackStateProxy.filteredCovariance());
+                         BoundSymMatrix(trackStateProxy.filteredCovariance()));
 
           // Update state and stepper with post material effects
           materialInteractor(surface, state, stepper, postUpdate);
@@ -846,7 +846,7 @@ class KalmanFitter {
       stepper.update(state.stepping,
                      MultiTrajectoryHelpers::freeSmoothed(
                          state.options.geoContext, firstMeasurement),
-                     firstMeasurement.smoothedCovariance());
+                     BoundSymMatrix(firstMeasurement.smoothedCovariance()));
       // Reverse the propagation direction
       state.stepping.stepSize =
           ConstrainedStep(-1. * state.options.maxStepSize);

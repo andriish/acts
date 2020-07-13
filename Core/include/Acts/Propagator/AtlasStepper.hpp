@@ -674,7 +674,7 @@ class AtlasStepper {
 
     // prepare the jacobian if we have a covariance
     // copy the covariance matrix
-    state.covariance = new ActsSymMatrixD<eBoundParametersSize>(covariance);
+    state.covariance = new Covariance(covariance);
     state.covTransport = true;
     state.useJacobian = true;
 
