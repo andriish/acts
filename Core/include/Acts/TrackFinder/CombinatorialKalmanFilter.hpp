@@ -466,7 +466,8 @@ class CombinatorialKalmanFilter {
 
       // Reset the navigation state
       state.navigation = typename propagator_t::NavigatorState();
-      state.navigation.startSurface = dynamic_cast<const Surface*>(&currentState.referenceObject());
+      state.navigation.startSurface =
+          dynamic_cast<const Surface*>(&currentState.referenceObject());
       if (state.navigation.startSurface->associatedLayer() != nullptr) {
         state.navigation.startLayer =
             state.navigation.startSurface->associatedLayer();
@@ -480,7 +481,7 @@ class CombinatorialKalmanFilter {
       // Update the stepping state
       stepper.resetState(state.stepping, currentState.filtered(),
                          BoundSymMatrix(currentState.filteredCovariance()),
-                         currentState.referenceSurface(), state.stepping.navDir,
+                         state.navigation.startSurface, state.stepping.navDir,
                          state.options.maxStepSize);
 
       // No Kalman filtering for the starting surface, but still need
@@ -1105,8 +1106,8 @@ class CombinatorialKalmanFilter {
     std::unordered_map<const GeometryObject*, std::vector<SourceLink>>
         inputMeasurements;
     for (const auto& sl : sourcelinks) {
-	  const GeometryObject* srf = &sl.referenceSurface();
-	  inputMeasurements[srf].emplace_back(sl);
+      const GeometryObject* srf = &sl.referenceSurface();
+      inputMeasurements[srf].emplace_back(sl);
     }
 
     // Create the ActionList and AbortList
