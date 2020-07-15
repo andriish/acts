@@ -43,6 +43,7 @@ class SingleTrackParameters {
  public:
   // public typedef's
   static constexpr bool is_local_representation = true;
+
   using Scalar = BoundParametersScalar;
   /// vector type for stored track parameters
   using ParametersVector = BoundVector;
