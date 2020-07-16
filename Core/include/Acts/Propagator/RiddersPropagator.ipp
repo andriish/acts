@@ -77,7 +77,7 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
       if (start.covariance()) {
         mParSet->setCovariance(std::get<BoundSymMatrix>(
             calculateCovariance(derivatives, *start.covariance(), deviations,
-                                start.parameters().template segment<3>(4))));
+                                start.parameters().template segment<3>(eFreeDir0))));
       }
     }
   } else {
@@ -93,14 +93,13 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
       }
 
       // Exchange the result by Ridders Covariance
-      FreeTrackParameters* parameters =
-          const_cast<FreeTrackParameters*>(nominalResult.endParameters.get());
+      const FullFreeParameterSet& parSet =
+          nominalResult.endParameters->getParameterSet();
+      FullFreeParameterSet* mParSet = const_cast<FullFreeParameterSet*>(&parSet);
       if (start.covariance()) {
-        parameters->covariance(std::get<FreeSymMatrix>(calculateCovariance(
+        mParSet->setCovariance(std::get<FreeSymMatrix>(calculateCovariance(
             derivatives, *start.covariance(), deviations, Vector3D())));
       }
-      nominalResult.endParameters =
-          std::make_unique<const FreeTrackParameters>(*parameters);
     }
     // Case IV: We start and end free
     else {
@@ -114,15 +113,14 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
       }
 
       // Exchange the result by Ridders Covariance
-      FreeTrackParameters* parameters =
-          const_cast<FreeTrackParameters*>(nominalResult.endParameters.get());
+      const FullFreeParameterSet& parSet =
+          nominalResult.endParameters->getParameterSet();
+      FullFreeParameterSet* mParSet = const_cast<FullFreeParameterSet*>(&parSet);
       if (start.covariance()) {
-        parameters->covariance(std::get<FreeSymMatrix>(
+        mParSet->setCovariance(std::get<FreeSymMatrix>(
             calculateCovariance(derivatives, *start.covariance(), deviations,
-                                start.parameters().template segment<3>(4))));
+                                start.parameters().template segment<3>(eFreeDir0))));
       }
-      nominalResult.endParameters =
-          std::make_unique<const FreeTrackParameters>(*parameters);
     }
   }
 

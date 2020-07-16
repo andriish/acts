@@ -102,11 +102,6 @@ class SingleFreeTrackParameters {
     return m_oParameters.getCovariance();
   }
 
-  /// @brief Sets a covariance matrix
-  ///
-  /// @param [in] cov Covariance that will be set
-  void covariance(const CovMatrix_t& cov) { m_oParameters.setCovariance(cov); }
-
   /// @brief access position in global coordinate system
   ///
   /// @return 3D vector with global position
