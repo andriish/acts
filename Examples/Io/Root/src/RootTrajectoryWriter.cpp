@@ -354,16 +354,15 @@ FW::ProcessCode FW::RootTrajectoryWriter::writeT(
         return true;
       }
 
+      auto meas = std::get<Measurement>(*state.uncalibrated());
       // get the Surface
       const Acts::Surface* surfacePtr =
-          dynamic_cast<const Acts::Surface*>(&state.referenceObject());
+          dynamic_cast<const Acts::Surface*>(meas.referenceObject());
       if (surfacePtr == nullptr) {
         return true;
       }
       auto surface = surfacePtr->getSharedPtr();
 
-      auto meas = std::get<Measurement>(*state.uncalibrated());
-      auto& surface = meas.referenceObject();
 
       // get the geometry ID
       auto geoID = surface->geoID();
