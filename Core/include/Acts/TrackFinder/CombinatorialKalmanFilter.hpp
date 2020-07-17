@@ -468,6 +468,8 @@ class CombinatorialKalmanFilter {
       state.navigation = typename propagator_t::NavigatorState();
       state.navigation.startSurface =
           dynamic_cast<const Surface*>(&currentState.referenceObject());
+          if(state.navigation.startSurface != nullptr)
+          {
       if (state.navigation.startSurface->associatedLayer() != nullptr) {
         state.navigation.startLayer =
             state.navigation.startSurface->associatedLayer();
@@ -481,12 +483,13 @@ class CombinatorialKalmanFilter {
       // Update the stepping state
       stepper.resetState(state.stepping, currentState.filtered(),
                          BoundSymMatrix(currentState.filteredCovariance()),
-                         state.navigation.startSurface, state.stepping.navDir,
+                         *state.navigation.startSurface, state.stepping.navDir,
                          state.options.maxStepSize);
 
       // No Kalman filtering for the starting surface, but still need
       // to consider the material effects here
       materialInteractor(state.navigation.startSurface, state, stepper);
+  }
     }
 
     /// @brief CombinatorialKalmanFilter actor operation :
