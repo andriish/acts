@@ -75,9 +75,9 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
           nominalResult.endParameters->getParameterSet();
       FullParameterSet* mParSet = const_cast<FullParameterSet*>(&parSet);
       if (start.covariance()) {
-        mParSet->setCovariance(std::get<BoundSymMatrix>(
-            calculateCovariance(derivatives, *start.covariance(), deviations,
-                                start.parameters().template segment<3>(eFreeDir0))));
+        mParSet->setCovariance(std::get<BoundSymMatrix>(calculateCovariance(
+            derivatives, *start.covariance(), deviations,
+            start.parameters().template segment<3>(eFreeDir0))));
       }
     }
   } else {
@@ -95,7 +95,8 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
       // Exchange the result by Ridders Covariance
       const FullFreeParameterSet& parSet =
           nominalResult.endParameters->getParameterSet();
-      FullFreeParameterSet* mParSet = const_cast<FullFreeParameterSet*>(&parSet);
+      FullFreeParameterSet* mParSet =
+          const_cast<FullFreeParameterSet*>(&parSet);
       if (start.covariance()) {
         mParSet->setCovariance(std::get<FreeSymMatrix>(calculateCovariance(
             derivatives, *start.covariance(), deviations, Vector3D())));
@@ -115,11 +116,12 @@ auto Acts::RiddersPropagator<propagator_t>::propagate(
       // Exchange the result by Ridders Covariance
       const FullFreeParameterSet& parSet =
           nominalResult.endParameters->getParameterSet();
-      FullFreeParameterSet* mParSet = const_cast<FullFreeParameterSet*>(&parSet);
+      FullFreeParameterSet* mParSet =
+          const_cast<FullFreeParameterSet*>(&parSet);
       if (start.covariance()) {
-        mParSet->setCovariance(std::get<FreeSymMatrix>(
-            calculateCovariance(derivatives, *start.covariance(), deviations,
-                                start.parameters().template segment<3>(eFreeDir0))));
+        mParSet->setCovariance(std::get<FreeSymMatrix>(calculateCovariance(
+            derivatives, *start.covariance(), deviations,
+            start.parameters().template segment<3>(eFreeDir0))));
       }
     }
   }
