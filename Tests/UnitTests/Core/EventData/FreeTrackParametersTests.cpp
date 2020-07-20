@@ -13,6 +13,7 @@
 #include "Acts/Geometry/GeometryContext.hpp"
 #include "Acts/Tests/CommonHelpers/FloatComparisons.hpp"
 #include "Acts/Utilities/Definitions.hpp"
+#include "Acts/Geometry/Volume.hpp"
 
 namespace Acts {
 namespace Test {
@@ -20,6 +21,7 @@ namespace Test {
 /// @brief Unit test for free parameters
 ///
 BOOST_AUTO_TEST_CASE(free_initialization) {
+	std::shared_ptr<const Volume> volume(new Volume());
   Vector3D pos(0., 1., 2.);
   double t = 3.;
   Vector3D dir(4., 5., 6.);
@@ -42,7 +44,7 @@ BOOST_AUTO_TEST_CASE(free_initialization) {
       0., 7., 0., 0., 0., 0., 0., 0., 0., 0., 8.;
   std::optional<FreeSymMatrix> covCpy = *cov;
 
-  FreeTrackParameters fp(covCpy, params);
+  FreeTrackParameters fp(covCpy, params, volume);
   CHECK_CLOSE_COVARIANCE(*fp.covariance(), *cov, 1e-6);
   CHECK_CLOSE_ABS(fp.parameters(), params, 1e-6);
 
@@ -74,7 +76,7 @@ BOOST_AUTO_TEST_CASE(free_initialization) {
   CHECK_CLOSE_ABS(nfpwoCov.parameters(), params, 1e-6);
 
   covCpy = *cov;
-  NeutralFreeTrackParameters nfp(covCpy, params);
+  NeutralFreeTrackParameters nfp(covCpy, params, volume);
   CHECK_CLOSE_COVARIANCE(*nfp.covariance(), *cov, 1e-6);
   CHECK_CLOSE_ABS(nfp.parameters(), params, 1e-6);
 
@@ -124,6 +126,8 @@ BOOST_AUTO_TEST_CASE(free_initialization) {
   CHECK_CLOSE_ABS(fp.charge(), +1., 1e-6);
   BOOST_CHECK_EQUAL(nfp.charge(), 0.);
   CHECK_CLOSE_ABS(fp.time(), t, 1e-6);
+  BOOST_TEST(&fp.referenceVolume() == volume.get());
+  BOOST_TEST(&nfp.referenceVolume() == volume.get());
 
   // Test setters
   GeometryContext dummy;
