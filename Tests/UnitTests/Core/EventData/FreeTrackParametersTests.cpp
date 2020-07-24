@@ -11,7 +11,6 @@
 #include "Acts/EventData/NeutralTrackParameters.hpp"
 #include "Acts/EventData/TrackParameters.hpp"
 #include "Acts/Geometry/GeometryContext.hpp"
-#include "Acts/Geometry/Volume.hpp"
 #include "Acts/Tests/CommonHelpers/FloatComparisons.hpp"
 #include "Acts/Utilities/Definitions.hpp"
 
@@ -21,7 +20,6 @@ namespace Test {
 /// @brief Unit test for free parameters
 ///
 BOOST_AUTO_TEST_CASE(free_initialization) {
-  std::shared_ptr<const Volume> volume(new Volume());
   Vector3D pos(0., 1., 2.);
   double t = 3.;
   Vector3D dir(4., 5., 6.);
@@ -44,7 +42,7 @@ BOOST_AUTO_TEST_CASE(free_initialization) {
       0., 7., 0., 0., 0., 0., 0., 0., 0., 0., 8.;
   std::optional<FreeSymMatrix> covCpy = *cov;
 
-  FreeTrackParameters fp(covCpy, params, volume);
+  FreeTrackParameters fp(covCpy, params);
   CHECK_CLOSE_COVARIANCE(*fp.covariance(), *cov, 1e-6);
   CHECK_CLOSE_ABS(fp.parameters(), params, 1e-6);
 
@@ -67,7 +65,6 @@ BOOST_AUTO_TEST_CASE(free_initialization) {
   covCpy = *cov;
   FreeTrackParameters fpMoveAssignment = FreeTrackParameters(covCpy, params);
   BOOST_CHECK_EQUAL(fpMoveAssignment, fp);
-
   /// Repeat constructing and assignment with neutral parameters
 
   // Test if the object can be created w/o covariance
@@ -76,7 +73,7 @@ BOOST_AUTO_TEST_CASE(free_initialization) {
   CHECK_CLOSE_ABS(nfpwoCov.parameters(), params, 1e-6);
 
   covCpy = *cov;
-  NeutralFreeTrackParameters nfp(covCpy, params, volume);
+  NeutralFreeTrackParameters nfp(covCpy, params);
   CHECK_CLOSE_COVARIANCE(*nfp.covariance(), *cov, 1e-6);
   CHECK_CLOSE_ABS(nfp.parameters(), params, 1e-6);
 
@@ -145,10 +142,6 @@ BOOST_AUTO_TEST_CASE(free_initialization) {
   CHECK_CLOSE_ABS(fp.get<eFreeDir1>(), 13., 1e-6);
   CHECK_CLOSE_ABS(fp.get<eFreeDir2>(), 14., 1e-6);
   CHECK_CLOSE_ABS(fp.get<eFreeQOverP>(), 15., 1e-6);
-
-  // Test further getters
-  BOOST_TEST(&fp.referenceVolume() == volume.get());
-  BOOST_TEST(&nfp.referenceVolume() == volume.get());
 
   FullFreeParameterSet parameterSet(fp.covariance(), fp.parameters());
   BOOST_TEST(fp.getParameterSet().getParameters() ==
