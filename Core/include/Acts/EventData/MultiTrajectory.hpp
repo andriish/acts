@@ -643,9 +643,7 @@ class TrackStateProxy {
         std::is_same<SourceLink, typename measurement_t::SourceLink>::value);
     IndexData& dataref = data();
     // Set the dimension of the measurement
-    constexpr size_t measdim =
-        Acts::Measurement<SourceLink, BoundParametersIndices,
-                          params...>::size();
+    constexpr size_t measdim = measurement_t::size();
     static_assert(measdim <= M, "Measurement has too many dimensions");
     dataref.measdim = measdim;
 
