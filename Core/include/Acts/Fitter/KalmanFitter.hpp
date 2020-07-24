@@ -475,7 +475,7 @@ class KalmanFitter {
         // add a full TrackState entry multi trajectory
         // (this allocates storage for all components, we will set them later)
         result.trackTip = result.fittedStates.addTrackState(
-            TrackStatePropMask::All, result.trackTip);
+            TrackStatePropMask::BoundAll, result.trackTip);
 
         // now get track state proxy back
         auto trackStateProxy =
@@ -485,9 +485,9 @@ class KalmanFitter {
         trackStateProxy.uncalibrated() = sourcelink_it->second;
 
         // Fill the track state
-        trackStateProxy.predicted() = boundParams.parameters();
-        trackStateProxy.predictedCovariance() = *boundParams.covariance();
-        trackStateProxy.jacobian() = std::get<BoundMatrix>(jacobian);
+        trackStateProxy.boundPredicted() = boundParams.parameters();
+        trackStateProxy.boundPredictedCovariance() = *boundParams.covariance();
+        trackStateProxy.jacobianBoundToBound() = std::get<BoundMatrix>(jacobian);
         trackStateProxy.pathLength() = pathLength;
 
         // We have predicted parameters, so calibrate the uncalibrated input
@@ -497,7 +497,7 @@ class KalmanFitter {
               trackStateProxy.setCalibrated(calibrated);
             },
             m_calibrator(trackStateProxy.uncalibrated(),
-                         trackStateProxy.predicted()));
+                         trackStateProxy.boundPredicted()));
 
         // Get and set the type flags
         auto& typeFlags = trackStateProxy.typeFlags();
@@ -520,12 +520,12 @@ class KalmanFitter {
           typeFlags.set(TrackStateFlag::MeasurementFlag);
           // Update the stepping state with filtered parameters
           ACTS_VERBOSE("Filtering step successful, updated parameters are : \n"
-                       << trackStateProxy.filtered().transpose());
+                       << trackStateProxy.boundFiltered().transpose());
           // update stepping state using filtered parameters after kalman
           stepper.update(state.stepping,
                          MultiTrajectoryHelpers::freeFiltered(
                              state.options.geoContext, trackStateProxy),
-                         BoundSymMatrix(trackStateProxy.filteredCovariance()));
+                         BoundSymMatrix(trackStateProxy.boundFilteredCovariance()));
           // We count the state with measurement
           ++result.measurementStates;
         } else {
@@ -550,7 +550,8 @@ class KalmanFitter {
           // uncalibrated/calibrated measurement and filtered parameter
           result.trackTip = result.fittedStates.addTrackState(
               ~(TrackStatePropMask::Uncalibrated |
-                TrackStatePropMask::Calibrated | TrackStatePropMask::Filtered),
+                TrackStatePropMask::Calibrated |
+                TrackStatePropMask::BoundFiltered),
               result.trackTip);
 
           // now get track state proxy back
@@ -578,9 +579,10 @@ class KalmanFitter {
                 stepper.boundState(state.stepping, *surface);
 
             // Fill the track state
-            trackStateProxy.predicted() = boundParams.parameters();
-            trackStateProxy.predictedCovariance() = *boundParams.covariance();
-            trackStateProxy.jacobian() = std::get<BoundMatrix>(jacobian);
+            trackStateProxy.boundPredicted() = boundParams.parameters();
+            trackStateProxy.boundPredictedCovariance() =
+                *boundParams.covariance();
+            trackStateProxy.jacobianBoundToBound() = std::get<BoundMatrix>(jacobian);
             trackStateProxy.pathLength() = pathLength;
           } else {
             ACTS_VERBOSE("Detected in-sensitive surface " << surface->geoID());
@@ -590,16 +592,17 @@ class KalmanFitter {
                 stepper.curvilinearState(state.stepping);
 
             // Fill the track state
-            trackStateProxy.predicted() = curvilinearParams.parameters();
-            trackStateProxy.predictedCovariance() =
+            trackStateProxy.boundPredicted() = curvilinearParams.parameters();
+            trackStateProxy.boundPredictedCovariance() =
                 *curvilinearParams.covariance();
-            trackStateProxy.jacobian() = std::get<BoundMatrix>(jacobian);
+            trackStateProxy.jacobianBoundToBound() = std::get<BoundMatrix>(jacobian);
             trackStateProxy.pathLength() = pathLength;
           }
 
           // Set the filtered parameter index to be the same with predicted
           // parameter
-          trackStateProxy.data().ifiltered = trackStateProxy.data().ipredicted;
+          trackStateProxy.data().iboundfiltered =
+              trackStateProxy.data().iboundpredicted;
 
           // We count the processed state
           ++result.processedStates;
@@ -650,7 +653,7 @@ class KalmanFitter {
 
         // Create a detached track state proxy
         auto tempTrackTip =
-            result.fittedStates.addTrackState(TrackStatePropMask::All);
+            result.fittedStates.addTrackState(TrackStatePropMask::BoundAll);
 
         // Get the detached track state proxy back
         auto trackStateProxy = result.fittedStates.getTrackState(tempTrackTip);
@@ -659,9 +662,9 @@ class KalmanFitter {
         trackStateProxy.uncalibrated() = sourcelink_it->second;
 
         // Fill the track state
-        trackStateProxy.predicted() = boundParams.parameters();
-        trackStateProxy.predictedCovariance() = *boundParams.covariance();
-        trackStateProxy.jacobian() = std::get<BoundMatrix>(jacobian);
+        trackStateProxy.boundPredicted() = boundParams.parameters();
+        trackStateProxy.boundPredictedCovariance() = *boundParams.covariance();
+        trackStateProxy.jacobianBoundToBound() = std::get<BoundMatrix>(jacobian);
         trackStateProxy.pathLength() = pathLength;
 
         // We have predicted parameters, so calibrate the uncalibrated input
@@ -671,7 +674,7 @@ class KalmanFitter {
               trackStateProxy.setCalibrated(calibrated);
             },
             m_calibrator(trackStateProxy.uncalibrated(),
-                         trackStateProxy.predicted()));
+                         trackStateProxy.boundPredicted()));
 
         // If the update is successful, set covariance and
         auto updateRes = m_updater(state.geoContext, trackStateProxy, backward);
@@ -683,7 +686,7 @@ class KalmanFitter {
           ACTS_VERBOSE(
               "Backward Filtering step successful, updated parameters are : "
               "\n"
-              << trackStateProxy.filtered().transpose());
+              << trackStateProxy.boundFiltered().transpose());
 
           // Fill the smoothed parameter for the existing track state
           result.fittedStates.applyBackwards(
@@ -691,9 +694,9 @@ class KalmanFitter {
                 auto fReferenceObject = &trackState.referenceObject();
                 if (fReferenceObject == surface) {
                   result.passedAgainObject.push_back(surface);
-                  trackState.smoothed() = trackStateProxy.filtered();
-                  trackState.smoothedCovariance() =
-                      trackStateProxy.filteredCovariance();
+                  trackState.boundSmoothed() = trackStateProxy.boundFiltered();
+                  trackState.boundSmoothedCovariance() =
+                      trackStateProxy.boundFilteredCovariance();
                   return false;
                 }
                 return true;
@@ -705,7 +708,7 @@ class KalmanFitter {
           stepper.update(state.stepping,
                          MultiTrajectoryHelpers::freeFiltered(
                              state.options.geoContext, trackStateProxy),
-                         BoundSymMatrix(trackStateProxy.filteredCovariance()));
+                         BoundSymMatrix(trackStateProxy.boundFilteredCovariance()));
 
           // Update state and stepper with post material effects
           materialInteractor(surface, state, stepper, postUpdate);
@@ -814,7 +817,7 @@ class KalmanFitter {
         } else if (measurementIndices.empty()) {
           // No smoothed parameters if the last measurement state has not been
           // found yet
-          st.data().ismoothed = detail_lt::IndexData::kInvalid;
+          st.data().iboundsmoothed = detail_lt::IndexData::kInvalid;
         }
         // Start count when the last measurement state is found
         if (not measurementIndices.empty()) {
@@ -851,7 +854,7 @@ class KalmanFitter {
       stepper.update(state.stepping,
                      MultiTrajectoryHelpers::freeSmoothed(
                          state.options.geoContext, firstMeasurement),
-                     BoundSymMatrix(firstMeasurement.smoothedCovariance()));
+                     BoundSymMatrix(firstMeasurement.boundSmoothedCovariance()));
       // Reverse the propagation direction
       state.stepping.stepSize =
           ConstrainedStep(-1. * state.options.maxStepSize);

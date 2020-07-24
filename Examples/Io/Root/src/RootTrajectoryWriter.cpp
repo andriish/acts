@@ -427,11 +427,11 @@ FW::ProcessCode FW::RootTrajectoryWriter::writeT(
 
       // get the predicted parameter
       bool predicted = false;
-      if (state.hasPredicted()) {
+      if (state.hasBoundPredicted()) {
         predicted = true;
         m_nPredicted++;
-        auto parameters = state.predicted();
-        auto covariance = state.predictedCovariance();
+        auto parameters = state.boundPredicted();
+        auto covariance = state.boundPredictedCovariance();
         // local hit residual info
         auto H = meas.projector();
         auto resCov = cov + H * covariance * H.transpose();
@@ -558,11 +558,11 @@ FW::ProcessCode FW::RootTrajectoryWriter::writeT(
 
       // get the filtered parameter
       bool filtered = false;
-      if (state.hasFiltered()) {
+      if (state.hasBoundFiltered()) {
         filtered = true;
         m_nFiltered++;
-        auto parameters = state.filtered();
-        auto covariance = state.filteredCovariance();
+        auto parameters = state.boundFiltered();
+        auto covariance = state.boundFilteredCovariance();
         // filtered parameter
         m_eLOC0_flt.push_back(parameters[Acts::eBoundLoc0]);
         m_eLOC1_flt.push_back(parameters[Acts::eBoundLoc1]);
@@ -667,11 +667,11 @@ FW::ProcessCode FW::RootTrajectoryWriter::writeT(
 
       // get the smoothed parameter
       bool smoothed = false;
-      if (state.hasSmoothed()) {
+      if (state.hasBoundSmoothed()) {
         smoothed = true;
         m_nSmoothed++;
-        auto parameters = state.smoothed();
-        auto covariance = state.smoothedCovariance();
+        auto parameters = state.boundSmoothed();
+        auto covariance = state.boundSmoothedCovariance();
 
         // smoothed parameter
         m_eLOC0_smt.push_back(parameters[Acts::eBoundLoc0]);

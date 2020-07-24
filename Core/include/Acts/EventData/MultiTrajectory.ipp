@@ -20,25 +20,42 @@ namespace Acts {
 namespace detail_lt {
 template <typename SL, size_t M, bool ReadOnly>
 inline TrackStateProxy<SL, M, ReadOnly>::TrackStateProxy(
-    ConstIf<MultiTrajectory<SL>, ReadOnly>& trajectory, size_t istate)
+    ConstIf<MultiTrajectory<SL, M>, ReadOnly>& trajectory, size_t istate)
     : m_traj(&trajectory), m_istate(istate) {}
 
 template <typename SL, size_t M, bool ReadOnly>
 TrackStatePropMask TrackStateProxy<SL, M, ReadOnly>::getMask() const {
   using PM = TrackStatePropMask;
   PM mask = PM::None;
-  if (hasPredicted()) {
-    mask |= PM::Predicted;
+  if (hasBoundPredicted()) {
+    mask |= PM::BoundPredicted;
   }
-
-  if (hasFiltered()) {
-    mask |= PM::Filtered;
+  if (hasBoundFiltered()) {
+    mask |= PM::BoundFiltered;
   }
-  if (hasSmoothed()) {
-    mask |= PM::Smoothed;
+  if (hasBoundSmoothed()) {
+    mask |= PM::BoundSmoothed;
   }
-  if (hasJacobian()) {
-    mask |= PM::Jacobian;
+  if (hasFreePredicted()) {
+    mask |= PM::FreePredicted;
+  }
+  if (hasFreeFiltered()) {
+    mask |= PM::FreeFiltered;
+  }
+  if (hasFreeSmoothed()) {
+    mask |= PM::FreeSmoothed;
+  }
+  if (hasJacobianBoundToBound()) {
+    mask |= PM::JacobianBoundToBound;
+  }
+  if (hasJacobianBoundToFree()) {
+    mask |= PM::JacobianBoundToFree;
+  }
+  if (hasJacobianFreeToBound()) {
+    mask |= PM::JacobianFreeToBound;
+  }
+  if (hasJacobianFreeToFree()) {
+    mask |= PM::JacobianFreeToFree;
   }
   if (hasUncalibrated()) {
     mask |= PM::Uncalibrated;
@@ -51,75 +68,151 @@ TrackStatePropMask TrackStateProxy<SL, M, ReadOnly>::getMask() const {
 }
 
 template <typename SL, size_t M, bool ReadOnly>
-inline auto TrackStateProxy<SL, M, ReadOnly>::parameters() const -> Parameters {
+inline auto TrackStateProxy<SL, M, ReadOnly>::parameters() const
+    -> BoundParameters {
   IndexData::IndexType idx;
-  if (hasSmoothed()) {
-    idx = data().ismoothed;
-  } else if (hasFiltered()) {
-    idx = data().ifiltered;
+  if (hasBoundSmoothed()) {
+    idx = data().iboundsmoothed;
+  } else if (hasBoundFiltered()) {
+    idx = data().iboundfiltered;
   } else {
     idx = data().ipredicted;
   }
 
-  return Parameters(m_traj->m_params.data.col(idx).data());
+  return BoundParameters(m_traj->m_boundParams.data.col(idx).data());
 }
 
 template <typename SL, size_t M, bool ReadOnly>
-inline auto TrackStateProxy<SL, M, ReadOnly>::covariance() const -> Covariance {
+inline auto TrackStateProxy<SL, M, ReadOnly>::covariance() const
+    -> BoundCovariance {
   IndexData::IndexType idx;
-  if (hasSmoothed()) {
-    idx = data().ismoothed;
-  } else if (hasFiltered()) {
-    idx = data().ifiltered;
+  if (hasBoundSmoothed()) {
+    idx = data().iboundsmoothed;
+  } else if (hasBoundFiltered()) {
+    idx = data().iboundfiltered;
   } else {
     idx = data().ipredicted;
   }
-  return Covariance(m_traj->m_cov.data.col(idx).data());
+  return BoundCovariance(m_traj->m_boundCov.data.col(idx).data());
 }
 
 template <typename SL, size_t M, bool ReadOnly>
-inline auto TrackStateProxy<SL, M, ReadOnly>::predicted() const -> Parameters {
-  assert(data().ipredicted != IndexData::kInvalid);
-  return Parameters(m_traj->m_params.col(data().ipredicted).data());
+inline auto TrackStateProxy<SL, M, ReadOnly>::boundPredicted() const
+    -> BoundParameters {
+  assert(data().iboundpredicted != IndexData::kInvalid);
+  return BoundParameters(
+      m_traj->m_boundParams.col(data().iboundpredicted).data());
 }
 
 template <typename SL, size_t M, bool ReadOnly>
-inline auto TrackStateProxy<SL, M, ReadOnly>::predictedCovariance() const
-    -> Covariance {
-  assert(data().ipredicted != IndexData::kInvalid);
-  return Covariance(m_traj->m_cov.col(data().ipredicted).data());
+inline auto TrackStateProxy<SL, M, ReadOnly>::boundPredictedCovariance() const
+    -> BoundCovariance {
+  assert(data().iboundpredicted != IndexData::kInvalid);
+  return BoundCovariance(m_traj->m_boundCov.col(data().iboundpredicted).data());
 }
 
 template <typename SL, size_t M, bool ReadOnly>
-inline auto TrackStateProxy<SL, M, ReadOnly>::filtered() const -> Parameters {
-  assert(data().ifiltered != IndexData::kInvalid);
-  return Parameters(m_traj->m_params.col(data().ifiltered).data());
+inline auto TrackStateProxy<SL, M, ReadOnly>::boundFiltered() const
+    -> BoundParameters {
+  assert(data().iboundfiltered != IndexData::kInvalid);
+  return BoundParameters(
+      m_traj->m_boundParams.col(data().iboundfiltered).data());
 }
 
 template <typename SL, size_t M, bool ReadOnly>
-inline auto TrackStateProxy<SL, M, ReadOnly>::filteredCovariance() const
-    -> Covariance {
-  assert(data().ifiltered != IndexData::kInvalid);
-  return Covariance(m_traj->m_cov.col(data().ifiltered).data());
+inline auto TrackStateProxy<SL, M, ReadOnly>::boundFilteredCovariance() const
+    -> BoundCovariance {
+  assert(data().iboundfiltered != IndexData::kInvalid);
+  return BoundCovariance(m_traj->m_boundCov.col(data().iboundfiltered).data());
 }
 
 template <typename SL, size_t M, bool ReadOnly>
-inline auto TrackStateProxy<SL, M, ReadOnly>::smoothed() const -> Parameters {
-  assert(data().ismoothed != IndexData::kInvalid);
-  return Parameters(m_traj->m_params.col(data().ismoothed).data());
+inline auto TrackStateProxy<SL, M, ReadOnly>::boundSmoothed() const
+    -> BoundParameters {
+  assert(data().iboundsmoothed != IndexData::kInvalid);
+  return BoundParameters(
+      m_traj->m_boundParams.col(data().iboundsmoothed).data());
 }
 
 template <typename SL, size_t M, bool ReadOnly>
-inline auto TrackStateProxy<SL, M, ReadOnly>::smoothedCovariance() const
-    -> Covariance {
-  assert(data().ismoothed != IndexData::kInvalid);
-  return Covariance(m_traj->m_cov.col(data().ismoothed).data());
+inline auto TrackStateProxy<SL, M, ReadOnly>::boundSmoothedCovariance() const
+    -> BoundCovariance {
+  assert(data().iboundsmoothed != IndexData::kInvalid);
+  return BoundCovariance(m_traj->m_boundCov.col(data().iboundsmoothed).data());
 }
 
 template <typename SL, size_t M, bool ReadOnly>
-inline auto TrackStateProxy<SL, M, ReadOnly>::jacobian() const -> Covariance {
-  assert(data().ijacobian != IndexData::kInvalid);
-  return Covariance(m_traj->m_jac.col(data().ijacobian).data());
+inline auto TrackStateProxy<SL, M, ReadOnly>::freePredicted() const
+    -> FreeParameters {
+  assert(data().ifreepredicted != IndexData::kInvalid);
+  return FreeParameters(m_traj->m_freeParams.col(data().ifreepredicted).data());
+}
+
+template <typename SL, size_t M, bool ReadOnly>
+inline auto TrackStateProxy<SL, M, ReadOnly>::freePredictedCovariance() const
+    -> FreeCovariance {
+  assert(data().ifreepredicted != IndexData::kInvalid);
+  return FreeCovariance(m_traj->m_freeCov.col(data().ifreepredicted).data());
+}
+
+template <typename SL, size_t M, bool ReadOnly>
+inline auto TrackStateProxy<SL, M, ReadOnly>::freeFiltered() const
+    -> FreeParameters {
+  assert(data().ifreefiltered != IndexData::kInvalid);
+  return FreeParameters(m_traj->m_freeParams.col(data().ifreefiltered).data());
+}
+
+template <typename SL, size_t M, bool ReadOnly>
+inline auto TrackStateProxy<SL, M, ReadOnly>::freeFilteredCovariance() const
+    -> FreeCovariance {
+  assert(data().ifreefiltered != IndexData::kInvalid);
+  return FreeCovariance(m_traj->m_freeCov.col(data().ifreefiltered).data());
+}
+
+template <typename SL, size_t M, bool ReadOnly>
+inline auto TrackStateProxy<SL, M, ReadOnly>::freeSmoothed() const
+    -> FreeParameters {
+  assert(data().ifreesmoothed != IndexData::kInvalid);
+  return FreeParameters(m_traj->m_freeParams.col(data().ifreesmoothed).data());
+}
+
+template <typename SL, size_t M, bool ReadOnly>
+inline auto TrackStateProxy<SL, M, ReadOnly>::freeSmoothedCovariance() const
+    -> FreeCovariance {
+  assert(data().ifreesmoothed != IndexData::kInvalid);
+  return FreeCovariance(m_traj->m_freeCov.col(data().ifreesmoothed).data());
+}
+
+template <typename SL, size_t M, bool ReadOnly>
+inline auto TrackStateProxy<SL, M, ReadOnly>::jacobianBoundToBound() const
+    -> JacobianBoundToBound {
+  assert(data().ijacobianboundtobound != IndexData::kInvalid);
+  return JacobianBoundToBound(
+      m_traj->m_jacBoundToBound.col(data().ijacobianboundtobound).data());
+}
+
+template <typename SL, size_t M, bool ReadOnly>
+inline auto TrackStateProxy<SL, M, ReadOnly>::jacobianBoundToFree() const
+    -> JacobianBoundToFree {
+  assert(data().ijacobianboundtofree != IndexData::kInvalid);
+  return JacobianBoundToFree(
+      m_traj->m_jacBoundToFree.col(data().ijacobianboundtofree).data());
+}
+
+template <typename SL, size_t M, bool ReadOnly>
+inline auto TrackStateProxy<SL, M, ReadOnly>::jacobianFreeToBound() const
+    -> JacobianFreeToBound {
+  assert(data().ijacobianfreetobound != IndexData::kInvalid);
+  return JacobianFreeToBound(
+      m_traj->m_jacFreeToBound.col(data().ijacobianfreetobound).data());
+}
+
+template <typename SL, size_t M, bool ReadOnly>
+inline auto TrackStateProxy<SL, M, ReadOnly>::jacobianFreeToFree() const
+    -> JacobianFreeToFree {
+  assert(data().ijacobianfreetofree != IndexData::kInvalid);
+  return JacobianFreeToFree(
+      m_traj->m_jacFreeToFree.col(data().ijacobianfreetofree).data());
 }
 
 template <typename SL, size_t M, bool ReadOnly>
@@ -159,9 +252,9 @@ inline auto TrackStateProxy<SL, M, ReadOnly>::calibratedCovariance() const
 
 }  // namespace detail_lt
 
-template <typename SL>
-inline size_t MultiTrajectory<SL>::addTrackState(TrackStatePropMask mask,
-                                                 size_t iprevious) {
+template <typename SL, size_t MSM>
+inline size_t MultiTrajectory<SL, MSM>::addTrackState(TrackStatePropMask mask,
+                                                      size_t iprevious) {
   using PropMask = TrackStatePropMask;
 
   m_index.emplace_back();
@@ -176,27 +269,60 @@ inline size_t MultiTrajectory<SL>::addTrackState(TrackStatePropMask mask,
   m_referenceObjects.emplace_back(nullptr);
   p.irefobject = m_referenceObjects.size() - 1;
 
-  if (ACTS_CHECK_BIT(mask, PropMask::Predicted)) {
-    m_params.addCol();
-    m_cov.addCol();
-    p.ipredicted = m_params.size() - 1;
+  if (ACTS_CHECK_BIT(mask, PropMask::BoundPredicted)) {
+    m_boundParams.addCol();
+    m_boundCov.addCol();
+    p.iboundpredicted = m_boundParams.size() - 1;
   }
 
-  if (ACTS_CHECK_BIT(mask, PropMask::Filtered)) {
-    m_params.addCol();
-    m_cov.addCol();
-    p.ifiltered = m_params.size() - 1;
+  if (ACTS_CHECK_BIT(mask, PropMask::BoundFiltered)) {
+    m_boundParams.addCol();
+    m_boundCov.addCol();
+    p.iboundfiltered = m_boundParams.size() - 1;
   }
 
-  if (ACTS_CHECK_BIT(mask, PropMask::Smoothed)) {
-    m_params.addCol();
-    m_cov.addCol();
-    p.ismoothed = m_params.size() - 1;
+  if (ACTS_CHECK_BIT(mask, PropMask::BoundSmoothed)) {
+    m_boundParams.addCol();
+    m_boundCov.addCol();
+    p.iboundsmoothed = m_boundParams.size() - 1;
   }
 
-  if (ACTS_CHECK_BIT(mask, PropMask::Jacobian)) {
-    m_jac.addCol();
-    p.ijacobian = m_jac.size() - 1;
+  if (ACTS_CHECK_BIT(mask, PropMask::FreePredicted)) {
+    m_freeParams.addCol();
+    m_freeCov.addCol();
+    p.ifreepredicted = m_freeParams.size() - 1;
+  }
+
+  if (ACTS_CHECK_BIT(mask, PropMask::FreeFiltered)) {
+    m_freeParams.addCol();
+    m_freeCov.addCol();
+    p.ifreefiltered = m_freeParams.size() - 1;
+  }
+
+  if (ACTS_CHECK_BIT(mask, PropMask::FreeSmoothed)) {
+    m_freeParams.addCol();
+    m_freeCov.addCol();
+    p.ifreesmoothed = m_freeParams.size() - 1;
+  }
+
+  if (ACTS_CHECK_BIT(mask, PropMask::JacobianBoundToBound)) {
+    m_jacBoundToBound.addCol();
+    p.ijacobianboundtobound = m_jacBoundToBound.size() - 1;
+  }
+
+  if (ACTS_CHECK_BIT(mask, PropMask::JacobianBoundToFree)) {
+    m_jacBoundToFree.addCol();
+    p.ijacobianboundtofree = m_jacBoundToFree.size() - 1;
+  }
+
+  if (ACTS_CHECK_BIT(mask, PropMask::JacobianFreeToBound)) {
+    m_jacFreeToBound.addCol();
+    p.ijacobianfreetobound = m_jacFreeToBound.size() - 1;
+  }
+
+  if (ACTS_CHECK_BIT(mask, PropMask::JacobianFreeToFree)) {
+    m_jacFreeToFree.addCol();
+    p.ijacobianfreetofree = m_jacFreeToFree.size() - 1;
   }
 
   if (ACTS_CHECK_BIT(mask, PropMask::Uncalibrated)) {
@@ -219,9 +345,10 @@ inline size_t MultiTrajectory<SL>::addTrackState(TrackStatePropMask mask,
   return index;
 }
 
-template <typename SL>
+template <typename SL, size_t MSM>
 template <typename F>
-void MultiTrajectory<SL>::visitBackwards(size_t iendpoint, F&& callable) const {
+void MultiTrajectory<SL, MSM>::visitBackwards(size_t iendpoint,
+                                              F&& callable) const {
   static_assert(detail_lt::VisitorConcept<F, ConstTrackStateProxy>,
                 "Callable needs to satisfy VisitorConcept");
 
@@ -246,9 +373,9 @@ void MultiTrajectory<SL>::visitBackwards(size_t iendpoint, F&& callable) const {
   }
 }
 
-template <typename SL>
+template <typename SL, size_t MSM>
 template <typename F>
-void MultiTrajectory<SL>::applyBackwards(size_t iendpoint, F&& callable) {
+void MultiTrajectory<SL, MSM>::applyBackwards(size_t iendpoint, F&& callable) {
   static_assert(detail_lt::VisitorConcept<F, TrackStateProxy>,
                 "Callable needs to satisfy VisitorConcept");
 

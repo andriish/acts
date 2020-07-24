@@ -579,12 +579,12 @@ class CombinatorialKalmanFilter {
           // already stored
           // -> filtered parameter for outlier
           auto stateMask =
-              (isPredictedShared ? ~TrackStatePropMask::Predicted
-                                 : TrackStatePropMask::All) &
+              (isPredictedShared ? ~TrackStatePropMask::BoundPredicted
+                                 : TrackStatePropMask::BoundAll) &
               (isSourcelinkShared ? ~TrackStatePropMask::Uncalibrated
-                                  : TrackStatePropMask::All) &
-              (isOutlier ? ~TrackStatePropMask::Filtered
-                         : TrackStatePropMask::All);
+                                  : TrackStatePropMask::BoundAll) &
+              (isOutlier ? ~TrackStatePropMask::BoundFiltered
+                         : TrackStatePropMask::BoundAll);
 
           // Add measurement/outlier track state to the multitrajectory
           auto addStateRes = addSourcelinkState(
@@ -622,9 +622,9 @@ class CombinatorialKalmanFilter {
           stepper.update(state.stepping,
                          MultiTrajectoryHelpers::freeFiltered(
                              state.options.geoContext, ts),
-                         BoundSymMatrix(ts.filteredCovariance()));
+                         BoundSymMatrix(ts.boundFilteredCovariance()));
           ACTS_VERBOSE("Stepping state is updated with filtered parameter: \n"
-                       << ts.filtered().transpose()
+                       << ts.boundFiltered().transpose()
                        << " of track state with tip = "
                        << result.activeTips.back().first);
         }
@@ -662,9 +662,9 @@ class CombinatorialKalmanFilter {
           // No source links on surface, add either hole or passive material
           // TrackState. No storage allocation for uncalibrated/calibrated
           // measurement and filtered parameter
-          auto stateMask =
-              ~(TrackStatePropMask::Uncalibrated |
-                TrackStatePropMask::Calibrated | TrackStatePropMask::Filtered);
+          auto stateMask = ~(TrackStatePropMask::Uncalibrated |
+                             TrackStatePropMask::Calibrated |
+                             TrackStatePropMask::BoundFiltered);
 
           // Increment of number of processed states
           tipState.nStates++;
@@ -752,16 +752,18 @@ class CombinatorialKalmanFilter {
       auto [boundParams, jacobian, pathLength] = boundState;
 
       // Fill the parametric part of the track state proxy
-      if ((not ACTS_CHECK_BIT(stateMask, TrackStatePropMask::Predicted)) and
+      if ((not ACTS_CHECK_BIT(stateMask,
+                              TrackStatePropMask::BoundPredicted)) and
           neighborTip != SIZE_MAX) {
         // The predicted parameter is already stored, just set the index
         auto neighborState = result.fittedStates.getTrackState(neighborTip);
-        trackStateProxy.data().ipredicted = neighborState.data().ipredicted;
+        trackStateProxy.data().iboundpredicted =
+            neighborState.data().iboundpredicted;
       } else {
-        trackStateProxy.predicted() = boundParams.parameters();
-        trackStateProxy.predictedCovariance() = *boundParams.covariance();
+        trackStateProxy.boundPredicted() = boundParams.parameters();
+        trackStateProxy.boundPredictedCovariance() = *boundParams.covariance();
       }
-      trackStateProxy.jacobian() = std::get<BoundMatrix>(jacobian);
+      trackStateProxy.jacobianBoundToBound() = std::get<BoundMatrix>(jacobian);
       trackStateProxy.pathLength() = pathLength;
 
       // Assign the uncalibrated&calibrated measurement to the track
@@ -780,7 +782,7 @@ class CombinatorialKalmanFilter {
             trackStateProxy.setCalibrated(calibrated);
           },
           m_calibrator(trackStateProxy.uncalibrated(),
-                       trackStateProxy.predicted()));
+                       trackStateProxy.boundPredicted()));
 
       // Get and set the type flags
       auto& typeFlags = trackStateProxy.typeFlags();
@@ -800,7 +802,8 @@ class CombinatorialKalmanFilter {
         // No Kalman update for outlier
         // Set the filtered parameter index to be the same with predicted
         // parameter
-        trackStateProxy.data().ifiltered = trackStateProxy.data().ipredicted;
+        trackStateProxy.data().iboundfiltered =
+            trackStateProxy.data().iboundpredicted;
       } else {
         // Kalman update
         auto updateRes = m_updater(geoContext, trackStateProxy);
@@ -845,16 +848,17 @@ class CombinatorialKalmanFilter {
 
       auto [boundParams, jacobian, pathLength] = boundState;
       // Fill the track state
-      trackStateProxy.predicted() = boundParams.parameters();
-      trackStateProxy.predictedCovariance() = *boundParams.covariance();
-      trackStateProxy.jacobian() = std::get<BoundMatrix>(jacobian);
+      trackStateProxy.boundPredicted() = boundParams.parameters();
+      trackStateProxy.boundPredictedCovariance() = *boundParams.covariance();
+      trackStateProxy.jacobianBoundToBound() = std::get<BoundMatrix>(jacobian);
       trackStateProxy.pathLength() = pathLength;
       // Set the surface
       trackStateProxy.setReferenceObject(
           boundParams.referenceSurface().getSharedPtr());
       // Set the filtered parameter index to be the same with predicted
       // parameter
-      trackStateProxy.data().ifiltered = trackStateProxy.data().ipredicted;
+      trackStateProxy.data().iboundfiltered =
+          trackStateProxy.data().iboundpredicted;
 
       return currentTip;
     }
@@ -890,16 +894,18 @@ class CombinatorialKalmanFilter {
 
       auto [curvilinearParams, jacobian, pathLength] = curvilinearState;
       // Fill the track state
-      trackStateProxy.predicted() = curvilinearParams.parameters();
-      trackStateProxy.predictedCovariance() = *curvilinearParams.covariance();
-      trackStateProxy.jacobian() = std::get<BoundMatrix>(jacobian);
+      trackStateProxy.boundPredicted() = curvilinearParams.parameters();
+      trackStateProxy.boundPredictedCovariance() =
+          *curvilinearParams.covariance();
+      trackStateProxy.jacobianBoundToBound() = std::get<BoundMatrix>(jacobian);
       trackStateProxy.pathLength() = pathLength;
       // Set the surface
       trackStateProxy.setReferenceObject(Surface::makeShared<PlaneSurface>(
           curvilinearParams.position(), curvilinearParams.momentum()));
       // Set the filtered parameter index to be the same with predicted
       // parameter
-      trackStateProxy.data().ifiltered = trackStateProxy.data().ipredicted;
+      trackStateProxy.data().iboundfiltered =
+          trackStateProxy.data().iboundpredicted;
 
       return currentTip;
     }
@@ -984,7 +990,7 @@ class CombinatorialKalmanFilter {
         } else if (measurementIndices.empty()) {
           // No smoothed parameter if the last measurment state has not been
           // found yet
-          st.data().ismoothed = detail_lt::IndexData::kInvalid;
+          st.data().iboundsmoothed = detail_lt::IndexData::kInvalid;
         }
         // Start count when the last measurement state is found
         if (not measurementIndices.empty()) {
@@ -1018,7 +1024,7 @@ class CombinatorialKalmanFilter {
       stepper.update(state.stepping,
                      MultiTrajectoryHelpers::freeSmoothed(
                          state.options.geoContext, firstMeasurement),
-                     BoundSymMatrix(firstMeasurement.smoothedCovariance()));
+                     BoundSymMatrix(firstMeasurement.boundSmoothedCovariance()));
       // Reverse the propagation direction
       state.stepping.stepSize =
           ConstrainedStep(-1. * state.options.maxStepSize);

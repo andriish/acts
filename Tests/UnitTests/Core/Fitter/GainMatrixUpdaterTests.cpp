@@ -51,21 +51,21 @@ BOOST_AUTO_TEST_CASE(gain_matrix_updater) {
   parValues << 0.3, 0.5, 0.5 * M_PI, 0.3 * M_PI, 0.01, 0.;
 
   MultiTrajectory<SourceLink> traj;
-  traj.addTrackState(TrackStatePropMask::All);
+  traj.addTrackState(TrackStatePropMask::BoundAll);
   auto ts = traj.getTrackState(0);
 
   ts.uncalibrated() = SourceLink{&meas};
   // "calibrate"
   std::visit([&](const auto& m) { ts.setCalibrated(m); }, meas);
 
-  ts.predicted() = parValues;
-  ts.predictedCovariance() = covTrk;
+  ts.boundPredicted() = parValues;
+  ts.boundPredictedCovariance() = covTrk;
   ts.pathLength() = 0.;
 
   // Gain matrix update and filtered state
   GainMatrixUpdater gmu;
 
-  BOOST_CHECK(ts.hasFiltered());
+  BOOST_CHECK(ts.hasBoundFiltered());
   BOOST_CHECK(ts.hasCalibrated());
   BOOST_CHECK(gmu(tgContext, ts).ok());
   // ref object is same on measurements and parameters
@@ -88,8 +88,8 @@ BOOST_AUTO_TEST_CASE(gain_matrix_updater) {
   Vector3D expMomentum;
   expMomentum << 0.0000000, 80.9016994, 58.7785252;
 
-  BoundParameters filtered(tgContext, ts.filteredCovariance(), ts.filtered(),
-                           cylinder);
+  BoundParameters filtered(tgContext, ts.boundFilteredCovariance(),
+                           ts.boundFiltered(), cylinder);
 
   double expChi2 = 1.33958;
 

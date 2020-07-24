@@ -38,7 +38,7 @@ enum TrackStateFlag {
 using TrackStateType = std::bitset<TrackStateFlag::NumTrackStateFlags>;
 
 // forward declarations
-template <typename source_link_t>
+template <typename source_link_t, size_t measurement_size_max_t>
 class MultiTrajectory;
 class GeometryObject;
 
@@ -99,13 +99,28 @@ struct Types {
   using Covariance = Eigen::Matrix<Scalar, Size, Size, Flags>;
   using CoefficientsMap = Eigen::Map<ConstIf<Coefficients, ReadOnlyMaps>>;
   using CovarianceMap = Eigen::Map<ConstIf<Covariance, ReadOnlyMaps>>;
+  using QuadraticJacobian = Eigen::Matrix<Scalar, Size, Size, Flags>;
+  using JacobianBoundToFree =
+      Eigen::Matrix<Scalar, eFreeParametersSize, eBoundParametersSize, Flags>;
+  using JacobianFreeToBound =
+      Eigen::Matrix<Scalar, eBoundParametersSize, eFreeParametersSize, Flags>;
+  using QuadraticJacobianMap =
+      Eigen::Map<ConstIf<QuadraticJacobian, ReadOnlyMaps>>;
+  using JacobianBoundToFreeMap =
+      Eigen::Map<ConstIf<JacobianBoundToFree, ReadOnlyMaps>>;
+  using JacobianFreeToBoundMap =
+      Eigen::Map<ConstIf<JacobianFreeToBound, ReadOnlyMaps>>;
   // storage of multiple items in flat arrays
   using StorageCoefficients =
       GrowableColumns<Eigen::Array<Scalar, Size, Eigen::Dynamic, Flags>,
                       SizeIncrement>;
-  using StorageCovariance =
+  using StorageQuadraticMatrix =
       GrowableColumns<Eigen::Array<Scalar, Size * Size, Eigen::Dynamic, Flags>,
                       SizeIncrement>;
+  using StorageNonQuadraticMatrix = GrowableColumns<
+      Eigen::Array<Scalar, eBoundParametersSize * eFreeParametersSize,
+                   Eigen::Dynamic, Flags>,
+      SizeIncrement>;
 };
 
 struct IndexData {
@@ -115,10 +130,16 @@ struct IndexData {
 
   IndexType irefobject = kInvalid;
   IndexType iprevious = kInvalid;
-  IndexType ipredicted = kInvalid;
-  IndexType ifiltered = kInvalid;
-  IndexType ismoothed = kInvalid;
-  IndexType ijacobian = kInvalid;
+  IndexType iboundpredicted = kInvalid;
+  IndexType iboundfiltered = kInvalid;
+  IndexType iboundsmoothed = kInvalid;
+  IndexType ifreepredicted = kInvalid;
+  IndexType ifreefiltered = kInvalid;
+  IndexType ifreesmoothed = kInvalid;
+  IndexType ijacobianboundtobound = kInvalid;
+  IndexType ijacobianboundtofree = kInvalid;
+  IndexType ijacobianfreetobound = kInvalid;
+  IndexType ijacobianfreetofree = kInvalid;
   IndexType iprojector = kInvalid;
 
   double chi2;
@@ -140,10 +161,22 @@ template <typename source_link_t, size_t M, bool ReadOnly = true>
 class TrackStateProxy {
  public:
   using SourceLink = source_link_t;
-  using Parameters =
+  using BoundParameters =
       typename Types<eBoundParametersSize, ReadOnly>::CoefficientsMap;
-  using Covariance =
+  using BoundCovariance =
       typename Types<eBoundParametersSize, ReadOnly>::CovarianceMap;
+  using FreeParameters =
+      typename Types<eFreeParametersSize, ReadOnly>::CoefficientsMap;
+  using FreeCovariance =
+      typename Types<eFreeParametersSize, ReadOnly>::CovarianceMap;
+  using JacobianBoundToBound =
+      typename Types<eBoundParametersSize, ReadOnly>::QuadraticJacobianMap;
+  using JacobianBoundToFree =
+      typename Types<eBoundParametersSize, ReadOnly>::JacobianBoundToFreeMap;
+  using JacobianFreeToBound =
+      typename Types<eFreeParametersSize, ReadOnly>::JacobianFreeToBoundMap;
+  using JacobianFreeToFree =
+      typename Types<eFreeParametersSize, ReadOnly>::QuadraticJacobianMap;
   using Measurement = typename Types<M, ReadOnly>::CoefficientsMap;
   using MeasurementCovariance = typename Types<M, ReadOnly>::CovarianceMap;
 
@@ -152,11 +185,14 @@ class TrackStateProxy {
   // @TODO: Does not copy flags, because this fails: can't have col major row
   // vector, but that's required for 1xN projection matrices below.
   constexpr static auto ProjectorFlags = Eigen::RowMajor | Eigen::AutoAlign;
-  using Projector = Eigen::Matrix<typename Covariance::Scalar, M,
-                                  eBoundParametersSize, ProjectorFlags>;
-  using EffectiveProjector =
+  using Projector = Eigen::Matrix<typename BoundCovariance::Scalar, M,
+                                  eFreeParametersSize, ProjectorFlags>;
+  using EffectiveBoundProjector =
       Eigen::Matrix<typename Projector::Scalar, Eigen::Dynamic, Eigen::Dynamic,
                     ProjectorFlags, M, eBoundParametersSize>;
+  using EffectiveFreeProjector =
+      Eigen::Matrix<typename Projector::Scalar, Eigen::Dynamic, Eigen::Dynamic,
+                    ProjectorFlags, M, eFreeParametersSize>;
 
   /// Index within the trajectory.
   /// @return the index
@@ -201,27 +237,54 @@ class TrackStateProxy {
     }
 
     // we're sure now this has correct allocations, so just copy
-    if (ACTS_CHECK_BIT(src, PM::Predicted)) {
-      predicted() = other.predicted();
-      predictedCovariance() = other.predictedCovariance();
+    if (ACTS_CHECK_BIT(src, PM::BoundPredicted)) {
+      boundPredicted() = other.boundPredicted();
+      boundPredictedCovariance() = other.boundPredictedCovariance();
     }
 
-    if (ACTS_CHECK_BIT(src, PM::Filtered)) {
-      filtered() = other.filtered();
-      filteredCovariance() = other.filteredCovariance();
+    if (ACTS_CHECK_BIT(src, PM::BoundFiltered)) {
+      boundFiltered() = other.boundFiltered();
+      boundFilteredCovariance() = other.boundFilteredCovariance();
     }
 
-    if (ACTS_CHECK_BIT(src, PM::Smoothed)) {
-      smoothed() = other.smoothed();
-      smoothedCovariance() = other.smoothedCovariance();
+    if (ACTS_CHECK_BIT(src, PM::BoundSmoothed)) {
+      boundSmoothed() = other.boundSmoothed();
+      boundSmoothedCovariance() = other.boundSmoothedCovariance();
+    }
+
+    if (ACTS_CHECK_BIT(src, PM::FreePredicted)) {
+      freePredicted() = other.freePredicted();
+      freePredictedCovariance() = other.freePredictedCovariance();
+    }
+
+    if (ACTS_CHECK_BIT(src, PM::FreeFiltered)) {
+      freeFiltered() = other.freeFiltered();
+      freeFilteredCovariance() = other.freeFilteredCovariance();
+    }
+
+    if (ACTS_CHECK_BIT(src, PM::FreeSmoothed)) {
+      freeSmoothed() = other.freeSmoothed();
+      freeSmoothedCovariance() = other.freeSmoothedCovariance();
+    }
+
+    if (ACTS_CHECK_BIT(src, PM::JacobianBoundToBound)) {
+      jacobianBoundToBound() = other.jacobianBoundToBound();
+    }
+
+    if (ACTS_CHECK_BIT(src, PM::JacobianBoundToFree)) {
+      jacobianBoundToFree() = other.jacobianBoundToFree();
+    }
+
+    if (ACTS_CHECK_BIT(src, PM::JacobianFreeToBound)) {
+      jacobianFreeToBound() = other.jacobianFreeToBound();
+    }
+
+    if (ACTS_CHECK_BIT(src, PM::JacobianFreeToFree)) {
+      jacobianFreeToFree() = other.jacobianFreeToFree();
     }
 
     if (ACTS_CHECK_BIT(src, PM::Uncalibrated)) {
       uncalibrated() = other.uncalibrated();
-    }
-
-    if (ACTS_CHECK_BIT(src, PM::Jacobian)) {
-      jacobian() = other.jacobian();
     }
 
     if (ACTS_CHECK_BIT(src, PM::Calibrated)) {
@@ -263,65 +326,141 @@ class TrackStateProxy {
   /// first parameters that are set in this order: predicted -> filtered ->
   /// smoothed
   /// @return one of predicted, filtered or smoothed parameters
-  Parameters parameters() const;
+  BoundParameters parameters() const;
 
   /// Track parameters covariance matrix. This tries to be somewhat smart and
   /// return the
   /// first parameters that are set in this order: predicted -> filtered ->
   /// smoothed
   /// @return one of predicted, filtered or smoothed covariances
-  Covariance covariance() const;
+  BoundCovariance covariance() const;
 
   /// Predicted track parameters vector
   /// @return The predicted parameters
-  Parameters predicted() const;
+  BoundParameters boundPredicted() const;
 
   /// Predicted track parameters covariance matrix.
   /// @return The predicted track parameter covariance
-  Covariance predictedCovariance() const;
+  BoundCovariance boundPredictedCovariance() const;
 
   /// Check whether the predicted parameters+covariance is set
   /// @return Whether it is set or not
-  bool hasPredicted() const { return data().ipredicted != IndexData::kInvalid; }
+  bool hasBoundPredicted() const {
+    return data().iboundpredicted != IndexData::kInvalid;
+  }
 
   /// Filtered track parameters vector
   /// @return The filtered parameters
-  Parameters filtered() const;
+  BoundParameters boundFiltered() const;
 
   /// Filtered track parameters covariance matrix
   /// @return The filtered parameters covariance
-  Covariance filteredCovariance() const;
+  BoundCovariance boundFilteredCovariance() const;
 
   /// Return whether filtered parameters+covariance is set
   /// @return Whether it is set
-  bool hasFiltered() const { return data().ifiltered != IndexData::kInvalid; }
+  bool hasBoundFiltered() const {
+    return data().iboundfiltered != IndexData::kInvalid;
+  }
 
   /// Smoothed track parameters vector
   /// @return The smoothed parameters
-  Parameters smoothed() const;
+  BoundParameters boundSmoothed() const;
 
   /// Smoothed track parameters covariance matrix
   /// @return the parameter covariance matrix
-  Covariance smoothedCovariance() const;
+  BoundCovariance boundSmoothedCovariance() const;
 
   /// Return whether smoothed parameters+covariance is set
   /// @return Whether it is set
-  bool hasSmoothed() const { return data().ismoothed != IndexData::kInvalid; }
+  bool hasBoundSmoothed() const {
+    return data().iboundsmoothed != IndexData::kInvalid;
+  }
+
+  /// Predicted track parameters vector
+  /// @return The predicted parameters
+  FreeParameters freePredicted() const;
+
+  /// Predicted track parameters covariance matrix.
+  /// @return The predicted track parameter covariance
+  FreeCovariance freePredictedCovariance() const;
+
+  /// Check whether the predicted parameters+covariance is set
+  /// @return Whether it is set or not
+  bool hasFreePredicted() const {
+    return data().ifreepredicted != IndexData::kInvalid;
+  }
+
+  /// Filtered track parameters vector
+  /// @return The filtered parameters
+  FreeParameters freeFiltered() const;
+
+  /// Filtered track parameters covariance matrix
+  /// @return The filtered parameters covariance
+  FreeCovariance freeFilteredCovariance() const;
+
+  /// Return whether filtered parameters+covariance is set
+  /// @return Whether it is set
+  bool hasFreeFiltered() const {
+    return data().ifreefiltered != IndexData::kInvalid;
+  }
+
+  /// Smoothed track parameters vector
+  /// @return The smoothed parameters
+  FreeParameters freeSmoothed() const;
+
+  /// Smoothed track parameters covariance matrix
+  /// @return the parameter covariance matrix
+  FreeCovariance freeSmoothedCovariance() const;
+
+  /// Return whether smoothed parameters+covariance is set
+  /// @return Whether it is set
+  bool hasFreeSmoothed() const {
+    return data().ifreesmoothed != IndexData::kInvalid;
+  }
 
   /// Returns the jacobian from the previous trackstate to this one
   /// @return The jacobian matrix
-  Covariance jacobian() const;
+  JacobianBoundToBound jacobianBoundToBound() const;
 
   /// Returns whether a jacobian is set for this trackstate
   /// @return Whether it is set
-  bool hasJacobian() const { return data().ijacobian != IndexData::kInvalid; }
+  bool hasJacobianBoundToBound() const {
+    return data().ijacobianboundtobound != IndexData::kInvalid;
+  }
+
+  /// @copydoc jacobianBoundToBound()
+  JacobianBoundToFree jacobianBoundToFree() const;
+
+  /// @copydoc hasJacobianBoundToBound()
+  bool hasJacobianBoundToFree() const {
+    return data().ijacobianboundtofree != IndexData::kInvalid;
+  }
+
+  /// @copydoc jacobianBoundToBound()
+  JacobianFreeToBound jacobianFreeToBound() const;
+
+  /// @copydoc hasJacobianBoundToBound()
+  bool hasJacobianFreeToBound() const {
+    return data().ijacobianfreetobound != IndexData::kInvalid;
+  }
+
+  /// @copydoc jacobianBoundToBound()
+  JacobianFreeToFree jacobianFreeToFree() const;
+
+  /// @copydoc hasJacobianBoundToBound()
+  bool hasJacobianFreeToFree() const {
+    return data().ijacobianfreetofree != IndexData::kInvalid;
+  }
 
   /// Returns the projector (measurement mapping function) for this track
   /// state. It is derived from the uncalibrated measurement
   /// @note This function returns the overallocated projector. This means it
-  /// is of dimension MxM, where M is the maximum number of measurement
-  /// dimensions. The NxM submatrix, where N is the actual dimension of the
-  /// measurement, is located in the top left corner, everything else is zero.
+  /// is of dimension MxP, where M is the maximum number of measurement
+  /// dimensions and P the maximum number of parameters dimensions. The NxQ
+  /// submatrix, where N is the actual dimension of the measurement and Q the
+  /// actual dimension of the parameters, is located in the top left corner,
+  /// everything else is zero.
   /// @return The overallocated projector
   Projector projector() const;
 
@@ -330,13 +469,23 @@ class TrackStateProxy {
   bool hasProjector() const { return data().iprojector != IndexData::kInvalid; }
 
   /// Returns the projector (measurement mapping function) for this track
-  /// state. It is derived from the uncalibrated measurement
+  /// state. It is derived from the calibrated measurement
   /// @note This function returns the effective projector. This means it
   /// is of dimension NxM, where N is the actual dimension of the
-  /// measurement.
+  /// measurement and M the dimension of bound parameters.
   /// @return The effective projector
-  EffectiveProjector effectiveProjector() const {
-    return projector().topLeftCorner(data().measdim, M);
+  EffectiveBoundProjector effectiveBoundProjector() const {
+    return projector().topLeftCorner(data().measdim, eBoundParametersSize);
+  }
+
+  /// Returns the projector (measurement mapping function) for this track
+  /// state. It is derived from the calibrated measurement
+  /// @note This function returns the effective projector. This means it
+  /// is of dimension NxM, where N is the actual dimension of the
+  /// measurement and M the dimension of free parameters.
+  /// @return The effective projector
+  EffectiveFreeProjector effectiveFreeProjector() const {
+    return projector().topLeftCorner(data().measdim, eFreeParametersSize);
   }
 
   /// Set the projector on this track state
@@ -357,7 +506,7 @@ class TrackStateProxy {
     assert(dataref.iprojector != IndexData::kInvalid);
 
     static_assert(rows <= M, "Given projector has too many rows");
-    static_assert(cols <= eBoundParametersSize,
+    static_assert(cols <= eFreeParametersSize,
                   "Given projector has too many columns");
 
     // set up full size projector with only zeros
@@ -453,6 +602,7 @@ class TrackStateProxy {
     IndexData& dataref = data();
     constexpr size_t measdim = measurement_t::size();
 
+    static_assert(measdim <= M, "Measurement has too many dimensions");
     dataref.measdim = measdim;
 
     assert(hasCalibrated());
@@ -492,6 +642,13 @@ class TrackStateProxy {
     static_assert(
         std::is_same<SourceLink, typename measurement_t::SourceLink>::value);
     IndexData& dataref = data();
+    // Set the dimension of the measurement
+    constexpr size_t measdim =
+        Acts::Measurement<SourceLink, BoundParametersIndices,
+                          params...>::size();
+    static_assert(measdim <= M, "Measurement has too many dimensions");
+    dataref.measdim = measdim;
+
     auto& traj = *m_traj;
     // force reallocate, whether currently invalid or shared index
     traj.m_meas.addCol();
@@ -554,7 +711,7 @@ class TrackStateProxy {
 
  private:
   // Private since it can only be created by the trajectory.
-  TrackStateProxy(ConstIf<MultiTrajectory<SourceLink>, ReadOnly>& trajectory,
+  TrackStateProxy(ConstIf<MultiTrajectory<SourceLink, M>, ReadOnly>& trajectory,
                   size_t istate);
 
   const std::shared_ptr<const GeometryObject>& referenceObjectPointer() const {
@@ -562,7 +719,7 @@ class TrackStateProxy {
     return m_traj->m_referenceObjects[data().irefobject];
   }
 
-  typename MultiTrajectory<SourceLink>::ProjectorBitset projectorBitset()
+  typename MultiTrajectory<SourceLink, M>::ProjectorBitset projectorBitset()
       const {
     assert(data().iprojector != IndexData::kInvalid);
     return m_traj->m_projectors[data().iprojector];
@@ -570,15 +727,15 @@ class TrackStateProxy {
 
   template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
   void setProjectorBitset(
-      typename MultiTrajectory<SourceLink>::ProjectorBitset proj) {
+      typename MultiTrajectory<SourceLink, M>::ProjectorBitset proj) {
     assert(data().iprojector != IndexData::kInvalid);
     m_traj->m_projectors[data().iprojector] = proj;
   }
 
-  ConstIf<MultiTrajectory<SourceLink>, ReadOnly>* m_traj;
+  ConstIf<MultiTrajectory<SourceLink, M>, ReadOnly>* m_traj;
   size_t m_istate;
 
-  friend class Acts::MultiTrajectory<SourceLink>;
+  friend class Acts::MultiTrajectory<SourceLink, M>;
 };
 
 // implement track state visitor concept
@@ -601,11 +758,12 @@ constexpr bool VisitorConcept = concept ::require<
 /// can be easily identified. Some functionality is provided to simplify
 /// iterating over specific sub-components.
 /// @tparam source_link_t Type to link back to an original measurement
-template <typename source_link_t>
+template <typename source_link_t,
+          size_t measurement_size_max_t = eBoundParametersSize>
 class MultiTrajectory {
  public:
   enum {
-    MeasurementSizeMax = eBoundParametersSize,
+    MeasurementSizeMax = measurement_size_max_t,
   };
   using SourceLink = source_link_t;
   using ConstTrackStateProxy =
@@ -613,8 +771,7 @@ class MultiTrajectory {
   using TrackStateProxy =
       detail_lt::TrackStateProxy<SourceLink, MeasurementSizeMax, false>;
 
-  using ProjectorBitset =
-      std::bitset<eBoundParametersSize * MeasurementSizeMax>;
+  using ProjectorBitset = std::bitset<eFreeParametersSize * MeasurementSizeMax>;
 
   /// Create an empty trajectory.
   MultiTrajectory() = default;
@@ -660,11 +817,30 @@ class MultiTrajectory {
  private:
   /// index to map track states to the corresponding
   std::vector<detail_lt::IndexData> m_index;
-  typename detail_lt::Types<eBoundParametersSize>::StorageCoefficients m_params;
-  typename detail_lt::Types<eBoundParametersSize>::StorageCovariance m_cov;
+
+  typename detail_lt::Types<eBoundParametersSize>::StorageCoefficients
+      m_boundParams;
+  typename detail_lt::Types<eBoundParametersSize>::StorageQuadraticMatrix
+      m_boundCov;
+
+  typename detail_lt::Types<eFreeParametersSize>::StorageCoefficients
+      m_freeParams;
+  typename detail_lt::Types<eFreeParametersSize>::StorageQuadraticMatrix
+      m_freeCov;
+
   typename detail_lt::Types<MeasurementSizeMax>::StorageCoefficients m_meas;
-  typename detail_lt::Types<MeasurementSizeMax>::StorageCovariance m_measCov;
-  typename detail_lt::Types<eBoundParametersSize>::StorageCovariance m_jac;
+  typename detail_lt::Types<MeasurementSizeMax>::StorageQuadraticMatrix
+      m_measCov;
+
+  typename detail_lt::Types<eBoundParametersSize>::StorageQuadraticMatrix
+      m_jacBoundToBound;
+  typename detail_lt::Types<eBoundParametersSize>::StorageNonQuadraticMatrix
+      m_jacBoundToFree;
+  typename detail_lt::Types<eFreeParametersSize>::StorageNonQuadraticMatrix
+      m_jacFreeToBound;
+  typename detail_lt::Types<eFreeParametersSize>::StorageQuadraticMatrix
+      m_jacFreeToFree;
+
   std::vector<SourceLink> m_sourceLinks;
   std::vector<ProjectorBitset> m_projectors;
 
