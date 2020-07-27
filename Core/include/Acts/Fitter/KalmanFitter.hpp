@@ -221,9 +221,10 @@ class KalmanFitter {
           typename calibrator_t = VoidMeasurementCalibrator>
   class Actor {
    public:
+    using Self = Actor<source_link_t, updater_t, smoother_t, outlier_finder_t, calibrator_t>;
     using Fitter = KalmanFitter<propagator_t>;
-    using Aborter = typename Fitter::template Aborter<source_link_t>;
-    using Options = PropagatorOptions<ActionList<Actor<source_link_t>>, AbortList<Aborter, PathLimitReached>>;
+    using Aborter = typename Fitter::template Aborter<Self>;
+    using Options = PropagatorOptions<ActionList<Self>, AbortList<Aborter, PathLimitReached>>;
     using State = typename propagator_t::template State<Options>;
 	using SourceLink = source_link_t;
     using OutlierFinder = outlier_finder_t;
@@ -872,13 +873,12 @@ class KalmanFitter {
     SurfaceReached targetReached;
   };
 
-  template <typename source_link_t>
+  template <typename actor_type_t>
   class Aborter {
    public:
     /// Broadcast the result_type
-    using action_type = Actor<source_link_t>;
-
-    template <typename propagator_state_t>
+    using action_type = actor_type_t;
+    
     bool operator()(typename action_type::State& /*state*/, const KalmanStepper& /*stepper*/,
                     const typename action_type::result_type& result) const {
       if (!result.result.ok() or result.finished) {
@@ -889,12 +889,12 @@ class KalmanFitter {
   };
 
 private:
-    template <typename ActorType>
+    template <typename actor_type_t>
     auto
-    buildPropagatorOptions(const std::vector<typename ActorType::SourceLink>& boundSourcelinks, const std::vector<typename ActorType::SourceLink>& freeSourcelinks, 
-    const KalmanFitterOptions<typename ActorType::OutlierFinder>& kfOptions) const
+    buildPropagatorOptions(const std::vector<typename actor_type_t::SourceLink>& boundSourcelinks, const std::vector<typename actor_type_t::SourceLink>& freeSourcelinks, 
+    const KalmanFitterOptions<typename actor_type_t::OutlierFinder>& kfOptions) const
     {
-		using SourceLink = typename ActorType::SourceLink;
+		using SourceLink = typename actor_type_t::SourceLink;
         static_assert(SourceLinkConcept<SourceLink>,
                   "Source link does not fulfill SourceLinkConcept");
 
@@ -914,8 +914,8 @@ private:
 		}
 
 		// Create the ActionList and AbortList
-		using KalmanAborter = Aborter<SourceLink>;
-		using KalmanActor = ActorType;
+		using KalmanAborter = Aborter<actor_type_t>;
+		using KalmanActor = actor_type_t;
 		using Actors = ActionList<KalmanActor>;
 		using Aborters = AbortList<KalmanAborter>;
 
@@ -962,8 +962,7 @@ public:
   /// @return the output as an output track
   template <typename updater_t = VoidKalmanUpdater,
           typename smoother_t = VoidKalmanSmoother,
-          typename outlier_finder_t = VoidOutlierFinder,
-          typename calibrator_t = VoidMeasurementCalibrator, typename source_link_t, typename start_parameters_t>
+          typename calibrator_t = VoidMeasurementCalibrator, typename outlier_finder_t = VoidOutlierFinder,typename source_link_t, typename start_parameters_t>
   auto fit(const std::vector<source_link_t>& sourcelinks,
            const start_parameters_t& sParameters,
            const KalmanFitterOptions<outlier_finder_t>& kfOptions) const
@@ -1023,8 +1022,7 @@ public:
   /// @return the output as an output track
   template <typename updater_t = VoidKalmanUpdater,
           typename smoother_t = VoidKalmanSmoother,
-          typename outlier_finder_t = VoidOutlierFinder,
-          typename calibrator_t = VoidMeasurementCalibrator, typename source_link_t, typename start_parameters_t>
+          typename calibrator_t = VoidMeasurementCalibrator, typename outlier_finder_t, typename source_link_t, typename start_parameters_t>
   auto fit(const std::vector<source_link_t>& sourcelinks,
            const start_parameters_t& sParameters,
            const KalmanFitterOptions<outlier_finder_t>& kfOptions,

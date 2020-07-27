@@ -77,9 +77,20 @@ struct VoidKalmanUpdater {
   ///
   /// @return The copied predicted parameters
   template <typename track_state_t, typename predicted_state_t>
-  auto operator()(track_state_t& /* trackState */,
-                  const predicted_state_t& predicted) const {
-    return &(predicted.parameters);
+  auto operator()(const GeometryContext& /*gctx*/, track_state_t& trackState,
+                  const NavigationDirection& /*direction*/, bool boundState = true) const {
+	if(boundState)
+	{
+		assert(trackState.hasBoundPredicted());
+		assert(trackState.hasBoundFiltered());
+      trackState.boundFiltered() = trackState.boundPredicted();
+}
+else
+{
+			assert(trackState.hasFreePredicted());
+		assert(trackState.hasFreeFiltered());
+	trackState.freeFiltered() = trackState.freePredicted();
+}
   }
   /// Pointer to a logger that is owned by the parent, KalmanFilter
   std::shared_ptr<const Logger> m_logger{nullptr};
@@ -95,7 +106,7 @@ struct VoidKalmanSmoother {
   ///
   /// @return The resulting
   template <typename parameters_t, typename track_states_t>
-  const parameters_t* operator()(track_states_t& /* trackStates */) const {
+  const parameters_t* operator()(const GeometryContext& /*gctx*/, track_states_t& /* trackStates */, size_t /*entryIndex*/) const {
     return nullptr;
   }
   /// Pointer to a logger that is owned by the parent, KalmanFilter

@@ -409,7 +409,7 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
       tgContext, mfContext, calContext, outlierFinder, rSurface);
 
   // Fit the track
-  auto fitRes = kFitter.fit<Updater, Smoother, MinimalOutlierFinder>(sourcelinks, rStart, kfOptions);
+  auto fitRes = kFitter.fit<Updater, Smoother>(sourcelinks, rStart, kfOptions);
   BOOST_CHECK(fitRes.ok());
   auto& fittedTrack = *fitRes;
   auto fittedParameters = fittedTrack.fittedParameters.value();
@@ -425,7 +425,7 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
   BOOST_CHECK_EQUAL(trackParamsCov.rows(), 6 * eBoundParametersSize);
 
   // Make sure it is deterministic
-  fitRes = kFitter.fit(sourcelinks, rStart, kfOptions);
+  fitRes = kFitter.fit<Updater, Smoother>(sourcelinks, rStart, kfOptions);
   BOOST_CHECK(fitRes.ok());
   auto& fittedAgainTrack = *fitRes;
   auto fittedAgainParameters = fittedAgainTrack.fittedParameters.value();
@@ -452,7 +452,7 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
       sourcelinks[4], sourcelinks[5], sourcelinks[0]};
 
   // Make sure it works for shuffled measurements as well
-  fitRes = kFitter.fit(shuffledMeasurements, rStart, kfOptions);
+  fitRes = kFitter.fit<Updater, Smoother>(shuffledMeasurements, rStart, kfOptions);
   BOOST_CHECK(fitRes.ok());
   auto& fittedShuffledTrack = *fitRes;
   auto fittedShuffledParameters = fittedShuffledTrack.fittedParameters.value();
@@ -470,7 +470,7 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
       sourcelinks[5]};
 
   // Make sure it works for shuffled measurements as well
-  fitRes = kFitter.fit(measurementsWithHole, rStart, kfOptions);
+  fitRes = kFitter.fit<Updater, Smoother>(measurementsWithHole, rStart, kfOptions);
   BOOST_CHECK(fitRes.ok());
   auto& fittedWithHoleTrack = *fitRes;
   auto fittedWithHoleParameters = fittedWithHoleTrack.fittedParameters.value();
@@ -502,7 +502,7 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
   // Run KF fit in backward filtering mode
   kfOptions.backwardFiltering = true;
   // Fit the track
-  fitRes = kFitter.fit(sourcelinks, rStart, kfOptions);
+  fitRes = kFitter.fit<Updater, Smoother>(sourcelinks, rStart, kfOptions);
   BOOST_CHECK(fitRes.ok());
   auto fittedWithBwdFiltering = *fitRes;
   // Check the filtering and smoothing status flag
@@ -533,7 +533,7 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
       SourceLink{&outliers[3]}, sourcelinks[4], sourcelinks[5]};
 
   // Make sure it works with one outlier
-  fitRes = kFitter.fit(measurementsWithOneOutlier, rStart, kfOptions);
+  fitRes = kFitter.fit<Updater, Smoother>(measurementsWithOneOutlier, rStart, kfOptions);
   BOOST_CHECK(fitRes.ok());
   auto& fittedWithOneOutlier = *fitRes;
 
