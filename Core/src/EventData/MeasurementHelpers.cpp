@@ -13,8 +13,8 @@ bool Acts::MinimalSourceLink::operator==(
   return meas == rhs.meas;
 }
 
-const Acts::Surface& Acts::MinimalSourceLink::referenceSurface() const {
-  return *MeasurementHelpers::getSurface(*meas);
+const Acts::GeometryObject& Acts::MinimalSourceLink::referenceObject() const {
+  return *MeasurementHelpers::getObject(*meas);
 }
 
 const Acts::FittableMeasurement<Acts::MinimalSourceLink>&

@@ -40,8 +40,9 @@ class SimSourceLink {
   SimSourceLink& operator=(SimSourceLink&&) = default;
   SimSourceLink& operator=(const SimSourceLink&) = default;
 
+  using MeasurementType = Acts::FittableMeasurement<SimSourceLink>;
   constexpr Acts::GeometryID geometryId() const { return m_geometryId; }
-  constexpr const Acts::Surface& referenceSurface() const { return *m_surface; }
+  constexpr const Acts::GeometryObject& referenceObject() const { return *m_surface; }
   constexpr const ActsFatras::Hit& truthHit() const { return *m_truthHit; }
 
   Acts::FittableMeasurement<SimSourceLink> operator*() const {
@@ -49,12 +50,12 @@ class SimSourceLink {
       throw std::runtime_error("Cannot create dim 0 measurement");
     } else if (m_dim == 1) {
       return Acts::Measurement<SimSourceLink, Acts::BoundParametersIndices,
-                               Acts::eBoundLoc0>{
+                               Acts::ParDef::eLOC_0>{
           m_surface->getSharedPtr(), *this, m_cov.topLeftCorner<1, 1>(),
           m_values[0]};
     } else if (m_dim == 2) {
       return Acts::Measurement<SimSourceLink, Acts::BoundParametersIndices,
-                               Acts::eBoundLoc0, Acts::eBoundLoc1>{
+                               Acts::ParDef::eLOC_0, Acts::ParDef::eLOC_1>{
           m_surface->getSharedPtr(), *this, m_cov.topLeftCorner<2, 2>(),
           m_values[0], m_values[1]};
     } else {

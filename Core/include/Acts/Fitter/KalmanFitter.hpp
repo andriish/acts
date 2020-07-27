@@ -937,7 +937,7 @@ class KalmanFitter {
     ACTS_VERBOSE("Preparing " << sourcelinks.size() << " input measurements");
     std::map<const GeometryObject*, source_link_t> inputMeasurements;
     for (const auto& sl : sourcelinks) {
-      const GeometryObject* srf = &sl.referenceSurface();
+      const GeometryObject* srf = &sl.referenceObject();
       inputMeasurements.emplace(srf, sl);
     }
 
@@ -1030,7 +1030,7 @@ class KalmanFitter {
     ACTS_VERBOSE("Preparing " << sourcelinks.size() << " input measurements");
     std::map<const GeometryObject*, source_link_t> inputMeasurements;
     for (const auto& sl : sourcelinks) {
-      const GeometryObject* srf = &sl.referenceSurface();
+      const GeometryObject* srf = &sl.referenceObject();
       inputMeasurements.emplace(srf, sl);
     }
 
