@@ -11,6 +11,7 @@
 #include "Acts/EventData/SourceLinkConcept.hpp"
 #include "Acts/Utilities/Result.hpp"
 #include "Acts/Utilities/TypeTraits.hpp"
+#include "Acts/Utilities/Logger.hpp"
 
 namespace Acts {
 
@@ -80,6 +81,8 @@ struct VoidKalmanUpdater {
                   const predicted_state_t& predicted) const {
     return &(predicted.parameters);
   }
+  /// Pointer to a logger that is owned by the parent, KalmanFilter
+  std::shared_ptr<const Logger> m_logger{nullptr};
 };
 
 /// @brief void Kalman smoother
@@ -95,6 +98,8 @@ struct VoidKalmanSmoother {
   const parameters_t* operator()(track_states_t& /* trackStates */) const {
     return nullptr;
   }
+  /// Pointer to a logger that is owned by the parent, KalmanFilter
+  std::shared_ptr<const Logger> m_logger{nullptr};
 };
 
 /// @brief void outlier finder

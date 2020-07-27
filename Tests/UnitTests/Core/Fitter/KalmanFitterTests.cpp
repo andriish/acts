@@ -397,7 +397,7 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
   using Updater = GainMatrixUpdater;
   using Smoother = GainMatrixSmoother;
   using KalmanFitter =
-      KalmanFitter<RecoPropagator, Updater, Smoother, MinimalOutlierFinder>;
+      KalmanFitter<RecoPropagator>;
 
   MinimalOutlierFinder outlierFinder;
   outlierFinder.measurementSignificanceCutoff = 0.05;
@@ -409,7 +409,7 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
       tgContext, mfContext, calContext, outlierFinder, rSurface);
 
   // Fit the track
-  auto fitRes = kFitter.fit(sourcelinks, rStart, kfOptions);
+  auto fitRes = kFitter.fit<Updater, Smoother, MinimalOutlierFinder>(sourcelinks, rStart, kfOptions);
   BOOST_CHECK(fitRes.ok());
   auto& fittedTrack = *fitRes;
   auto fittedParameters = fittedTrack.fittedParameters.value();

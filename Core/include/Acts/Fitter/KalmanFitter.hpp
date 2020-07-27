@@ -177,10 +177,7 @@ struct KalmanFitterResult {
 /// the propagator.
 ///
 /// The void components are provided mainly for unit testing.
-template <typename propagator_t, typename updater_t = VoidKalmanUpdater,
-          typename smoother_t = VoidKalmanSmoother,
-          typename outlier_finder_t = VoidOutlierFinder,
-          typename calibrator_t = VoidMeasurementCalibrator>
+template <typename propagator_t>
 class KalmanFitter {
  public:
   /// The navigator type
@@ -218,14 +215,18 @@ class KalmanFitter {
   ///
   /// The KalmanActor does not rely on the measurements to be
   /// sorted along the track.
-  template <typename source_link_t>
+  template <typename source_link_t, typename updater_t = VoidKalmanUpdater,
+          typename smoother_t = VoidKalmanSmoother,
+          typename outlier_finder_t = VoidOutlierFinder,
+          typename calibrator_t = VoidMeasurementCalibrator>
   class Actor {
    public:
-    using Fitter = KalmanFitter<propagator_t, updater_t, smoother_t, outlier_finder_t, calibrator_t>;
+    using Fitter = KalmanFitter<propagator_t>;
     using Aborter = typename Fitter::template Aborter<source_link_t>;
     using Options = PropagatorOptions<ActionList<Actor<source_link_t>>, AbortList<Aborter, PathLimitReached>>;
     using State = typename propagator_t::template State<Options>;
 	using SourceLink = source_link_t;
+    using OutlierFinder = outlier_finder_t;
 	
     /// Broadcast the result_type
     using result_type = KalmanFitterResult<source_link_t>;
@@ -248,9 +249,6 @@ class KalmanFitter {
     bool backwardFiltering = false;
 
     /// @brief Kalman actor operation
-    ///
-    /// @tparam propagator_state_t is the type of Propagagor state
-    /// @tparam stepper_t Type of the stepper
     ///
     /// @param state is the mutable propagator state object
     /// @param stepper The stepper in use
@@ -395,9 +393,6 @@ class KalmanFitter {
 
     /// @brief Kalman actor operation : reverse direction
     ///
-    /// @tparam propagator_state_t is the type of Propagagor state
-    /// @tparam stepper_t Type of the stepper
-    ///
     /// @param state is the mutable propagator state object
     /// @param stepper The stepper in use
     /// @param result is the mutable result state object
@@ -453,9 +448,6 @@ class KalmanFitter {
     }
 
     /// @brief Kalman actor operation : update
-    ///
-    /// @tparam propagator_state_t is the type of Propagagor state
-    /// @tparam stepper_t Type of the stepper
     ///
     /// @param surface The surface where the update happens
     /// @param state The mutable propagator state object
@@ -621,9 +613,6 @@ class KalmanFitter {
 
     /// @brief Kalman actor operation : backward update
     ///
-    /// @tparam propagator_state_t is the type of Propagagor state
-    /// @tparam stepper_t Type of the stepper
-    ///
     /// @param surface The surface where the update happens
     /// @param state The mutable propagator state object
     /// @param stepper The stepper in use
@@ -742,9 +731,6 @@ class KalmanFitter {
 
     /// @brief Kalman actor operation : material interaction
     ///
-    /// @tparam propagator_state_t is the type of Propagagor state
-    /// @tparam stepper_t Type of the stepper
-    ///
     /// @param surface The surface where the material interaction happens
     /// @param state The mutable propagator state object
     /// @param stepper The stepper in use
@@ -794,9 +780,6 @@ class KalmanFitter {
     }
 
     /// @brief Kalman actor operation : finalize
-    ///
-    /// @tparam propagator_state_t is the type of Propagagor state
-    /// @tparam stepper_t Type of the stepper
     ///
     /// @param state is the mutable propagator state object
     /// @param stepper The stepper in use
@@ -906,31 +889,33 @@ class KalmanFitter {
   };
 
 private:
-    template <typename source_link_t>
-    PropagatorOptions<ActionList<Actor<source_link_t>>, AbortList<Aborter<source_link_t>>>
-    buildPropagatorOptions(const std::vector<source_link_t>& boundSourcelinks, const std::vector<source_link_t>& freeSourcelinks, const KalmanFitterOptions<outlier_finder_t>& kfOptions) const
+    template <typename ActorType>
+    auto
+    buildPropagatorOptions(const std::vector<typename ActorType::SourceLink>& boundSourcelinks, const std::vector<typename ActorType::SourceLink>& freeSourcelinks, 
+    const KalmanFitterOptions<typename ActorType::OutlierFinder>& kfOptions) const
     {
-        static_assert(SourceLinkConcept<source_link_t>,
+		using SourceLink = typename ActorType::SourceLink;
+        static_assert(SourceLinkConcept<SourceLink>,
                   "Source link does not fulfill SourceLinkConcept");
 
 		// To be able to find measurements later, we put them into a map
 		// We need to copy input SourceLinks anyways, so the map can own them.
 		ACTS_VERBOSE("Preparing " << boundSourcelinks.size() << " bound input measurements");
-		std::map<const GeometryObject*, source_link_t> boundInputMeasurements;
+		std::map<const GeometryObject*, SourceLink> boundInputMeasurements;
 		for (const auto& sl : boundSourcelinks) {
 		  const GeometryObject* srf = &sl.referenceObject();
 		  boundInputMeasurements.emplace(srf, sl);
 		}
 		ACTS_VERBOSE("Preparing " << freeSourcelinks.size() << " free input measurements");
-		std::map<const GeometryObject*, std::vector<source_link_t>> freeInputMeasurements;
+		std::map<const GeometryObject*, std::vector<SourceLink>> freeInputMeasurements;
 		for (const auto& sl : freeSourcelinks) {
 		  const GeometryObject* srf = &sl.referenceObject();
 		  freeInputMeasurements[srf].emplace_back(sl);
 		}
 
 		// Create the ActionList and AbortList
-		using KalmanAborter = Aborter<source_link_t>;
-		using KalmanActor = Actor<source_link_t>;
+		using KalmanAborter = Aborter<SourceLink>;
+		using KalmanActor = ActorType;
 		using Actors = ActionList<KalmanActor>;
 		using Aborters = AbortList<KalmanAborter>;
 
@@ -975,16 +960,20 @@ public:
   /// the fit.
   ///
   /// @return the output as an output track
-  template <typename source_link_t, typename start_parameters_t>
+  template <typename updater_t = VoidKalmanUpdater,
+          typename smoother_t = VoidKalmanSmoother,
+          typename outlier_finder_t = VoidOutlierFinder,
+          typename calibrator_t = VoidMeasurementCalibrator, typename source_link_t, typename start_parameters_t>
   auto fit(const std::vector<source_link_t>& sourcelinks,
            const start_parameters_t& sParameters,
            const KalmanFitterOptions<outlier_finder_t>& kfOptions) const
       -> std::enable_if_t<!isDirectNavigator,
                           Result<KalmanFitterResult<source_link_t>>> {
-    using KalmanResult = typename Actor<source_link_t>::result_type;
+	using ActorType = Actor<source_link_t, updater_t, smoother_t, outlier_finder_t, calibrator_t>;
+    using KalmanResult = typename ActorType::result_type;
    
     // Create relevant options for the propagation options
-    auto kalmanOptions = buildPropagatorOptions(sourcelinks, {}, kfOptions);
+    auto kalmanOptions = buildPropagatorOptions<ActorType>(sourcelinks, {}, kfOptions);
 
     // Run the fitter
     auto result = m_propagator.template propagate(sParameters, kalmanOptions);
@@ -1032,17 +1021,21 @@ public:
   /// the fit.
   ///
   /// @return the output as an output track
-  template <typename source_link_t, typename start_parameters_t>
+  template <typename updater_t = VoidKalmanUpdater,
+          typename smoother_t = VoidKalmanSmoother,
+          typename outlier_finder_t = VoidOutlierFinder,
+          typename calibrator_t = VoidMeasurementCalibrator, typename source_link_t, typename start_parameters_t>
   auto fit(const std::vector<source_link_t>& sourcelinks,
            const start_parameters_t& sParameters,
            const KalmanFitterOptions<outlier_finder_t>& kfOptions,
            const std::vector<const Surface*>& sSequence) const
       -> std::enable_if_t<isDirectNavigator,
                           Result<KalmanFitterResult<source_link_t>>> {
-    using KalmanResult = typename Actor<source_link_t>::result_type;
+	using ActorType = Actor<source_link_t, updater_t, smoother_t, outlier_finder_t, calibrator_t>;
+    using KalmanResult = typename ActorType::result_type;
    
     // Create relevant options for the propagation options
-    auto kalmanOptions = buildPropagatorOptions(sourcelinks, {}, kfOptions);
+    auto kalmanOptions = buildPropagatorOptions<ActorType>(sourcelinks, {}, kfOptions);
 
     // Set the surface sequence
     auto& dInitializer =
