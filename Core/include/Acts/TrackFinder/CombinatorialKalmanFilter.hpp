@@ -213,8 +213,6 @@ template <typename propagator_t, typename updater_t = VoidKalmanUpdater,
           typename calibrator_t = VoidMeasurementCalibrator>
 class CombinatorialKalmanFilter {
  public:
-  /// Shorthand definition
-  using MeasurementSurfaces = std::multimap<const Layer*, const Surface*>;
   /// The navigator type
   using KalmanNavigator = typename propagator_t::Navigator;
 

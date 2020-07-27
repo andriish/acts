@@ -183,11 +183,9 @@ template <typename propagator_t, typename updater_t = VoidKalmanUpdater,
           typename calibrator_t = VoidMeasurementCalibrator>
 class KalmanFitter {
  public:
-  /// Shorthand definition
-  using MeasurementSurfaces = std::multimap<const Layer*, const Surface*>;
   /// The navigator type
   using KalmanNavigator = typename propagator_t::Navigator;
-
+  
   /// The navigator has DirectNavigator type or not
   static constexpr bool isDirectNavigator =
       std::is_same<KalmanNavigator, DirectNavigator>::value;
@@ -210,7 +208,7 @@ class KalmanFitter {
 
   /// Owned logging instance
   std::shared_ptr<const Logger> m_logger;
-
+  
   /// @brief Propagator Actor plugin for the KalmanFilter
   ///
   /// @tparam source_link_t is an type fulfilling the @c SourceLinkConcept
@@ -221,6 +219,7 @@ class KalmanFitter {
   template <typename source_link_t>
   class Actor {
    public:
+  
     /// Broadcast the result_type
     using result_type = KalmanFitterResult<source_link_t>;
 
@@ -905,7 +904,59 @@ class KalmanFitter {
       return false;
     }
   };
-           
+   
+   
+    template <typename source_link_t>
+    PropagatorOptions<ActionList<Actor<source_link_t>>, AbortList<Aborter<source_link_t>>>
+    buildPropagatorOptions(const std::vector<source_link_t>& boundSourcelinks, const std::vector<source_link_t>& freeSourcelinks, const KalmanFitterOptions<outlier_finder_t>& kfOptions) const
+    {
+        static_assert(SourceLinkConcept<source_link_t>,
+                  "Source link does not fulfill SourceLinkConcept");
+
+		// To be able to find measurements later, we put them into a map
+		// We need to copy input SourceLinks anyways, so the map can own them.
+		ACTS_VERBOSE("Preparing " << boundSourcelinks.size() << " bound input measurements");
+		std::map<const GeometryObject*, source_link_t> boundInputMeasurements;
+		for (const auto& sl : boundSourcelinks) {
+		  const GeometryObject* srf = &sl.referenceObject();
+		  boundInputMeasurements.emplace(srf, sl);
+		}
+		ACTS_VERBOSE("Preparing " << freeSourcelinks.size() << " free input measurements");
+		std::map<const GeometryObject*, source_link_t> freeInputMeasurements;
+		for (const auto& sl : freeSourcelinks) {
+		  const GeometryObject* srf = &sl.referenceObject();
+		  freeInputMeasurements.emplace(srf, sl);
+		}
+
+		// Create the ActionList and AbortList
+		using KalmanAborter = Aborter<source_link_t>;
+		using KalmanActor = Actor<source_link_t>;
+		using Actors = ActionList<KalmanActor>;
+		using Aborters = AbortList<KalmanAborter>;
+
+		// Create relevant options for the propagation options
+		PropagatorOptions<Actors, Aborters> kalmanOptions(
+			kfOptions.geoContext, kfOptions.magFieldContext);
+
+		// Catch the actor and set the measurements
+		auto& kalmanActor = kalmanOptions.actionList.template get<KalmanActor>();
+		kalmanActor.m_logger = m_logger.get();
+		kalmanActor.boundInputMeasurements = std::move(boundInputMeasurements);
+		kalmanActor.freeInputMeasurements = std::move(freeInputMeasurements);
+		kalmanActor.targetSurface = kfOptions.referenceSurface;
+		kalmanActor.multipleScattering = kfOptions.multipleScattering;
+		kalmanActor.energyLoss = kfOptions.energyLoss;
+		kalmanActor.backwardFiltering = kfOptions.backwardFiltering;
+
+		// Set config for outlier finder
+		kalmanActor.m_outlierFinder = kfOptions.outlierFinder;
+
+		// also set logger on updater and smoother
+		kalmanActor.m_updater.m_logger = m_logger;
+		kalmanActor.m_smoother.m_logger = m_logger;
+		return kalmanOptions;
+	}
+	        
     template <typename source_link_t>
     PropagatorOptions<ActionList<Actor<source_link_t>>, AbortList<Aborter<source_link_t>>>
     buildPropagatorOptions(const std::vector<source_link_t>& sourcelinks, const KalmanFitterOptions<outlier_finder_t>& kfOptions) const
