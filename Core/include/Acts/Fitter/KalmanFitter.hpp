@@ -218,7 +218,7 @@ class KalmanFitter {
   ///
   /// The KalmanActor does not rely on the measurements to be
   /// sorted along the track.
-  template <typename source_link_t, typename parameters_t>
+  template <typename source_link_t>
   class Actor {
    public:
     /// Broadcast the result_type
@@ -887,11 +887,11 @@ class KalmanFitter {
     SurfaceReached targetReached;
   };
 
-  template <typename source_link_t, typename parameters_t>
+  template <typename source_link_t>
   class Aborter {
    public:
     /// Broadcast the result_type
-    using action_type = Actor<source_link_t, parameters_t>;
+    using action_type = Actor<source_link_t>;
 
     template <typename propagator_state_t, typename stepper_t,
               typename result_t>
@@ -922,8 +922,7 @@ class KalmanFitter {
   /// the fit.
   ///
   /// @return the output as an output track
-  template <typename source_link_t, typename start_parameters_t,
-            typename parameters_t = BoundParameters>
+  template <typename source_link_t, typename start_parameters_t>
   auto fit(const std::vector<source_link_t>& sourcelinks,
            const start_parameters_t& sParameters,
            const KalmanFitterOptions<outlier_finder_t>& kfOptions) const
@@ -942,8 +941,8 @@ class KalmanFitter {
     }
 
     // Create the ActionList and AbortList
-    using KalmanAborter = Aborter<source_link_t, parameters_t>;
-    using KalmanActor = Actor<source_link_t, parameters_t>;
+    using KalmanAborter = Aborter<source_link_t>;
+    using KalmanActor = Actor<source_link_t>;
     using KalmanResult = typename KalmanActor::result_type;
     using Actors = ActionList<KalmanActor>;
     using Aborters = AbortList<KalmanAborter>;
@@ -1014,8 +1013,7 @@ class KalmanFitter {
   /// the fit.
   ///
   /// @return the output as an output track
-  template <typename source_link_t, typename start_parameters_t,
-            typename parameters_t = BoundParameters>
+  template <typename source_link_t, typename start_parameters_t>
   auto fit(const std::vector<source_link_t>& sourcelinks,
            const start_parameters_t& sParameters,
            const KalmanFitterOptions<outlier_finder_t>& kfOptions,
@@ -1035,8 +1033,8 @@ class KalmanFitter {
     }
 
     // Create the ActionList and AbortList
-    using KalmanAborter = Aborter<source_link_t, parameters_t>;
-    using KalmanActor = Actor<source_link_t, parameters_t>;
+    using KalmanAborter = Aborter<source_link_t>;
+    using KalmanActor = Actor<source_link_t>;
     using KalmanResult = typename KalmanActor::result_type;
     using Actors = ActionList<DirectNavigator::Initializer, KalmanActor>;
     using Aborters = AbortList<KalmanAborter>;
