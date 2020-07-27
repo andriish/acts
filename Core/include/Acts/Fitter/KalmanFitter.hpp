@@ -185,6 +185,7 @@ class KalmanFitter {
  public:
   /// The navigator type
   using KalmanNavigator = typename propagator_t::Navigator;
+  using KalmanStepper = typename propagator_t::Stepper;
   
   /// The navigator has DirectNavigator type or not
   static constexpr bool isDirectNavigator =
@@ -208,7 +209,8 @@ class KalmanFitter {
 
   /// Owned logging instance
   std::shared_ptr<const Logger> m_logger;
-  
+
+ public:  
   /// @brief Propagator Actor plugin for the KalmanFilter
   ///
   /// @tparam source_link_t is an type fulfilling the @c SourceLinkConcept
@@ -219,7 +221,12 @@ class KalmanFitter {
   template <typename source_link_t>
   class Actor {
    public:
-  
+    using Fitter = KalmanFitter<propagator_t, updater_t, smoother_t, outlier_finder_t, calibrator_t>;
+    using Aborter = typename Fitter::template Aborter<source_link_t>;
+    using Options = PropagatorOptions<ActionList<Actor<source_link_t>>, AbortList<Aborter, PathLimitReached>>;
+    using State = typename propagator_t::template State<Options>;
+	using SourceLink = source_link_t;
+	
     /// Broadcast the result_type
     using result_type = KalmanFitterResult<source_link_t>;
 
@@ -248,8 +255,7 @@ class KalmanFitter {
     /// @param state is the mutable propagator state object
     /// @param stepper The stepper in use
     /// @param result is the mutable result state object
-    template <typename propagator_state_t, typename stepper_t>
-    void operator()(propagator_state_t& state, const stepper_t& stepper,
+    void operator()(State& state, const KalmanStepper& stepper,
                     result_type& result) const {
       if (result.finished) {
         return;
@@ -395,8 +401,7 @@ class KalmanFitter {
     /// @param state is the mutable propagator state object
     /// @param stepper The stepper in use
     /// @param result is the mutable result state object
-    template <typename propagator_state_t, typename stepper_t>
-    void reverse(propagator_state_t& state, stepper_t& stepper,
+    void reverse(State& state, const KalmanStepper& stepper,
                  result_type& result) const {
       // Remember the navigation direciton has been reserved
       result.reset = true;
@@ -427,13 +432,13 @@ class KalmanFitter {
             state.navigation.currentVolume = state.navigation.startVolume;
 
             // Update the stepping state
-            stepper.resetState(state.stepping, st.filtered(),
-                               st.filteredCovariance(), *startSurface, backward,
+            stepper.resetState(state.stepping, st.boundFiltered(),
+                               BoundMatrix(st.boundFilteredCovariance()), *startSurface, backward,
                                state.options.maxStepSize);
 
             // For the last measurement state, smoothed is filtered
-            st.smoothed() = st.filtered();
-            st.smoothedCovariance() = st.filteredCovariance();
+            st.boundSmoothed() = st.boundFiltered();
+            st.boundSmoothedCovariance() = st.boundFilteredCovariance();
             result.passedAgainObject.push_back(startSurface);
 
             // Update material effects for last measurement state in backward
@@ -456,9 +461,8 @@ class KalmanFitter {
     /// @param state The mutable propagator state object
     /// @param stepper The stepper in use
     /// @param result The mutable result state object
-    template <typename propagator_state_t, typename stepper_t>
-    Result<void> filter(const Surface* surface, propagator_state_t& state,
-                        const stepper_t& stepper, result_type& result) const {
+    Result<void> filter(const Surface* surface, State& state,
+                        const KalmanStepper& stepper, result_type& result) const {
       // Try to find the surface in the measurement surfaces
       auto sourcelink_it = boundInputMeasurements.find(surface);
       if (sourcelink_it != boundInputMeasurements.end()) {
@@ -624,10 +628,9 @@ class KalmanFitter {
     /// @param state The mutable propagator state object
     /// @param stepper The stepper in use
     /// @param result The mutable result state object
-    template <typename propagator_state_t, typename stepper_t>
     Result<void> backwardFilter(const Surface* surface,
-                                propagator_state_t& state,
-                                const stepper_t& stepper,
+                                State& state,
+                                const KalmanStepper& stepper,
                                 result_type& result) const {
       // Try to find the surface in the measurement surfaces
       auto sourcelink_it = boundInputMeasurements.find(surface);
@@ -747,9 +750,8 @@ class KalmanFitter {
     /// @param stepper The stepper in use
     /// @param updateStage The materal update stage
     ///
-    template <typename propagator_state_t, typename stepper_t>
     void materialInteractor(
-        const Surface* surface, propagator_state_t& state, stepper_t& stepper,
+        const Surface* surface, State& state, const KalmanStepper& stepper,
         const MaterialUpdateStage& updateStage = fullUpdate) const {
       // Indicator if having material
       bool hasMaterial = false;
@@ -799,8 +801,7 @@ class KalmanFitter {
     /// @param state is the mutable propagator state object
     /// @param stepper The stepper in use
     /// @param result is the mutable result state object
-    template <typename propagator_state_t, typename stepper_t>
-    Result<void> finalize(propagator_state_t& state, const stepper_t& stepper,
+    Result<void> finalize(State& state, const KalmanStepper& stepper,
                           result_type& result) const {
       // Remember you smoothed the track states
       result.smoothed = true;
@@ -894,18 +895,17 @@ class KalmanFitter {
     /// Broadcast the result_type
     using action_type = Actor<source_link_t>;
 
-    template <typename propagator_state_t, typename stepper_t,
-              typename result_t>
-    bool operator()(propagator_state_t& /*state*/, const stepper_t& /*stepper*/,
-                    const result_t& result) const {
+    template <typename propagator_state_t>
+    bool operator()(typename action_type::State& /*state*/, const KalmanStepper& /*stepper*/,
+                    const typename action_type::result_type& result) const {
       if (!result.result.ok() or result.finished) {
         return true;
       }
       return false;
     }
   };
-   
-   
+
+private:
     template <typename source_link_t>
     PropagatorOptions<ActionList<Actor<source_link_t>>, AbortList<Aborter<source_link_t>>>
     buildPropagatorOptions(const std::vector<source_link_t>& boundSourcelinks, const std::vector<source_link_t>& freeSourcelinks, const KalmanFitterOptions<outlier_finder_t>& kfOptions) const
@@ -922,10 +922,10 @@ class KalmanFitter {
 		  boundInputMeasurements.emplace(srf, sl);
 		}
 		ACTS_VERBOSE("Preparing " << freeSourcelinks.size() << " free input measurements");
-		std::map<const GeometryObject*, source_link_t> freeInputMeasurements;
+		std::map<const GeometryObject*, std::vector<source_link_t>> freeInputMeasurements;
 		for (const auto& sl : freeSourcelinks) {
 		  const GeometryObject* srf = &sl.referenceObject();
-		  freeInputMeasurements.emplace(srf, sl);
+		  freeInputMeasurements[srf].emplace_back(sl);
 		}
 
 		// Create the ActionList and AbortList
@@ -956,52 +956,8 @@ class KalmanFitter {
 		kalmanActor.m_smoother.m_logger = m_logger;
 		return kalmanOptions;
 	}
-	        
-    template <typename source_link_t>
-    PropagatorOptions<ActionList<Actor<source_link_t>>, AbortList<Aborter<source_link_t>>>
-    buildPropagatorOptions(const std::vector<source_link_t>& sourcelinks, const KalmanFitterOptions<outlier_finder_t>& kfOptions) const
-    {
-        static_assert(SourceLinkConcept<source_link_t>,
-                  "Source link does not fulfill SourceLinkConcept");
 
-		// To be able to find measurements later, we put them into a map
-		// We need to copy input SourceLinks anyways, so the map can own them.
-		ACTS_VERBOSE("Preparing " << sourcelinks.size() << " input measurements");
-		std::map<const GeometryObject*, source_link_t> boundInputMeasurements;
-		for (const auto& sl : sourcelinks) {
-		  const GeometryObject* srf = &sl.referenceObject();
-		  boundInputMeasurements.emplace(srf, sl);
-		}
-
-		// Create the ActionList and AbortList
-		using KalmanAborter = Aborter<source_link_t>;
-		using KalmanActor = Actor<source_link_t>;
-		using Actors = ActionList<KalmanActor>;
-		using Aborters = AbortList<KalmanAborter>;
-
-		// Create relevant options for the propagation options
-		PropagatorOptions<Actors, Aborters> kalmanOptions(
-			kfOptions.geoContext, kfOptions.magFieldContext);
-
-		// Catch the actor and set the measurements
-		auto& kalmanActor = kalmanOptions.actionList.template get<KalmanActor>();
-		kalmanActor.m_logger = m_logger.get();
-		kalmanActor.boundInputMeasurements = std::move(boundInputMeasurements);
-		kalmanActor.targetSurface = kfOptions.referenceSurface;
-		kalmanActor.multipleScattering = kfOptions.multipleScattering;
-		kalmanActor.energyLoss = kfOptions.energyLoss;
-		kalmanActor.backwardFiltering = kfOptions.backwardFiltering;
-
-		// Set config for outlier finder
-		kalmanActor.m_outlierFinder = kfOptions.outlierFinder;
-
-		// also set logger on updater and smoother
-		kalmanActor.m_updater.m_logger = m_logger;
-		kalmanActor.m_smoother.m_logger = m_logger;
-		return kalmanOptions;
-	}
-	
- public:
+public:   
   /// Fit implementation of the foward filter, calls the
   /// the forward filter and backward smoother
   ///
@@ -1028,7 +984,7 @@ class KalmanFitter {
     using KalmanResult = typename Actor<source_link_t>::result_type;
    
     // Create relevant options for the propagation options
-    auto kalmanOptions = buildPropagatorOptions(sourcelinks, kfOptions);
+    auto kalmanOptions = buildPropagatorOptions(sourcelinks, {}, kfOptions);
 
     // Run the fitter
     auto result = m_propagator.template propagate(sParameters, kalmanOptions);
@@ -1086,7 +1042,7 @@ class KalmanFitter {
     using KalmanResult = typename Actor<source_link_t>::result_type;
    
     // Create relevant options for the propagation options
-    auto kalmanOptions = buildPropagatorOptions(sourcelinks, kfOptions);
+    auto kalmanOptions = buildPropagatorOptions(sourcelinks, {}, kfOptions);
 
     // Set the surface sequence
     auto& dInitializer =

@@ -477,8 +477,8 @@ class CombinatorialKalmanFilter {
         state.navigation.currentVolume = state.navigation.startVolume;
 
         // Update the stepping state
-        stepper.resetState(state.stepping, currentState.filtered(),
-                           currentState.filteredCovariance(),
+        stepper.resetState(state.stepping, currentState.boundFiltered(),
+                           BoundMatrix(currentState.boundFilteredCovariance()),
                            *state.navigation.startSurface,
                            state.stepping.navDir, state.options.maxStepSize);
 
