@@ -49,7 +49,7 @@ class GainMatrixUpdater {
   template <typename track_state_t>
   Result<void> operator()(
       const GeometryContext& /*gctx*/, track_state_t trackState,
-      const NavigationDirection& direction = forward) const {
+      const NavigationDirection& direction = forward, bool boundState = true) const {
     ACTS_VERBOSE("Invoked GainMatrixUpdater");
     // let's make sure the types are consistent
     using SourceLink = typename track_state_t::SourceLink;
@@ -57,83 +57,160 @@ class GainMatrixUpdater {
         typename MultiTrajectory<SourceLink>::TrackStateProxy;
     static_assert(std::is_same_v<track_state_t, TrackStateProxy>,
                   "Given track state type is not a track state proxy");
+    std::optional<std::error_code> error{std::nullopt};  // assume ok
 
     // we should definitely have an uncalibrated measurement here
     assert(trackState.hasUncalibrated());
     // there should be a calibrated measurement
     assert(trackState.hasCalibrated());
-    // we should have predicted state set
-    assert(trackState.hasBoundPredicted());
-    // filtering should not have happened yet, but is allocated, therefore set
-    assert(trackState.hasBoundFiltered());
+    if(boundState)
+    {
+		// we should have predicted state set
+		assert(trackState.hasBoundPredicted());
+		// filtering should not have happened yet, but is allocated, therefore set
+		assert(trackState.hasBoundFiltered());
 
-    // read-only handles. Types are eigen maps to backing storage
-    const auto predicted = trackState.boundPredicted();
-    const auto predicted_covariance = trackState.boundPredictedCovariance();
+		// read-only handles. Types are eigen maps to backing storage
+		const BoundVector predicted = trackState.boundPredicted();
+		const auto predicted_covariance = trackState.boundPredictedCovariance();
 
-    ACTS_VERBOSE("Predicted parameters: " << predicted.transpose());
-    ACTS_VERBOSE("Predicted covariance:\n" << predicted_covariance);
+		ACTS_VERBOSE("Predicted parameters: " << predicted.transpose());
+		ACTS_VERBOSE("Predicted covariance:\n" << predicted_covariance);
 
-    // read-write handles. Types are eigen maps into backing storage.
-    // This writes directly into the trajectory storage
-    auto filtered = trackState.boundFiltered();
-    auto filtered_covariance = trackState.boundFilteredCovariance();
+		// read-write handles. Types are eigen maps into backing storage.
+		// This writes directly into the trajectory storage
+		auto filtered = trackState.boundFiltered();
+		auto filtered_covariance = trackState.boundFilteredCovariance();
 
-    std::optional<std::error_code> error{std::nullopt};  // assume ok
-    visit_measurement(
-        trackState.calibrated(), trackState.calibratedCovariance(),
-        trackState.calibratedSize(),
-        [&](const auto calibrated, const auto calibrated_covariance) {
-          constexpr size_t measdim = decltype(calibrated)::RowsAtCompileTime;
-          using cov_t = ActsSymMatrixD<measdim>;
-          using par_t = ActsVectorD<measdim>;
+		visit_measurement(
+			trackState.calibrated(), trackState.calibratedCovariance(),
+			trackState.calibratedSize(),
+			[&](const auto calibrated, const auto calibrated_covariance) {
+			  constexpr size_t measdim = decltype(calibrated)::RowsAtCompileTime;
+			  using cov_t = ActsSymMatrixD<measdim>;
+			  using par_t = ActsVectorD<measdim>;
 
-          ACTS_VERBOSE("Measurement dimension: " << measdim);
-          ACTS_VERBOSE("Calibrated measurement: " << calibrated.transpose());
-          ACTS_VERBOSE("Calibrated measurement covariance:\n"
-                       << calibrated_covariance);
+			  ACTS_VERBOSE("Measurement dimension: " << measdim);
+			  ACTS_VERBOSE("Calibrated measurement: " << calibrated.transpose());
+			  ACTS_VERBOSE("Calibrated measurement covariance:\n"
+						   << calibrated_covariance);
 
-          const ActsMatrixD<measdim, eBoundParametersSize> H =
-              trackState.projector()
-                  .template topLeftCorner<measdim, eBoundParametersSize>();
+			  const ActsMatrixD<measdim, eBoundParametersSize> H =
+				  trackState.projector()
+					  .template topLeftCorner<measdim, eBoundParametersSize>();
 
-          ACTS_VERBOSE("Measurement projector H:\n" << H);
+			  ACTS_VERBOSE("Measurement projector H:\n" << H);
 
-          const ActsMatrixD<eBoundParametersSize, measdim> K =
-              predicted_covariance * H.transpose() *
-              (H * predicted_covariance * H.transpose() + calibrated_covariance)
-                  .inverse();
+			  const ActsMatrixD<eBoundParametersSize, measdim> K =
+				  predicted_covariance * H.transpose() *
+				  (H * predicted_covariance * H.transpose() + calibrated_covariance)
+					  .inverse();
 
-          ACTS_VERBOSE("Gain Matrix K:\n" << K);
+			  ACTS_VERBOSE("Gain Matrix K:\n" << K);
 
-          if (K.hasNaN()) {
-            error =
-                (direction == forward)
-                    ? KalmanFitterError::ForwardUpdateFailed
-                    : KalmanFitterError::BackwardUpdateFailed;  // set to error
-            return false;  // abort execution
-          }
+			  if (K.hasNaN()) {
+				error =
+					(direction == forward)
+						? KalmanFitterError::ForwardUpdateFailed
+						: KalmanFitterError::BackwardUpdateFailed;  // set to error
+				return false;  // abort execution
+			  }
 
-          filtered = predicted + K * (calibrated - H * predicted);
-          filtered_covariance =
-              (BoundSymMatrix::Identity() - K * H) * predicted_covariance;
-          ACTS_VERBOSE("Filtered parameters: " << filtered.transpose());
-          ACTS_VERBOSE("Filtered covariance:\n" << filtered_covariance);
+			  filtered = predicted + K * (calibrated - H * predicted);
+			  filtered_covariance =
+				  (BoundSymMatrix::Identity() - K * H) * predicted_covariance;
+			  ACTS_VERBOSE("Filtered parameters: " << filtered.transpose());
+			  ACTS_VERBOSE("Filtered covariance:\n" << filtered_covariance);
 
-          // calculate filtered residual
-          const par_t residual = (calibrated - H * filtered);
-          ACTS_VERBOSE("Residual: " << residual.transpose());
+			  // calculate filtered residual
+			  par_t residual(trackState.calibratedSize());
+			  residual = (calibrated - H * filtered);
+			  ACTS_VERBOSE("Residual: " << residual.transpose());
 
-          trackState.chi2() =
-              (residual.transpose() *
-               ((cov_t::Identity() - H * K) * calibrated_covariance).inverse() *
-               residual)
-                  .value();
+			  trackState.chi2() =
+				  (residual.transpose() *
+				   ((cov_t::Identity() - H * K) * calibrated_covariance).inverse() *
+				   residual)
+					  .value();
 
-          ACTS_VERBOSE("Chi2: " << trackState.chi2());
-          return true;  // continue execution
-        });
+			  ACTS_VERBOSE("Chi2: " << trackState.chi2());
+			  return true;  // continue execution
+			});
+	}
+	else
+	{
+		// we should have predicted state set
+		assert(trackState.hasFreePredicted());
+		// filtering should not have happened yet, but is allocated, therefore set
+		assert(trackState.hasFreeFiltered());
 
+		// read-only handles. Types are eigen maps to backing storage
+		const auto predicted = trackState.freePredicted();
+		const auto predicted_covariance = trackState.freePredictedCovariance();
+
+		ACTS_VERBOSE("Predicted parameters: " << predicted.transpose());
+		ACTS_VERBOSE("Predicted covariance:\n" << predicted_covariance);
+
+		// read-write handles. Types are eigen maps into backing storage.
+		// This writes directly into the trajectory storage
+		auto filtered = trackState.freeFiltered();
+		auto filtered_covariance = trackState.freeFilteredCovariance();
+
+		visit_measurement(
+			trackState.calibrated(), trackState.calibratedCovariance(),
+			trackState.calibratedSize(),
+			[&](const auto calibrated, const auto calibrated_covariance) {
+			  constexpr size_t measdim = decltype(calibrated)::RowsAtCompileTime;
+			  using cov_t = ActsSymMatrixD<measdim>;
+			  using par_t = ActsVectorD<measdim>;
+
+			  ACTS_VERBOSE("Measurement dimension: " << measdim);
+			  ACTS_VERBOSE("Calibrated measurement: " << calibrated.transpose());
+			  ACTS_VERBOSE("Calibrated measurement covariance:\n"
+						   << calibrated_covariance);
+
+			  const ActsMatrixD<measdim, eFreeParametersSize> H =
+				  trackState.projector()
+					  .template topLeftCorner<measdim, eFreeParametersSize>();
+
+			  ACTS_VERBOSE("Measurement projector H:\n" << H);
+
+			  const ActsMatrixD<eFreeParametersSize, measdim> K =
+				  predicted_covariance * H.transpose() *
+				  (H * predicted_covariance * H.transpose() + calibrated_covariance)
+					  .inverse();
+
+			  ACTS_VERBOSE("Gain Matrix K:\n" << K);
+
+			  if (K.hasNaN()) {
+				error =
+					(direction == forward)
+						? KalmanFitterError::ForwardUpdateFailed
+						: KalmanFitterError::BackwardUpdateFailed;  // set to error
+				return false;  // abort execution
+			  }
+
+			  filtered = predicted + K * (calibrated - H * predicted);
+			  filtered_covariance =
+				  (FreeSymMatrix::Identity() - K * H) * predicted_covariance;
+			  ACTS_VERBOSE("Filtered parameters: " << filtered.transpose());
+			  ACTS_VERBOSE("Filtered covariance:\n" << filtered_covariance);
+
+			  // calculate filtered residual
+			  par_t residual(trackState.calibratedSize());
+			  residual = (calibrated - H * filtered);
+			  ACTS_VERBOSE("Residual: " << residual.transpose());
+
+			  trackState.chi2() =
+				  (residual.transpose() *
+				   ((cov_t::Identity() - H * K) * calibrated_covariance).inverse() *
+				   residual)
+					  .value();
+
+			  ACTS_VERBOSE("Chi2: " << trackState.chi2());
+			  return true;  // continue execution
+			});		
+	}
     if (error) {
       // error is set, return result
       return *error;
@@ -143,6 +220,80 @@ class GainMatrixUpdater {
     return Result<void>::success();
   }
 
+private:
+
+  template <typename track_state_t, size_t parameter_size_t>
+  Result<void> update(
+      const GeometryContext& /*gctx*/, track_state_t trackState,
+      const NavigationDirection& direction = forward, const ActsVectorD<parameter_size_t>& predicted, 
+      const ActsSymMatrixD<parameter_size_t>& predictedCovariance, ActsVectorD<parameter_size_t>& filtered, 
+      ActsSymMatrixD<parameter_size_t>& filteredCovariance ) const {
+	
+	std::optional<std::error_code> error{std::nullopt};  // assume ok
+	visit_measurement(
+			trackState.calibrated(), trackState.calibratedCovariance(),
+			trackState.calibratedSize(),
+			[&](const auto calibrated, const auto calibrated_covariance) {
+			  constexpr size_t measdim = decltype(calibrated)::RowsAtCompileTime;
+			  using cov_t = ActsSymMatrixD<measdim>;
+			  using par_t = ActsVectorD<measdim>;
+
+			  ACTS_VERBOSE("Measurement dimension: " << measdim);
+			  ACTS_VERBOSE("Calibrated measurement: " << calibrated.transpose());
+			  ACTS_VERBOSE("Calibrated measurement covariance:\n"
+						   << calibrated_covariance);
+
+			  const ActsMatrixD<measdim, parameter_size_t> H =
+				  trackState.projector()
+					  .template topLeftCorner<measdim, parameter_size_t>();
+
+			  ACTS_VERBOSE("Measurement projector H:\n" << H);
+
+			  const ActsMatrixD<parameter_size_t, measdim> K =
+				  predicted_covariance * H.transpose() *
+				  (H * predicted_covariance * H.transpose() + calibrated_covariance)
+					  .inverse();
+
+			  ACTS_VERBOSE("Gain Matrix K:\n" << K);
+
+			  if (K.hasNaN()) {
+				error =
+					(direction == forward)
+						? KalmanFitterError::ForwardUpdateFailed
+						: KalmanFitterError::BackwardUpdateFailed;  // set to error
+				return false;  // abort execution
+			  }
+
+			  filtered = predicted + K * (calibrated - H * predicted);
+			  filtered_covariance =
+				  (ActsSymMatrix<parameter_size_t>::Identity() - K * H) * predicted_covariance;
+			  ACTS_VERBOSE("Filtered parameters: " << filtered.transpose());
+			  ACTS_VERBOSE("Filtered covariance:\n" << filtered_covariance);
+
+			  // calculate filtered residual
+			  par_t residual(trackState.calibratedSize());
+			  residual = (calibrated - H * filtered);
+			  ACTS_VERBOSE("Residual: " << residual.transpose());
+
+			  trackState.chi2() =
+				  (residual.transpose() *
+				   ((cov_t::Identity() - H * K) * calibrated_covariance).inverse() *
+				   residual)
+					  .value();
+
+			  ACTS_VERBOSE("Chi2: " << trackState.chi2());
+			  return true;  // continue execution
+			});
+		}
+	if (error) {
+      // error is set, return result
+      return *error;
+    }
+
+    // always succeed, no outlier logic yet
+    return Result<void>::success();
+  }
+  
   /// Pointer to a logger that is owned by the parent, KalmanFilter
   std::shared_ptr<const Logger> m_logger{nullptr};
 
