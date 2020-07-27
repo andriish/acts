@@ -241,11 +241,10 @@ class CombinatorialKalmanFilter {
   /// @brief Propagator Actor plugin for the CombinatorialKalmanFilter
   ///
   /// @tparam source_link_t is an type fulfilling the @c SourceLinkConcept
-  /// @tparam parameters_t The type of parameters used for "local" paremeters.
   ///
   /// The CombinatorialKalmanFilterActor does not rely on the measurements to be
   /// sorted along the track.
-  template <typename source_link_t, typename parameters_t>
+  template <typename source_link_t>
   class Actor {
    public:
     using TipState = CombinatorialKalmanFilterTipState;
@@ -1061,11 +1060,11 @@ class CombinatorialKalmanFilter {
     SurfaceReached targetReached;
   };
 
-  template <typename source_link_t, typename parameters_t>
+  template <typename source_link_t>
   class Aborter {
    public:
     /// Broadcast the result_type
-    using action_type = Actor<source_link_t, parameters_t>;
+    using action_type = Actor<source_link_t>;
 
     template <typename propagator_state_t, typename stepper_t,
               typename result_t>
@@ -1096,8 +1095,7 @@ class CombinatorialKalmanFilter {
   /// the track finding.
   ///
   /// @return the output as an output track
-  template <typename source_link_container_t, typename start_parameters_t,
-            typename parameters_t = BoundParameters>
+  template <typename source_link_container_t, typename start_parameters_t>
   Result<CombinatorialKalmanFilterResult<
       typename source_link_container_t::value_type>>
   findTracks(const source_link_container_t& sourcelinks,
@@ -1119,8 +1117,8 @@ class CombinatorialKalmanFilter {
     }
 
     // Create the ActionList and AbortList
-    using CombinatorialKalmanFilterAborter = Aborter<SourceLink, parameters_t>;
-    using CombinatorialKalmanFilterActor = Actor<SourceLink, parameters_t>;
+    using CombinatorialKalmanFilterAborter = Aborter<SourceLink>;
+    using CombinatorialKalmanFilterActor = Actor<SourceLink>;
     using CombinatorialKalmanFilterResult =
         typename CombinatorialKalmanFilterActor::result_type;
     using Actors = ActionList<CombinatorialKalmanFilterActor>;

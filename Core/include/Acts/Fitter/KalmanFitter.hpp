@@ -82,7 +82,7 @@ struct KalmanFitterOptions {
         multipleScattering(mScattering),
         energyLoss(eLoss),
         backwardFiltering(bwdFiltering) {}
-
+    
   /// Context object for the geometry
   std::reference_wrapper<const GeometryContext> geoContext;
   /// Context object for the magnetic field
@@ -228,7 +228,9 @@ class KalmanFitter {
     const Surface* targetSurface = nullptr;
 
     /// Allows retrieving measurements for a surface
-    std::map<const GeometryObject*, source_link_t> inputMeasurements;
+    std::map<const GeometryObject*, source_link_t> boundInputMeasurements;
+    /// Allows retrieving measurements for a volume
+    std::map<const GeometryObject*, std::vector<source_link_t>> freeInputMeasurements;
 
     /// Whether to consider multiple scattering.
     bool multipleScattering = true;
@@ -309,7 +311,7 @@ class KalmanFitter {
       // reset navigation&stepping before run backward filtering or
       // proceed to run smoothing
       if (state.stepping.navDir == forward) {
-        if (result.measurementStates == inputMeasurements.size() or
+        if (result.measurementStates == boundInputMeasurements.size() or
             (result.measurementStates > 0 and
              state.navigation.navigationBreak)) {
           if (backwardFiltering and not result.forwardFiltered) {
@@ -459,8 +461,8 @@ class KalmanFitter {
     Result<void> filter(const Surface* surface, propagator_state_t& state,
                         const stepper_t& stepper, result_type& result) const {
       // Try to find the surface in the measurement surfaces
-      auto sourcelink_it = inputMeasurements.find(surface);
-      if (sourcelink_it != inputMeasurements.end()) {
+      auto sourcelink_it = boundInputMeasurements.find(surface);
+      if (sourcelink_it != boundInputMeasurements.end()) {
         // Screen output message
         ACTS_VERBOSE("Measurement surface " << surface->geoID()
                                             << " detected.");
@@ -629,8 +631,8 @@ class KalmanFitter {
                                 const stepper_t& stepper,
                                 result_type& result) const {
       // Try to find the surface in the measurement surfaces
-      auto sourcelink_it = inputMeasurements.find(surface);
-      if (sourcelink_it != inputMeasurements.end()) {
+      auto sourcelink_it = boundInputMeasurements.find(surface);
+      if (sourcelink_it != boundInputMeasurements.end()) {
         // Screen output message
         ACTS_VERBOSE("Measurement surface "
                      << surface->geoID()
@@ -903,7 +905,51 @@ class KalmanFitter {
       return false;
     }
   };
+           
+    template <typename source_link_t>
+    PropagatorOptions<ActionList<Actor<source_link_t>>, AbortList<Aborter<source_link_t>>>
+    buildPropagatorOptions(const std::vector<source_link_t>& sourcelinks, const KalmanFitterOptions<outlier_finder_t>& kfOptions) const
+    {
+        static_assert(SourceLinkConcept<source_link_t>,
+                  "Source link does not fulfill SourceLinkConcept");
 
+		// To be able to find measurements later, we put them into a map
+		// We need to copy input SourceLinks anyways, so the map can own them.
+		ACTS_VERBOSE("Preparing " << sourcelinks.size() << " input measurements");
+		std::map<const GeometryObject*, source_link_t> boundInputMeasurements;
+		for (const auto& sl : sourcelinks) {
+		  const GeometryObject* srf = &sl.referenceObject();
+		  boundInputMeasurements.emplace(srf, sl);
+		}
+
+		// Create the ActionList and AbortList
+		using KalmanAborter = Aborter<source_link_t>;
+		using KalmanActor = Actor<source_link_t>;
+		using Actors = ActionList<KalmanActor>;
+		using Aborters = AbortList<KalmanAborter>;
+
+		// Create relevant options for the propagation options
+		PropagatorOptions<Actors, Aborters> kalmanOptions(
+			kfOptions.geoContext, kfOptions.magFieldContext);
+
+		// Catch the actor and set the measurements
+		auto& kalmanActor = kalmanOptions.actionList.template get<KalmanActor>();
+		kalmanActor.m_logger = m_logger.get();
+		kalmanActor.boundInputMeasurements = std::move(boundInputMeasurements);
+		kalmanActor.targetSurface = kfOptions.referenceSurface;
+		kalmanActor.multipleScattering = kfOptions.multipleScattering;
+		kalmanActor.energyLoss = kfOptions.energyLoss;
+		kalmanActor.backwardFiltering = kfOptions.backwardFiltering;
+
+		// Set config for outlier finder
+		kalmanActor.m_outlierFinder = kfOptions.outlierFinder;
+
+		// also set logger on updater and smoother
+		kalmanActor.m_updater.m_logger = m_logger;
+		kalmanActor.m_smoother.m_logger = m_logger;
+		return kalmanOptions;
+	}
+	
  public:
   /// Fit implementation of the foward filter, calls the
   /// the forward filter and backward smoother
@@ -928,44 +974,10 @@ class KalmanFitter {
            const KalmanFitterOptions<outlier_finder_t>& kfOptions) const
       -> std::enable_if_t<!isDirectNavigator,
                           Result<KalmanFitterResult<source_link_t>>> {
-    static_assert(SourceLinkConcept<source_link_t>,
-                  "Source link does not fulfill SourceLinkConcept");
-
-    // To be able to find measurements later, we put them into a map
-    // We need to copy input SourceLinks anyways, so the map can own them.
-    ACTS_VERBOSE("Preparing " << sourcelinks.size() << " input measurements");
-    std::map<const GeometryObject*, source_link_t> inputMeasurements;
-    for (const auto& sl : sourcelinks) {
-      const GeometryObject* srf = &sl.referenceObject();
-      inputMeasurements.emplace(srf, sl);
-    }
-
-    // Create the ActionList and AbortList
-    using KalmanAborter = Aborter<source_link_t>;
-    using KalmanActor = Actor<source_link_t>;
-    using KalmanResult = typename KalmanActor::result_type;
-    using Actors = ActionList<KalmanActor>;
-    using Aborters = AbortList<KalmanAborter>;
-
+    using KalmanResult = typename Actor<source_link_t>::result_type;
+   
     // Create relevant options for the propagation options
-    PropagatorOptions<Actors, Aborters> kalmanOptions(
-        kfOptions.geoContext, kfOptions.magFieldContext);
-
-    // Catch the actor and set the measurements
-    auto& kalmanActor = kalmanOptions.actionList.template get<KalmanActor>();
-    kalmanActor.m_logger = m_logger.get();
-    kalmanActor.inputMeasurements = std::move(inputMeasurements);
-    kalmanActor.targetSurface = kfOptions.referenceSurface;
-    kalmanActor.multipleScattering = kfOptions.multipleScattering;
-    kalmanActor.energyLoss = kfOptions.energyLoss;
-    kalmanActor.backwardFiltering = kfOptions.backwardFiltering;
-
-    // Set config for outlier finder
-    kalmanActor.m_outlierFinder = kfOptions.outlierFinder;
-
-    // also set logger on updater and smoother
-    kalmanActor.m_updater.m_logger = m_logger;
-    kalmanActor.m_smoother.m_logger = m_logger;
+    auto kalmanOptions = buildPropagatorOptions(sourcelinks, kfOptions);
 
     // Run the fitter
     auto result = m_propagator.template propagate(sParameters, kalmanOptions);
@@ -1020,44 +1032,10 @@ class KalmanFitter {
            const std::vector<const Surface*>& sSequence) const
       -> std::enable_if_t<isDirectNavigator,
                           Result<KalmanFitterResult<source_link_t>>> {
-    static_assert(SourceLinkConcept<source_link_t>,
-                  "Source link does not fulfill SourceLinkConcept");
-
-    // To be able to find measurements later, we put them into a map
-    // We need to copy input SourceLinks anyways, so the map can own them.
-    ACTS_VERBOSE("Preparing " << sourcelinks.size() << " input measurements");
-    std::map<const GeometryObject*, source_link_t> inputMeasurements;
-    for (const auto& sl : sourcelinks) {
-      const GeometryObject* srf = &sl.referenceObject();
-      inputMeasurements.emplace(srf, sl);
-    }
-
-    // Create the ActionList and AbortList
-    using KalmanAborter = Aborter<source_link_t>;
-    using KalmanActor = Actor<source_link_t>;
-    using KalmanResult = typename KalmanActor::result_type;
-    using Actors = ActionList<DirectNavigator::Initializer, KalmanActor>;
-    using Aborters = AbortList<KalmanAborter>;
-
+    using KalmanResult = typename Actor<source_link_t>::result_type;
+   
     // Create relevant options for the propagation options
-    PropagatorOptions<Actors, Aborters> kalmanOptions(
-        kfOptions.geoContext, kfOptions.magFieldContext);
-
-    // Catch the actor and set the measurements
-    auto& kalmanActor = kalmanOptions.actionList.template get<KalmanActor>();
-    kalmanActor.m_logger = m_logger.get();
-    kalmanActor.inputMeasurements = std::move(inputMeasurements);
-    kalmanActor.targetSurface = kfOptions.referenceSurface;
-    kalmanActor.multipleScattering = kfOptions.multipleScattering;
-    kalmanActor.energyLoss = kfOptions.energyLoss;
-    kalmanActor.backwardFiltering = kfOptions.backwardFiltering;
-
-    // Set config for outlier finder
-    kalmanActor.m_outlierFinder.m_config = kfOptions.outlierFinderConfig;
-
-    // also set logger on updater and smoother
-    kalmanActor.m_updater.m_logger = m_logger;
-    kalmanActor.m_smoother.m_logger = m_logger;
+    auto kalmanOptions = buildPropagatorOptions(sourcelinks, kfOptions);
 
     // Set the surface sequence
     auto& dInitializer =
