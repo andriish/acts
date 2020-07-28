@@ -255,7 +255,7 @@ static inline std::string testMultiTrajectory(IVisualization3D& helper) {
 
   using Updater = GainMatrixUpdater;
   using Smoother = GainMatrixSmoother;
-  using KalmanFitter = KalmanFitter<RecoPropagator, Updater, Smoother>;
+  using KalmanFitter = KalmanFitter<RecoPropagator>;
 
   KalmanFitter kFitter(rPropagator,
                        getDefaultLogger("KalmanFilter", Logging::WARNING));
@@ -264,7 +264,7 @@ static inline std::string testMultiTrajectory(IVisualization3D& helper) {
       tgContext, mfContext, calContext, VoidOutlierFinder(), rSurface);
 
   // Fit the track
-  auto fitRes = kFitter.fit(sourcelinks, rStart, kfOptions);
+  auto fitRes = kFitter.fit<Updater, Smoother>(sourcelinks, rStart, kfOptions);
   if (not fitRes.ok()) {
     std::cout << "Fit failed" << std::endl;
     return ss.str();

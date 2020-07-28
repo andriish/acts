@@ -39,7 +39,9 @@ struct FitterFunctionImpl {
       const std::vector<FW::SimSourceLink>& sourceLinks,
       const FW::TrackParameters& initialParameters,
       const Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>& options) const {
-    return fitter.fit(sourceLinks, initialParameters, options);
+	using Updater = Acts::GainMatrixUpdater;
+	using Smoother = Acts::GainMatrixSmoother;
+    return fitter.template fit<Updater, Smoother>(sourceLinks, initialParameters, options);
   };
 };
 }  // namespace
@@ -47,8 +49,6 @@ struct FitterFunctionImpl {
 FW::FittingAlgorithm::FitterFunction FW::FittingAlgorithm::makeFitterFunction(
     std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry,
     Options::BFieldVariant magneticField, Acts::Logging::Level lvl) {
-  using Updater = Acts::GainMatrixUpdater;
-  using Smoother = Acts::GainMatrixSmoother;
 
   // unpack the magnetic field variant and instantiate the corresponding fitter.
   return std::visit(
@@ -61,7 +61,7 @@ FW::FittingAlgorithm::FitterFunction FW::FittingAlgorithm::makeFitterFunction(
         using Stepper = Acts::EigenStepper<MagneticField>;
         using Navigator = Acts::Navigator;
         using Propagator = Acts::Propagator<Stepper, Navigator>;
-        using Fitter = Acts::KalmanFitter<Propagator, Updater, Smoother>;
+        using Fitter = Acts::KalmanFitter<Propagator>;
 
         // construct all components for the fitter
         MagneticField field(std::move(inputField));

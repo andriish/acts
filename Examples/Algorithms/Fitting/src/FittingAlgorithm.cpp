@@ -89,7 +89,7 @@ FW::ProcessCode FW::FittingAlgorithm::execute(
     Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> kfOptions(
         ctx.geoContext, ctx.magFieldContext, ctx.calibContext,
         Acts::VoidOutlierFinder(), &(*pSurface));
-
+  
     ACTS_DEBUG("Invoke fitter");
     auto result = m_cfg.fit(trackSourceLinks, initialParams, kfOptions);
     if (result.ok()) {

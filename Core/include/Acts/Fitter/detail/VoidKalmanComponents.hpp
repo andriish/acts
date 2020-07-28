@@ -70,13 +70,12 @@ struct VoidKalmanUpdater {
   /// @brief Public call mimicking an updater
   ///
   /// @tparam measurement_t Type of the measurement to be used
-  /// @tpredicted_state_t Type of the (bound) predicted state
   ///
   /// @param m The measurement
   /// @param predicted The predicted parameters
   ///
   /// @return The copied predicted parameters
-  template <typename track_state_t, typename predicted_state_t>
+  template <typename track_state_t>
   auto operator()(const GeometryContext& /*gctx*/, track_state_t& trackState,
                   const NavigationDirection& /*direction*/, bool boundState = true) const {
 	if(boundState)
