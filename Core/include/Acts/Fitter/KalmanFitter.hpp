@@ -143,6 +143,11 @@ struct KalmanFitterResult {
   // Measurement surfaces handled in both forward and backward filtering
   std::vector<const GeometryObject*> passedAgainObject;
 
+  // Iterator to the current volume and its source links
+  //~ typename std::map<const GeometryObject*, std::vector<source_link_t>>::const_iterator currentFreeInputMeasurements;
+  const TrackingVolume* currentVolume = nullptr;
+  std::vector<source_link_t> currentFreeInputMeasurements;
+	
   Result<void> result{Result<void>::success()};
 };
 
@@ -281,6 +286,21 @@ class KalmanFitter {
       }
 
       // Update:
+      // - Collect current free measurements
+      if(result.currentVolume == nullptr || state.navigation.currentVolume != result.currentVolume)
+      {
+		  result.currentVolume = state.navigation.currentVolume;
+		  auto measurementsInCurrentVolume = freeInputMeasurements.find(state.navigation.currentVolume);
+		  if(measurementsInCurrentVolume != freeInputMeasurements.end())
+		  {
+			 result.currentFreeInputMeasurements = sortFreeInputMeasurements(state, stepper, measurementsInCurrentVolume->second);
+		  }
+		  else
+		  {
+			  result.currentFreeInputMeasurements.clear();
+		  }
+	  }
+	  
       // - Waiting for a current surface
       auto surface = state.navigation.currentSurface;
       if (surface != nullptr) {
@@ -851,6 +871,51 @@ class KalmanFitter {
       return Result<void>::success();
     }
 
+  /// Actor that remembers the volumes passed
+  ///
+  /// @param state is the mutable propagator state object
+  /// @param result is the mutable result state object
+  //~ std::vector<source_link_t> sortFreeInputMeasurements(const State& state, const KalmanStepper& stepper, std::vector<source_link_t> sourceLinks) const {
+  std::vector<source_link_t> sortFreeInputMeasurements(const State& , const KalmanStepper& , std::vector<source_link_t> ) const {
+	  //~ std::vector<double> distances(sourceLinks.size());
+	  
+	  //~ for(unsigned int i = 0; i < sourceLinks.size(); i++)
+	  //~ {
+		  
+	  //~ }
+    //~ // Initialize the radii if necessary
+    //~ if (result.mts.empty() and result.mt == result.mts.end()) {
+      //~ result.mts = measurements;
+      //~ result.mt = result.mts.begin();
+    //~ } else if (result.mt == result.mts.end()) {
+      //~ return;
+    //~ }
+
+    //~ auto measurement = (*result.mt);
+
+    //~ // Get the position & direction
+    //~ auto position = stepper.position(state.stepping);
+    //~ auto direction = stepper.direction(state.stepping);
+
+    //~ // Let's create a hyperplane at the measurement point
+    //~ using Plane = Eigen::Hyperplane<double, 3>;
+    //~ using Line = Eigen::ParametrizedLine<double, 3>;
+
+    //~ // Make the plane and intersect
+    //~ auto plane = Plane(direction, measurement);
+    //~ auto line = Line::Through(position, position + direction);
+    //~ double path = line.intersection(plane);
+    //~ if (std::abs(path) < s_onSurfaceTolerance) {
+      //~ result.approaches.push_back(position);
+      //~ ++result.mt;
+      //~ return;
+    //~ }
+
+    //~ stepper.setStepSize(state.stepping, path);
+    //~ return sourceLinks;
+    return {};
+  }
+  
     /// Pointer to a logger that is owned by the parent, KalmanFilter
     const Logger* m_logger;
 
@@ -916,30 +981,58 @@ private:
 		// Create the ActionList and AbortList
 		using KalmanAborter = Aborter<actor_type_t>;
 		using KalmanActor = actor_type_t;
-		using Actors = ActionList<KalmanActor>;
 		using Aborters = AbortList<KalmanAborter>;
+		if constexpr(isDirectNavigator)
+		{
+			using Actors = ActionList<DirectNavigator::Initializer, KalmanActor>;
+			// Create relevant options for the propagation options
+			PropagatorOptions<Actors, Aborters> kalmanOptions(
+				kfOptions.geoContext, kfOptions.magFieldContext);
 
-		// Create relevant options for the propagation options
-		PropagatorOptions<Actors, Aborters> kalmanOptions(
-			kfOptions.geoContext, kfOptions.magFieldContext);
+			// Catch the actor and set the measurements
+			auto& kalmanActor = kalmanOptions.actionList.template get<KalmanActor>();
+			kalmanActor.m_logger = m_logger.get();
+			kalmanActor.boundInputMeasurements = std::move(boundInputMeasurements);
+			kalmanActor.freeInputMeasurements = std::move(freeInputMeasurements);
+			kalmanActor.targetSurface = kfOptions.referenceSurface;
+			kalmanActor.multipleScattering = kfOptions.multipleScattering;
+			kalmanActor.energyLoss = kfOptions.energyLoss;
+			kalmanActor.backwardFiltering = kfOptions.backwardFiltering;
 
-		// Catch the actor and set the measurements
-		auto& kalmanActor = kalmanOptions.actionList.template get<KalmanActor>();
-		kalmanActor.m_logger = m_logger.get();
-		kalmanActor.boundInputMeasurements = std::move(boundInputMeasurements);
-		kalmanActor.freeInputMeasurements = std::move(freeInputMeasurements);
-		kalmanActor.targetSurface = kfOptions.referenceSurface;
-		kalmanActor.multipleScattering = kfOptions.multipleScattering;
-		kalmanActor.energyLoss = kfOptions.energyLoss;
-		kalmanActor.backwardFiltering = kfOptions.backwardFiltering;
+			// Set config for outlier finder
+			kalmanActor.m_outlierFinder = kfOptions.outlierFinder;
 
-		// Set config for outlier finder
-		kalmanActor.m_outlierFinder = kfOptions.outlierFinder;
+			// also set logger on updater and smoother
+			kalmanActor.m_updater.m_logger = m_logger;
+			kalmanActor.m_smoother.m_logger = m_logger;
+			return kalmanOptions;
+		}
+		else
+		{
+			using Actors = ActionList<KalmanActor>;
+			
+			// Create relevant options for the propagation options
+			PropagatorOptions<Actors, Aborters> kalmanOptions(
+				kfOptions.geoContext, kfOptions.magFieldContext);
 
-		// also set logger on updater and smoother
-		kalmanActor.m_updater.m_logger = m_logger;
-		kalmanActor.m_smoother.m_logger = m_logger;
-		return kalmanOptions;
+			// Catch the actor and set the measurements
+			auto& kalmanActor = kalmanOptions.actionList.template get<KalmanActor>();
+			kalmanActor.m_logger = m_logger.get();
+			kalmanActor.boundInputMeasurements = std::move(boundInputMeasurements);
+			kalmanActor.freeInputMeasurements = std::move(freeInputMeasurements);
+			kalmanActor.targetSurface = kfOptions.referenceSurface;
+			kalmanActor.multipleScattering = kfOptions.multipleScattering;
+			kalmanActor.energyLoss = kfOptions.energyLoss;
+			kalmanActor.backwardFiltering = kfOptions.backwardFiltering;
+
+			// Set config for outlier finder
+			kalmanActor.m_outlierFinder = kfOptions.outlierFinder;
+
+			// also set logger on updater and smoother
+			kalmanActor.m_updater.m_logger = m_logger;
+			kalmanActor.m_smoother.m_logger = m_logger;
+			return kalmanOptions;
+		}
 	}
 
 public:   
