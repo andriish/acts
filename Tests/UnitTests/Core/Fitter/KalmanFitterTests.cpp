@@ -46,8 +46,24 @@ using namespace Acts::UnitLiterals;
 namespace Acts {
 namespace Test {
 
+struct SourceLink
+{
+  using MeasurementType = std::variant<Measurement<SourceLink, BoundParametersIndices, eLOC_0>, 
+						  Measurement<SourceLink, BoundParametersIndices,eLOC_1>, 
+						  Measurement<SourceLink, BoundParametersIndices,eLOC_0, eLOC_1>, 
+						  Measurement<SourceLink, FreeParametersIndices, eFreePos0, eFreePos1, eFreePos2>>;
+
+  const MeasurementType* meas{nullptr};
+
+  bool operator==(const SourceLink& rhs) const {return meas == rhs.meas;}
+
+  const GeometryObject& referenceObject() const {return *MeasurementHelpers::getObject(*meas);}
+
+  const MeasurementType& operator*() const {return *meas;}
+};
+
 // A few initialisations and definitionas
-using SourceLink = MinimalSourceLink;
+//~ using SourceLink = MinimalSourceLink;
 using Covariance = BoundSymMatrix;
 
 using Resolution = std::pair<ParID_t, double>;
@@ -85,10 +101,12 @@ struct MeasurementCreator {
 
   struct this_result {
     // The measurements
-    std::vector<FittableMeasurement<SourceLink>> measurements;
+    std::vector<SourceLink::MeasurementType> measurements;
 
     // The outliers
-    std::vector<FittableMeasurement<SourceLink>> outliers;
+    std::vector<SourceLink::MeasurementType> outliers;
+    
+    std::vector<SourceLink::MeasurementType> freeMeasurements;
   };
 
   using result_type = this_result;
@@ -164,12 +182,41 @@ struct MeasurementCreator {
         }
       }
     }
+    if(!surface)
+    {
+		const double resX = 200_um;
+		const double resY = 200_um;
+		const double resZ = 200_um;
+		SymMatrix3D cov;
+		cov << resX * resX, 0, 0,
+			   0, resY * resY, 0,
+			   0, 0, resZ * resZ;
+		
+		const double dx = resX * gauss(generator);
+		const double dy = resY * gauss(generator);
+		const double dz = resZ * gauss(generator);
+		
+		const Vector3D pos = stepper.position(state.stepping);
+		
+		Measurement<SourceLink, FreeParametersIndices, eFreePos0, eFreePos1, eFreePos2> meas(
+				std::shared_ptr<const Volume>(state.navigation.currentVolume), {}, cov, pos.x() + dx, pos.y() + dy, pos.z() + dz);
+		result.freeMeasurements.push_back(meas);
+	}
   }
 };
 
 double dX, dY;
 Vector3D pos;
 const Surface* sur;
+
+struct MeasurementCalibrator {
+  template <typename parameters_t>
+  SourceLink::MeasurementType operator()(
+      const SourceLink& sourceLink,
+      const parameters_t& /* parameters */) const {
+    return *sourceLink;
+  }
+};
 
 ///
 /// @brief Simplified material interaction effect by pure gaussian
@@ -355,7 +402,7 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
 
   // Extract measurements from result of propagation.
   // This vector owns the measurements
-  std::vector<FittableMeasurement<SourceLink>> measurements = std::move(
+  std::vector<SourceLink::MeasurementType> measurements = std::move(
       mResult.template get<MeasurementCreator::result_type>().measurements);
   BOOST_CHECK_EQUAL(measurements.size(), 6u);
 
@@ -365,6 +412,14 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
                  std::back_inserter(sourcelinks),
                  [](const auto& m) { return SourceLink{&m}; });
 
+std::vector<SourceLink::MeasurementType> freeMeasurements = std::move(
+      mResult.template get<MeasurementCreator::result_type>().freeMeasurements);
+      
+std::vector<SourceLink> freeSourcelinks;
+std::transform(freeMeasurements.begin(), freeMeasurements.end(),
+                 std::back_inserter(freeSourcelinks),
+                 [](const auto& m) { return SourceLink{&m}; });
+                      
   // The KalmanFitter - we use the eigen stepper for covariance transport
   // Build navigator for the measurement creatoin
   Navigator rNavigator(detector);
@@ -403,13 +458,13 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
   outlierFinder.measurementSignificanceCutoff = 0.05;
 
   KalmanFitter kFitter(rPropagator,
-                       getDefaultLogger("KalmanFilter", Logging::VERBOSE));
+                       getDefaultLogger("KalmanFilter", Logging::FATAL));
 
   KalmanFitterOptions<MinimalOutlierFinder> kfOptions(
       tgContext, mfContext, calContext, outlierFinder, rSurface);
 
   // Fit the track
-  auto fitRes = kFitter.fit<Updater, Smoother>(sourcelinks, rStart, kfOptions);
+  auto fitRes = kFitter.fit<Updater, Smoother, MeasurementCalibrator>(sourcelinks, rStart, kfOptions, freeSourcelinks);
   BOOST_CHECK(fitRes.ok());
   auto& fittedTrack = *fitRes;
   auto fittedParameters = fittedTrack.fittedParameters.value();

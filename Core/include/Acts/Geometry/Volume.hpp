@@ -29,7 +29,8 @@ using VolumeBoundsPtr = std::shared_ptr<const VolumeBounds>;
 /// the interface for inherited Volume classes
 /// regarding the geometrical information.
 
-class Volume : public virtual GeometryObject {
+class Volume : public virtual GeometryObject,
+			   public std::enable_shared_from_this<Volume> {
  public:
   using BoundingBox = AxisAlignedBoundingBox<Volume, double, 3>;
 
@@ -59,6 +60,16 @@ class Volume : public virtual GeometryObject {
   /// @param vol is the source volume to be copied
   Volume& operator=(const Volume& vol);
 
+  /// Retrieve a @c std::shared_ptr for this volume (non-const version)
+  ///
+  /// @return The shared pointer
+  std::shared_ptr<Volume> getSharedPtr();
+
+  /// Retrieve a @c std::shared_ptr for this volume (const version)
+  ///
+  /// @return The shared pointer
+  std::shared_ptr<const Volume> getSharedPtr() const;
+  
   /// Return methods for geometry transform
   const Transform3D& transform() const;
 
