@@ -535,7 +535,7 @@ class AtlasStepper {
 
   /// Time access
   double time(const State& state) const { return state.pVector[3]; }
-
+  
   /// Update surface status
   ///
   /// This method intersect the provided surface and update the navigation

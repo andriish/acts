@@ -250,7 +250,7 @@ class StraightLineStepper {
   ///
   /// @param state [in] The stepping state (thread-local cache)
   double time(const State& state) const { return state.t; }
-
+  
   /// Overstep limit
   ///
   /// @param state The stepping state (thread-local cache)

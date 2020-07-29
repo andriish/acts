@@ -144,11 +144,18 @@ struct KalmanFitterResult {
   std::vector<const GeometryObject*> passedAgainObject;
 
   // Iterator to the current volume and its source links
-  //~ typename std::map<const GeometryObject*, std::vector<source_link_t>>::const_iterator currentFreeInputMeasurements;
   const TrackingVolume* currentVolume = nullptr;
-  std::vector<source_link_t> currentFreeInputMeasurements;
 	
   Result<void> result{Result<void>::success()};
+  
+  struct FreeMeasurementCandidate
+  {
+	 source_link_t sourceLink;
+	 Vector3D position;
+	 double distance;
+  };
+  std::vector<FreeMeasurementCandidate> currentFreeMeasurements;
+
 };
 
 /// @brief Kalman fitter implementation of Acts as a plugin
@@ -293,11 +300,11 @@ class KalmanFitter {
 		  auto measurementsInCurrentVolume = freeInputMeasurements.find(state.navigation.currentVolume);
 		  if(measurementsInCurrentVolume != freeInputMeasurements.end())
 		  {
-			 result.currentFreeInputMeasurements = sortFreeInputMeasurements(state, stepper, measurementsInCurrentVolume->second);
+			 result.currentFreeMeasurements = sortFreeInputMeasurements(state, stepper, measurementsInCurrentVolume->second);
 		  }
 		  else
 		  {
-			  result.currentFreeInputMeasurements.clear();
+			  result.currentFreeMeasurements.clear();
 		  }
 	  }
 	  
@@ -875,45 +882,42 @@ class KalmanFitter {
   ///
   /// @param state is the mutable propagator state object
   /// @param result is the mutable result state object
-  //~ std::vector<source_link_t> sortFreeInputMeasurements(const State& state, const KalmanStepper& stepper, std::vector<source_link_t> sourceLinks) const {
-  std::vector<source_link_t> sortFreeInputMeasurements(const State& , const KalmanStepper& , std::vector<source_link_t> ) const {
-	  //~ std::vector<double> distances(sourceLinks.size());
-	  
-	  //~ for(unsigned int i = 0; i < sourceLinks.size(); i++)
-	  //~ {
-		  
-	  //~ }
-    //~ // Initialize the radii if necessary
-    //~ if (result.mts.empty() and result.mt == result.mts.end()) {
-      //~ result.mts = measurements;
-      //~ result.mt = result.mts.begin();
-    //~ } else if (result.mt == result.mts.end()) {
-      //~ return;
-    //~ }
+  std::vector<result_type::FreeMeasurementCandidate> 
+  sortFreeInputMeasurements(const State& state, const KalmanStepper& stepper, const std::vector<source_link_t>& sourceLinks) const {
+	  const unsigned int numberOfElements = sourceLinks.size();
+	  std::vector<result_type::FreeMeasurementCandidate> candidates(numberOfElements);
 
-    //~ auto measurement = (*result.mt);
-
-    //~ // Get the position & direction
-    //~ auto position = stepper.position(state.stepping);
-    //~ auto direction = stepper.direction(state.stepping);
-
-    //~ // Let's create a hyperplane at the measurement point
-    //~ using Plane = Eigen::Hyperplane<double, 3>;
-    //~ using Line = Eigen::ParametrizedLine<double, 3>;
-
-    //~ // Make the plane and intersect
-    //~ auto plane = Plane(direction, measurement);
-    //~ auto line = Line::Through(position, position + direction);
-    //~ double path = line.intersection(plane);
-    //~ if (std::abs(path) < s_onSurfaceTolerance) {
-      //~ result.approaches.push_back(position);
-      //~ ++result.mt;
-      //~ return;
-    //~ }
-
+    // Get the position & direction
+    auto position = stepper.position(state.stepping);
+    auto direction = stepper.direction(state.stepping);
+ 
+    // Build the line
+	using Line = Eigen::ParametrizedLine<double, 3>;
+	using Plane = Eigen::Hyperplane<double, 3>;
+    auto line = Line::Through(position, position + direction);
+	
+	// Evaluate all distances	     	  
+	for(unsigned int i = 0; i < numberOfElements; i++)
+	{
+		candidates[i].sourceLink = sourceLink[i];
+	   std::visit([&](const auto& meas) {
+		   using MeasType = typename std::decay<decltype(meas)>::type;
+		   using Indices = typename MeasType::ParametersIndices;
+		   if constexpr (std::is_same<Indices, FreeParametersIndices>::value)
+		   {
+				// Build the plane
+				FreeVector freeMeasurement = meas.projector().transpose() * meas.parameters();
+				candidates[i].position = (meas.projector().transpose() * meas.parameters()).template segment<3>(eFreePos0);
+				auto plane = Plane(direction, candidates[i].position);
+			  
+				// Intersection path
+				candidates[i].distance = line.intersection(plane);
+			}
+		}, *sourceLinks[i]);
+	}
+// TODO: distances can be 3D but outlier check should be in all dimensions - otherwise it's not performed
     //~ stepper.setStepSize(state.stepping, path);
-    //~ return sourceLinks;
-    return {};
+    return candidates;
   }
   
     /// Pointer to a logger that is owned by the parent, KalmanFilter

@@ -79,6 +79,8 @@ class Measurement {
   using ParamSet = ParameterSet<parameter_indices_t, params...>;
 
  public:
+  /// Type of the parameter indices
+  using ParametersIndices = parameter_indices_t;
   /// Type of the source link
   using SourceLink = source_link_t;
   /// type of the vector containing the parameter values
@@ -88,8 +90,8 @@ class Measurement {
   /// matrix type for projecting full parameter vector onto local parameters
   using Projection = typename ParamSet::Projection;
   /// Object type that corresponds to the measurement
-  using RefObject = typename detail::ReferenceObject<parameter_indices_t>::type;
-
+  using RefObject = typename detail::ReferenceObject<ParametersIndices>::type;
+  
   /// Delete the default constructor
   Measurement() = delete;
 
@@ -130,12 +132,12 @@ class Measurement {
   /// @brief copy constructor
   ///
   /// @tparam source_link_t The identifier type
-  /// @tparam parameter_indices_t Enum of parameter identifier
+  /// @tparam ParametersIndices Enum of parameter identifier
   /// @tparam params...The local parameter pack
   ///
   /// @param copy is the source for the copy
   Measurement(
-      const Measurement<source_link_t, parameter_indices_t, params...>& copy)
+      const Measurement<source_link_t, ParametersIndices, params...>& copy)
       : m_oParameters(copy.m_oParameters),
         m_pReferenceObject(copy.m_pReferenceObject),
         m_sourceLink(copy.m_sourceLink) {}
@@ -143,12 +145,12 @@ class Measurement {
   /// @brief move constructor
   ///
   /// @tparam source_link_t The identifier type
-  /// @tparam parameter_indices_t Enum of parameter identifier
+  /// @tparam ParametersIndices Enum of parameter identifier
   /// @tparam params...The local parameter pack
   ///
   /// @param other is the source for the move
   Measurement(
-      Measurement<source_link_t, parameter_indices_t, params...>&& other)
+      Measurement<source_link_t, ParametersIndices, params...>&& other)
       : m_oParameters(std::move(other.m_oParameters)),
         m_pReferenceObject(std::move(other.m_pReferenceObject)),
         m_sourceLink(std::move(other.m_sourceLink)) {}
@@ -156,12 +158,12 @@ class Measurement {
   /// @brief copy assignment operator
   ///
   /// @tparam source_link_t The identifier type
-  /// @tparam parameter_indices_t Enum of parameter identifier
+  /// @tparam ParametersIndices Enum of parameter identifier
   /// @tparam params...The local parameter pack
   ///
   /// @param rhs is the source for the assignment
-  Measurement<source_link_t, parameter_indices_t, params...>& operator=(
-      const Measurement<source_link_t, parameter_indices_t, params...>& rhs) {
+  Measurement<source_link_t, ParametersIndices, params...>& operator=(
+      const Measurement<source_link_t, ParametersIndices, params...>& rhs) {
     // check for self-assignment
     if (&rhs != this) {
       m_oParameters = rhs.m_oParameters;
@@ -174,12 +176,12 @@ class Measurement {
   /// @brief move assignment operator
   ///
   /// @tparam source_link_t The identifier type
-  /// @tparam parameter_indices_t Enum of parameter identifier
+  /// @tparam ParametersIndices Enum of parameter identifier
   /// @tparam params...The local parameter pack
   ///
   /// @param rhs is the source for the move assignment
-  Measurement<source_link_t, parameter_indices_t, params...>& operator=(
-      Measurement<source_link_t, parameter_indices_t, params...>&& rhs) {
+  Measurement<source_link_t, ParametersIndices, params...>& operator=(
+      Measurement<source_link_t, ParametersIndices, params...>&& rhs) {
     m_oParameters = std::move(rhs.m_oParameters);
     m_pReferenceObject = std::move(rhs.m_pReferenceObject);
     m_sourceLink = std::move(rhs.m_sourceLink);
@@ -195,7 +197,7 @@ class Measurement {
   ///         error is generated.
   ///
   /// @return value of the stored parameter
-  template <parameter_indices_t parameter>
+  template <ParametersIndices parameter>
   ParValue_t get() const {
     return m_oParameters.template getParameter<parameter>();
   }
@@ -223,7 +225,7 @@ class Measurement {
   ///         error is generated.
   ///
   /// @return uncertainty \f$\sigma \ge 0\f$ for given parameter
-  template <parameter_indices_t parameter>
+  template <ParametersIndices parameter>
   ParValue_t uncertainty() const {
     return m_oParameters.template getUncertainty<parameter>();
   }
@@ -286,7 +288,7 @@ class Measurement {
   ///
   /// @sa ParameterSet::residual
   ParameterVector residual(
-      const ActsVectorD<detail::ParametersSize<parameter_indices_t>::size>&
+      const ActsVectorD<detail::ParametersSize<ParametersIndices>::size>&
           boundParameters) const {
     return m_oParameters.residual(boundParameters);
   }
@@ -295,7 +297,7 @@ class Measurement {
   ///
   /// @return @c true if parameter sets and associated surfaces/volumes compare
   /// equal, otherwise @c false
-  virtual bool operator==(const Measurement<source_link_t, parameter_indices_t,
+  virtual bool operator==(const Measurement<source_link_t, ParametersIndices,
                                             params...>& rhs) const {
     return ((m_oParameters == rhs.m_oParameters) &&
             (m_pReferenceObject == rhs.m_pReferenceObject) &&
@@ -307,7 +309,7 @@ class Measurement {
   /// @return @c true if both objects are not equal, otherwise @c false
   ///
   /// @sa Measurement::operator==
-  bool operator!=(const Measurement<source_link_t, parameter_indices_t,
+  bool operator!=(const Measurement<source_link_t, ParametersIndices,
                                     params...>& rhs) const {
     return !(*this == rhs);
   }
@@ -317,7 +319,7 @@ class Measurement {
 
   friend std::ostream& operator<<(
       std::ostream& out,
-      const Measurement<source_link_t, parameter_indices_t, params...>& m) {
+      const Measurement<source_link_t, ParametersIndices, params...>& m) {
     m.print(out);
     return out;
   }
