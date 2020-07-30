@@ -308,13 +308,16 @@ std::cout << std::endl;
 			  if(result.currentFreeMeasurements[0].distance < state.stepping.tolerance)
 			  {
 				  // filter
+std::cout << "filter1" << std::endl;
 				  filter(state, stepper, result);
+std::cout << "filter2" << std::endl;
 				  result.currentFreeMeasurements.erase(result.currentFreeMeasurements.begin());
 				  if(!result.currentFreeMeasurements.empty())
 				  {
 				  calculateDistanceToMeasurement(state, stepper, result.currentFreeMeasurements[0]);
 				  stepper.setStepSize(state.stepping, result.currentFreeMeasurements[0].distance, ConstrainedStep::user);
 				  }
+std::cout << "filter3" << std::endl;
 			  }
 			  else
 			  {
@@ -705,13 +708,13 @@ std::cout << "step size set to: " << result.currentFreeMeasurements[0].distance 
             result.fittedStates.getTrackState(result.trackTip);
 
 		// Store the jacobian
-        if constexpr (std::is_same<decltype(jac), BoundMatrix>::value)
+        if constexpr (std::is_same<decltype(jac), FreeMatrix>::value)
         {
-        trackState.jacobianBoundToBound() = jac;
+        trackState.jacobianFreeToFree() = jac;
 	}
 	  if constexpr (std::is_same<decltype(jac), FreeToBoundMatrix>::value)
  {
-		trackState.jacobianFreeToBound() = jac;
+		trackState.jacobianBoundToFree() = jac;
 	}
       return trackState;}, jacobian);
       
