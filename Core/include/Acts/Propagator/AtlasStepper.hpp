@@ -687,6 +687,12 @@ class AtlasStepper {
                             : state.pVector[7] = .000000000000001;
     }
 
+	if(std::get_if<BoundMatrix>(covariance) == nullptr)
+	{
+		throw std::runtime_error(
+			"AtlasStepper::update with FreeTrackParameters is not implemented");
+     }
+     
     // prepare the jacobian if we have a covariance
     // copy the covariance matrix
     state.covariance = new Covariance(covariance);
@@ -696,7 +702,7 @@ class AtlasStepper {
     // declare the state as ready
     state.state_ready = true;
   }
-
+  
   /// Method to update momentum, direction and p
   ///
   /// @param uposition the updated position

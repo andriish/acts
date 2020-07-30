@@ -182,7 +182,7 @@ struct MeasurementCreator {
         }
       }
     }
-    if(!surface)
+    if(!surface && state.navigation.currentVolume)
     {
 		const double resX = 200_um;
 		const double resY = 200_um;
@@ -200,7 +200,7 @@ struct MeasurementCreator {
 		
 		Measurement<SourceLink, FreeParametersIndices, eFreePos0, eFreePos1, eFreePos2> meas(
 				std::shared_ptr<const Volume>(state.navigation.currentVolume), {}, cov, pos.x() + dx, pos.y() + dy, pos.z() + dz);
-		result.freeMeasurements.push_back(meas);
+		result.freeMeasurements.push_back(std::move(meas));
 	}
   }
 };
@@ -388,6 +388,7 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
   PropagatorOptions<MeasurementActions, MeasurementAborters> mOptions(
       tgContext, mfContext);
   mOptions.debug = debugMode;
+  mOptions.maxStepSize = 10_cm;
   auto& mCreator = mOptions.actionList.get<MeasurementCreator>();
   mCreator.detectorResolution = detRes;
 
@@ -418,7 +419,7 @@ std::vector<SourceLink::MeasurementType> freeMeasurements = std::move(
 std::vector<SourceLink> freeSourcelinks;
 std::transform(freeMeasurements.begin(), freeMeasurements.end(),
                  std::back_inserter(freeSourcelinks),
-                 [](const auto& m) { return SourceLink{&m}; });
+                 [](const auto& m) { return SourceLink{&m}; }); 
                       
   // The KalmanFitter - we use the eigen stepper for covariance transport
   // Build navigator for the measurement creatoin
@@ -462,7 +463,7 @@ std::transform(freeMeasurements.begin(), freeMeasurements.end(),
 
   KalmanFitterOptions<MinimalOutlierFinder> kfOptions(
       tgContext, mfContext, calContext, outlierFinder, rSurface);
-
+std::cout << "kf done " << freeSourcelinks.size() << std::endl;
   // Fit the track
   auto fitRes = kFitter.fit<Updater, Smoother, MeasurementCalibrator>(sourcelinks, rStart, kfOptions, freeSourcelinks);
   BOOST_CHECK(fitRes.ok());
