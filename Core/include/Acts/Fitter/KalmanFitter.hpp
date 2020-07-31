@@ -150,7 +150,7 @@ struct KalmanFitterResult {
   
   struct FreeMeasurementCandidate
   {
-	 source_link_t sourceLink;
+	 const source_link_t* sourceLink = nullptr;
 	 Vector3D position = Vector3D::Zero();
 	 double distance = std::numeric_limits<double>::max();
   };
@@ -314,9 +314,11 @@ std::cout << "filter2" << std::endl;
 				  result.currentFreeMeasurements.erase(result.currentFreeMeasurements.begin());
 				  if(!result.currentFreeMeasurements.empty())
 				  {
-				  calculateDistanceToMeasurement(state, stepper, result.currentFreeMeasurements[0]);
-				  stepper.setStepSize(state.stepping, result.currentFreeMeasurements[0].distance, ConstrainedStep::user);
+					  calculateDistanceToMeasurement(state, stepper, result.currentFreeMeasurements[0]);
+					  stepper.setStepSize(state.stepping, result.currentFreeMeasurements[0].distance, ConstrainedStep::user);
 				  }
+				  else
+					  state.stepping.stepSize.release(ConstrainedStep::user);
 std::cout << "filter3" << std::endl;
 			  }
 			  else
@@ -357,36 +359,36 @@ std::cout << "step size set to: " << result.currentFreeMeasurements[0].distance 
         }
       }
 
-      // Finalization:
-      // when all track states have been handled or the navigation is breaked,
-      // reset navigation&stepping before run backward filtering or
-      // proceed to run smoothing
-      if (state.stepping.navDir == forward) {
-        if (result.measurementStates == boundInputMeasurements.size() or
-            (result.measurementStates > 0 and
-             state.navigation.navigationBreak)) {
-          if (backwardFiltering and not result.forwardFiltered) {
-            ACTS_VERBOSE("Forward filtering done");
-            result.forwardFiltered = true;
-            // Start to run backward filtering:
-            // Reverse navigation direction and reset navigation and stepping
-            // state to last measurement
-            ACTS_VERBOSE("Reverse navigation direction.");
-            reverse(state, stepper, result);
-          } else if (not result.smoothed) {
-            // --> Search the starting state to run the smoothing
-            // --> Call the smoothing
-            // --> Set a stop condition when all track states have been
-            // handled
-            ACTS_VERBOSE("Finalize/run smoothing");
-            auto res = finalize(state, stepper, result);
-            if (!res.ok()) {
-              ACTS_ERROR("Error in finalize: " << res.error());
-              result.result = res.error();
-            }
-          }
-        }
-      }
+      //~ // Finalization:
+      //~ // when all track states have been handled or the navigation is breaked,
+      //~ // reset navigation&stepping before run backward filtering or
+      //~ // proceed to run smoothing
+      //~ if (state.stepping.navDir == forward) {
+        //~ if (result.measurementStates == boundInputMeasurements.size() or
+            //~ (result.measurementStates > 0 and
+             //~ state.navigation.navigationBreak)) {
+          //~ if (backwardFiltering and not result.forwardFiltered) {
+            //~ ACTS_VERBOSE("Forward filtering done");
+            //~ result.forwardFiltered = true;
+            //~ // Start to run backward filtering:
+            //~ // Reverse navigation direction and reset navigation and stepping
+            //~ // state to last measurement
+            //~ ACTS_VERBOSE("Reverse navigation direction.");
+            //~ reverse(state, stepper, result);
+          //~ } else if (not result.smoothed) {
+            //~ // --> Search the starting state to run the smoothing
+            //~ // --> Call the smoothing
+            //~ // --> Set a stop condition when all track states have been
+            //~ // handled
+            //~ ACTS_VERBOSE("Finalize/run smoothing");
+            //~ auto res = finalize(state, stepper, result);
+            //~ if (!res.ok()) {
+              //~ ACTS_ERROR("Error in finalize: " << res.error());
+              //~ result.result = res.error();
+            //~ }
+          //~ }
+        //~ }
+      //~ }
 
       // Post-finalization:
       // - Progress to target/reference surface and built the final track
@@ -677,21 +679,7 @@ std::cout << "step size set to: " << result.currentFreeMeasurements[0].distance 
     /// @param result The mutable result state object
     Result<void> filter(State& state, const KalmanStepper& stepper, result_type& result) const {
 		
-	  source_link_t& sourceLink = result.currentFreeMeasurements[0].sourceLink;
-	  
-      //~ // Try to find the surface in the measurement surfaces
-      //~ auto sourcelink_it = boundInputMeasurements.find(surface);
-      //~ if (sourcelink_it != boundInputMeasurements.end()) {
-        //~ // Screen output message
-        //~ ACTS_VERBOSE("Measurement surface " << surface->geoID()
-                                            //~ << " detected.");
-
-        //~ // Update state and stepper with pre material effects
-        //~ materialInteractor(surface, state, stepper, preUpdate);
-
-        //~ // Transport & bind the state to the current surface
-        //~ auto [boundParams, jacobian, pathLength] =
-            //~ stepper.boundState(state.stepping, *surface);
+	  const source_link_t& sourceLink = *result.currentFreeMeasurements[0].sourceLink;
 
 		auto [freeParams, jacobian, pathLength] = stepper.freeState(state.stepping);
 
@@ -717,15 +705,6 @@ std::cout << "step size set to: " << result.currentFreeMeasurements[0].distance 
 		trackState.jacobianBoundToFree() = jac;
 	}
       return trackState;}, jacobian);
-      
-        //~ // add a full TrackState entry multi trajectory
-        //~ // (this allocates storage for all components, we will set them later)
-        //~ result.trackTip = result.fittedStates.addTrackState(
-            //~ TrackStatePropMask::BoundAll, result.trackTip);
-
-        //~ // now get track state proxy back
-        //~ auto trackStateProxy =
-            //~ result.fittedStates.getTrackState(result.trackTip);
 
         // assign the source link to the track state
         trackStateProxy.uncalibrated() = sourceLink;
@@ -748,9 +727,10 @@ std::cout << "step size set to: " << result.currentFreeMeasurements[0].distance 
         auto& typeFlags = trackStateProxy.typeFlags();
         typeFlags.set(TrackStateFlag::MaterialFlag);
         typeFlags.set(TrackStateFlag::ParameterFlag);
-
+std::cout << "KF vor update" << std::endl;
         // If the update is successful, set covariance and
-        auto updateRes = m_updater(state.geoContext, trackStateProxy, forward, true);
+        auto updateRes = m_updater(state.geoContext, trackStateProxy, forward, false);
+std::cout << "KF nach update" << std::endl;
         if (!updateRes.ok()) {
           ACTS_ERROR("Update step failed: " << updateRes.error());
           return updateRes.error();
@@ -779,82 +759,10 @@ std::cout << "step size set to: " << result.currentFreeMeasurements[0].distance 
             // Set the outlier type flag
             typeFlags.set(TrackStateFlag::OutlierFlag);
           }
-
-          //~ // Update state and stepper with post material effects
-          //~ materialInteractor(surface, state, stepper, postUpdate);
         }
+std::cout << "KF ende" << std::endl;
         // We count the processed state
         ++result.processedStates;
-      //~ } else if (surface->surfaceMaterial() != nullptr) {
-        //~ // We only create track states here if there is already measurement
-        //~ // detected
-        //~ if (result.measurementStates > 0) {
-          //~ // No source links on surface, add either hole or passive material
-          //~ // TrackState entry multi trajectory. No storage allocation for
-          //~ // uncalibrated/calibrated measurement and filtered parameter
-          //~ result.trackTip = result.fittedStates.addTrackState(
-              //~ ~(TrackStatePropMask::Uncalibrated |
-                //~ TrackStatePropMask::Calibrated |
-                //~ TrackStatePropMask::BoundFiltered),
-              //~ result.trackTip);
-
-          //~ // now get track state proxy back
-          //~ auto trackStateProxy =
-              //~ result.fittedStates.getTrackState(result.trackTip);
-
-          //~ // Set the surface
-          //~ trackStateProxy.setReferenceObject(surface->getSharedPtr());
-
-          //~ // Set the track state flags
-          //~ auto& typeFlags = trackStateProxy.typeFlags();
-          //~ typeFlags.set(TrackStateFlag::MaterialFlag);
-          //~ typeFlags.set(TrackStateFlag::ParameterFlag);
-
-          //~ if (surface->associatedDetectorElement() != nullptr) {
-            //~ ACTS_VERBOSE("Detected hole on " << surface->geoID());
-            //~ // If the surface is sensitive, set the hole type flag
-            //~ typeFlags.set(TrackStateFlag::HoleFlag);
-
-            //~ // Count the missed surface
-            //~ result.missedActiveSurfaces.push_back(surface);
-
-            //~ // Transport & bind the state to the current surface
-            //~ auto [boundParams, jacobian, pathLength] =
-                //~ stepper.boundState(state.stepping, *surface);
-
-            //~ // Fill the track state
-            //~ trackStateProxy.boundPredicted() = boundParams.parameters();
-            //~ trackStateProxy.boundPredictedCovariance() =
-                //~ *boundParams.covariance();
-            //~ trackStateProxy.jacobianBoundToBound() = std::get<BoundMatrix>(jacobian);
-            //~ trackStateProxy.pathLength() = pathLength;
-          //~ } else {
-            //~ ACTS_VERBOSE("Detected in-sensitive surface " << surface->geoID());
-
-            //~ // Transport & get curvilinear state instead of bound state
-            //~ auto [curvilinearParams, jacobian, pathLength] =
-                //~ stepper.curvilinearState(state.stepping);
-
-            //~ // Fill the track state
-            //~ trackStateProxy.boundPredicted() = curvilinearParams.parameters();
-            //~ trackStateProxy.boundPredictedCovariance() =
-                //~ *curvilinearParams.covariance();
-            //~ trackStateProxy.jacobianBoundToBound() = std::get<BoundMatrix>(jacobian);
-            //~ trackStateProxy.pathLength() = pathLength;
-          //~ }
-
-          //~ // Set the filtered parameter index to be the same with predicted
-          //~ // parameter
-          //~ trackStateProxy.data().iboundfiltered =
-              //~ trackStateProxy.data().iboundpredicted;
-
-          //~ // We count the processed state
-          //~ ++result.processedStates;
-        //~ }
-
-        //~ // Update state and stepper with material effects
-        //~ materialInteractor(surface, state, stepper, fullUpdate);
-      //~ }
       return Result<void>::success();
     }
     
@@ -1151,7 +1059,7 @@ std::cout << "step size set to: " << result.currentFreeMeasurements[0].distance 
 				candidates[i].position = (meas.projector().transpose() * meas.parameters()).template segment<3>(eFreePos0);
 			  
 				// Store source link
-				candidates[i].sourceLink = sourceLinks[i];
+				candidates[i].sourceLink = &sourceLinks[i];
 			}
 		}, *sourceLinks[i]);
 	}
@@ -1275,6 +1183,9 @@ private:
 		// also set logger on updater and smoother
 		kalmanActor.m_updater.m_logger = m_logger;
 		kalmanActor.m_smoother.m_logger = m_logger;
+		
+		kalmanOptions.pathLimit = 6500; // TODO: just testing
+		
 		return kalmanOptions;
 	}
 

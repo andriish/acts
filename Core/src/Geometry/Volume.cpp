@@ -43,7 +43,7 @@ Acts::Volume::Volume(const std::shared_ptr<const Transform3D>& htrans,
 }
 
 Acts::Volume::Volume(const Volume& vol, const Transform3D* shift)
-    : GeometryObject(), std::enable_shared_from_this<Volume>(),
+    : GeometryObject(), //std::enable_shared_from_this<Volume>(),
       m_transform(vol.m_transform),
       m_itransform(m_transform ? m_transform->inverse()
                                : Transform3D::Identity()),
@@ -63,13 +63,13 @@ Acts::Volume::Volume(const Volume& vol, const Transform3D* shift)
 
 Acts::Volume::~Volume() = default;
 
-std::shared_ptr<Acts::Volume> Acts::Volume::getSharedPtr() {
-  return shared_from_this();
-}
+//std::shared_ptr<Acts::Volume> Acts::Volume::getSharedPtr() {
+//  return shared_from_this();
+//}
 
-std::shared_ptr<const Acts::Volume> Acts::Volume::getSharedPtr() const {
-  return shared_from_this();
-}
+//std::shared_ptr<const Acts::Volume> Acts::Volume::getSharedPtr() const {
+//  return shared_from_this();
+//}
 
 const Acts::Vector3D Acts::Volume::binningPosition(
     const GeometryContext& /*gctx*/, Acts::BinningValue bValue) const {

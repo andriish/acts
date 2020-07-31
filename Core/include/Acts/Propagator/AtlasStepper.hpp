@@ -687,7 +687,7 @@ class AtlasStepper {
                             : state.pVector[7] = .000000000000001;
     }
 
-	if(std::get_if<BoundMatrix>(covariance) == nullptr)
+	if(std::get_if<BoundMatrix>(&covariance) == nullptr)
 	{
 		throw std::runtime_error(
 			"AtlasStepper::update with FreeTrackParameters is not implemented");

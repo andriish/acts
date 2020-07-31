@@ -80,7 +80,7 @@ class GainMatrixUpdater {
 		// This writes directly into the trajectory storage
 		auto filtered = trackState.boundFiltered();
 		auto filtered_covariance = trackState.boundFilteredCovariance();
-		
+
 		return update<TrackStateProxy, 6>(trackState, predicted, predicted_covariance, filtered, filtered_covariance, direction);
 	}
 	else
@@ -194,7 +194,7 @@ private:
       // error is set, return result
       return *error;
     }
-
+std::cout << "trace: " << predictedCovariance.trace() << " " << filteredCovariance.trace() << std::endl;		
     // always succeed, no outlier logic yet
     return Result<void>::success();
   }

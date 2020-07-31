@@ -97,7 +97,7 @@ else
 
 /// @brief void Kalman smoother
 struct VoidKalmanSmoother {
-  /// @brief Public call mimicking an updater
+  /// @brief Public call mimicking an smoother
   ///
   /// @tparam track_states_t Type of the track states
   ///

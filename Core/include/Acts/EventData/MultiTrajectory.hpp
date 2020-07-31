@@ -623,7 +623,14 @@ class TrackStateProxy {
     assert(!refObj || refObj.get() == &meas.referenceObject());
     if (!refObj) {
       // ref object is not set, set it now
-	  refObj = meas.referenceObject().getSharedPtr();
+      auto srf = dynamic_cast<const Surface*>(&meas.referenceObject());
+      if(srf != nullptr)
+		refObj = srf->getSharedPtr();
+	  else
+	  {
+		auto vol = dynamic_cast<const Volume*>(&meas.referenceObject());
+		refObj = std::shared_ptr<const GeometryObject>(vol);
+	  }
     }
 
     assert(dataref.icalibratedsourcelink != IndexData::kInvalid);

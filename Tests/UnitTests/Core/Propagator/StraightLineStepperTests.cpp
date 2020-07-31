@@ -194,7 +194,7 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_test) {
   BOOST_CHECK(curvPars.covariance().has_value());
   BOOST_CHECK_NE(*curvPars.covariance(), cov);
   BOOST_REQUIRE_NO_THROW(std::get<BoundMatrix>(std::get<1>(curvState)));
-  CHECK_CLOSE_COVARIANCE(std::get<BoundSymMatrix>(std::get<1>(curvState),
+  CHECK_CLOSE_COVARIANCE(std::get<BoundSymMatrix>(std::get<1>(curvState)),
                          BoundMatrix(BoundMatrix::Identity()), 1e-6);
   CHECK_CLOSE_ABS(std::get<2>(curvState), 0., 1e-6);
 
@@ -431,7 +431,7 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_test) {
   BOOST_REQUIRE_NO_THROW(std::get<FreeSymMatrix>(slsState.cov));
   BOOST_CHECK(!slsState.jacToGlobal.has_value());
   BOOST_CHECK_EQUAL(slsState.jacTransport, FreeMatrix::Identity());
-  BOOST_CHECK(slsState.derivative, FreeVector::Zero());
+  BOOST_CHECK_EQUAL(slsState.derivative, FreeVector::Zero());
 }
 }  // namespace Test
 }  // namespace Acts

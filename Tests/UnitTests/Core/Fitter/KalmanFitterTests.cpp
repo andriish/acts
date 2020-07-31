@@ -463,147 +463,147 @@ std::transform(freeMeasurements.begin(), freeMeasurements.end(),
 
   KalmanFitterOptions<MinimalOutlierFinder> kfOptions(
       tgContext, mfContext, calContext, outlierFinder, rSurface);
-std::cout << "kf done " << freeSourcelinks.size() << std::endl;
+
   // Fit the track
   auto fitRes = kFitter.fit<Updater, Smoother, MeasurementCalibrator>(sourcelinks, rStart, kfOptions, freeSourcelinks);
   BOOST_CHECK(fitRes.ok());
   auto& fittedTrack = *fitRes;
-  auto fittedParameters = fittedTrack.fittedParameters.value();
+  
+  auto state = fittedTrack.fittedStates.getTrackState(fittedTrack.trackTip);
+  std::cout << state.hasBoundFiltered() << " " << state.hasFreeFiltered() << std::endl;
+  while(state.hasFreeFiltered())
+	state = fittedTrack.fittedStates.getTrackState(state.previous());
+if(state.hasBoundFiltered())
+        std::cout << state.boundFiltered() << "\n" << state.boundFilteredCovariance() << std::endl;
+  //~ auto fittedParameters = fittedTrack.fittedParameters.value();
+std::cout << "start destruction" << std::endl;
+fittedTrack.currentFreeMeasurements.clear();
+std::cout << "clear " << &fittedTrack.currentFreeMeasurements << " | " << &fittedTrack.currentVolume << " | " << fittedTrack.currentVolume << std::endl;
+fittedTrack.~KalmanFitterResult<SourceLink>(); // TODO: this line breaks
+std::cout << "fitted track destroyed" << std::endl;
+  //~ // Calculate global track parameters covariance matrix
+  //~ const auto& [trackParamsCov, stateRowIndices] =
+      //~ detail::globalTrackParametersCovariance(fittedTrack.fittedStates,
+                                              //~ fittedTrack.trackTip);
 
-  // Calculate global track parameters covariance matrix
-  const auto& [trackParamsCov, stateRowIndices] =
-      detail::globalTrackParametersCovariance(fittedTrack.fittedStates,
-                                              fittedTrack.trackTip);
+  //~ // Check the size of the global track parameters size
+  //~ BOOST_CHECK_EQUAL(stateRowIndices.size(), 6);
+  //~ BOOST_CHECK_EQUAL(stateRowIndices.at(fittedTrack.trackTip), 30);
+  //~ BOOST_CHECK_EQUAL(trackParamsCov.rows(), 6 * eBoundParametersSize);
 
-  // Check the size of the global track parameters size
-  BOOST_CHECK_EQUAL(stateRowIndices.size(), 6);
-  BOOST_CHECK_EQUAL(stateRowIndices.at(fittedTrack.trackTip), 30);
-  BOOST_CHECK_EQUAL(trackParamsCov.rows(), 6 * eBoundParametersSize);
+  //~ // Make sure it is deterministic
+  //~ fitRes = kFitter.fit<Updater, Smoother, MeasurementCalibrator>(sourcelinks, rStart, kfOptions);
+  //~ BOOST_CHECK(fitRes.ok());
+  //~ auto& fittedAgainTrack = *fitRes;
+  //~ auto fittedAgainParameters = fittedAgainTrack.fittedParameters.value();
 
-  // Make sure it is deterministic
-  fitRes = kFitter.fit<Updater, Smoother>(sourcelinks, rStart, kfOptions);
-  BOOST_CHECK(fitRes.ok());
-  auto& fittedAgainTrack = *fitRes;
-  auto fittedAgainParameters = fittedAgainTrack.fittedParameters.value();
+  //~ CHECK_CLOSE_REL(fittedParameters.parameters().template head<5>(),
+                  //~ fittedAgainParameters.parameters().template head<5>(), 1e-5);
+  //~ CHECK_CLOSE_ABS(fittedParameters.parameters().template tail<1>(),
+                  //~ fittedAgainParameters.parameters().template tail<1>(), 1e-5);
 
-  CHECK_CLOSE_REL(fittedParameters.parameters().template head<5>(),
-                  fittedAgainParameters.parameters().template head<5>(), 1e-5);
-  CHECK_CLOSE_ABS(fittedParameters.parameters().template tail<1>(),
-                  fittedAgainParameters.parameters().template tail<1>(), 1e-5);
+  //~ // Change the order of the sourcelinks
+  //~ std::vector<SourceLink> shuffledMeasurements = {
+      //~ sourcelinks[3], sourcelinks[2], sourcelinks[1],
+      //~ sourcelinks[4], sourcelinks[5], sourcelinks[0]};
 
-  // Fit without target surface
-  kfOptions.referenceSurface = nullptr;
-  fitRes = kFitter.fit(sourcelinks, rStart, kfOptions);
-  BOOST_CHECK(fitRes.ok());
-  auto fittedWithoutTargetSurface = *fitRes;
-  // Check if there is no fitted parameters
-  BOOST_CHECK(fittedWithoutTargetSurface.fittedParameters == std::nullopt);
+  //~ // Make sure it works for shuffled measurements as well
+  //~ fitRes = kFitter.fit<Updater, Smoother, MeasurementCalibrator>(shuffledMeasurements, rStart, kfOptions);
+  //~ BOOST_CHECK(fitRes.ok());
+  //~ auto& fittedShuffledTrack = *fitRes;
+  //~ auto fittedShuffledParameters = fittedShuffledTrack.fittedParameters.value();
 
-  // Reset the target surface
-  kfOptions.referenceSurface = rSurface;
+  //~ CHECK_CLOSE_REL(fittedParameters.parameters().template head<5>(),
+                  //~ fittedShuffledParameters.parameters().template head<5>(),
+                  //~ 1e-5);
+  //~ CHECK_CLOSE_ABS(fittedParameters.parameters().template tail<1>(),
+                  //~ fittedShuffledParameters.parameters().template tail<1>(),
+                  //~ 1e-5);
 
-  // Change the order of the sourcelinks
-  std::vector<SourceLink> shuffledMeasurements = {
-      sourcelinks[3], sourcelinks[2], sourcelinks[1],
-      sourcelinks[4], sourcelinks[5], sourcelinks[0]};
+  //~ // Remove one measurement and find a hole
+  //~ std::vector<SourceLink> measurementsWithHole = {
+      //~ sourcelinks[0], sourcelinks[1], sourcelinks[2], sourcelinks[4],
+      //~ sourcelinks[5]};
 
-  // Make sure it works for shuffled measurements as well
-  fitRes = kFitter.fit<Updater, Smoother>(shuffledMeasurements, rStart, kfOptions);
-  BOOST_CHECK(fitRes.ok());
-  auto& fittedShuffledTrack = *fitRes;
-  auto fittedShuffledParameters = fittedShuffledTrack.fittedParameters.value();
+  //~ // Make sure it works for shuffled measurements as well
+  //~ fitRes = kFitter.fit<Updater, Smoother, MeasurementCalibrator>(measurementsWithHole, rStart, kfOptions);
+  //~ BOOST_CHECK(fitRes.ok());
+  //~ auto& fittedWithHoleTrack = *fitRes;
+  //~ auto fittedWithHoleParameters = fittedWithHoleTrack.fittedParameters.value();
 
-  CHECK_CLOSE_REL(fittedParameters.parameters().template head<5>(),
-                  fittedShuffledParameters.parameters().template head<5>(),
-                  1e-5);
-  CHECK_CLOSE_ABS(fittedParameters.parameters().template tail<1>(),
-                  fittedShuffledParameters.parameters().template tail<1>(),
-                  1e-5);
+  //~ // Calculate global track parameters covariance matrix
+  //~ const auto& [holeTrackTrackParamsCov, holeTrackStateRowIndices] =
+      //~ detail::globalTrackParametersCovariance(fittedWithHoleTrack.fittedStates,
+                                              //~ fittedWithHoleTrack.trackTip);
 
-  // Remove one measurement and find a hole
-  std::vector<SourceLink> measurementsWithHole = {
-      sourcelinks[0], sourcelinks[1], sourcelinks[2], sourcelinks[4],
-      sourcelinks[5]};
+  //~ // Check the size of the global track parameters size
+  //~ BOOST_CHECK_EQUAL(holeTrackStateRowIndices.size(), 6);
+  //~ BOOST_CHECK_EQUAL(holeTrackStateRowIndices.at(fittedWithHoleTrack.trackTip),
+                    //~ 30);
+  //~ BOOST_CHECK_EQUAL(holeTrackTrackParamsCov.rows(), 6 * eBoundParametersSize);
 
-  // Make sure it works for shuffled measurements as well
-  fitRes = kFitter.fit<Updater, Smoother>(measurementsWithHole, rStart, kfOptions);
-  BOOST_CHECK(fitRes.ok());
-  auto& fittedWithHoleTrack = *fitRes;
-  auto fittedWithHoleParameters = fittedWithHoleTrack.fittedParameters.value();
+  //~ // Count one hole
+  //~ BOOST_CHECK_EQUAL(fittedWithHoleTrack.missedActiveSurfaces.size(), 1u);
+  //~ // And the parameters should be different
+  //~ //
+  //~ // BOOST_CHECK(!Acts::Test::checkCloseRel(fittedParameters.parameters().template
+  //~ // head<5>(), ~ fittedWithHoleParameters.parameters().template head<5>(), ~
+  //~ // 1e-6));
+  //~ std::cout << &(fittedParameters) << std::endl;
+  //~ std::cout << &(fittedWithHoleParameters) << std::endl;
+  //~ BOOST_CHECK(!Acts::Test::checkCloseRel(fittedParameters.parameters(),
+                                         //~ fittedWithHoleParameters.parameters(),
+                                         //~ 1e-6));
 
-  // Calculate global track parameters covariance matrix
-  const auto& [holeTrackTrackParamsCov, holeTrackStateRowIndices] =
-      detail::globalTrackParametersCovariance(fittedWithHoleTrack.fittedStates,
-                                              fittedWithHoleTrack.trackTip);
+  //~ // Run KF fit in backward filtering mode
+  //~ kfOptions.backwardFiltering = true;
+  //~ // Fit the track
+  //~ fitRes = kFitter.fit<Updater, Smoother, MeasurementCalibrator>(sourcelinks, rStart, kfOptions);
+  //~ BOOST_CHECK(fitRes.ok());
+  //~ auto fittedWithBwdFiltering = *fitRes;
+  //~ // Check the filtering and smoothing status flag
+  //~ BOOST_CHECK(fittedWithBwdFiltering.forwardFiltered);
+  //~ BOOST_CHECK(not fittedWithBwdFiltering.smoothed);
 
-  // Check the size of the global track parameters size
-  BOOST_CHECK_EQUAL(holeTrackStateRowIndices.size(), 6);
-  BOOST_CHECK_EQUAL(holeTrackStateRowIndices.at(fittedWithHoleTrack.trackTip),
-                    30);
-  BOOST_CHECK_EQUAL(holeTrackTrackParamsCov.rows(), 6 * eBoundParametersSize);
+  //~ // Count the number of 'smoothed' states
+  //~ auto trackTip = fittedWithBwdFiltering.trackTip;
+  //~ auto mj = fittedWithBwdFiltering.fittedStates;
+  //~ size_t nSmoothed = 0;
+  //~ mj.visitBackwards(trackTip, [&](const auto& state) {
+    //~ if (state.hasBoundSmoothed())
+      //~ nSmoothed++;
+  //~ });
+  //~ BOOST_CHECK_EQUAL(nSmoothed, 6u);
 
-  // Count one hole
-  BOOST_CHECK_EQUAL(fittedWithHoleTrack.missedActiveSurfaces.size(), 1u);
-  // And the parameters should be different
-  //
-  // BOOST_CHECK(!Acts::Test::checkCloseRel(fittedParameters.parameters().template
-  // head<5>(), ~ fittedWithHoleParameters.parameters().template head<5>(), ~
-  // 1e-6));
-  std::cout << &(fittedParameters) << std::endl;
-  std::cout << &(fittedWithHoleParameters) << std::endl;
-  BOOST_CHECK(!Acts::Test::checkCloseRel(fittedParameters.parameters(),
-                                         fittedWithHoleParameters.parameters(),
-                                         1e-6));
+  //~ // Extract outliers from result of propagation.
+  //~ // This vector owns the outliers
+  //~ std::vector<SourceLink::MeasurementType> outliers = std::move(
+      //~ mResult.template get<MeasurementCreator::result_type>().outliers);
 
-  // Run KF fit in backward filtering mode
-  kfOptions.backwardFiltering = true;
-  // Fit the track
-  fitRes = kFitter.fit<Updater, Smoother>(sourcelinks, rStart, kfOptions);
-  BOOST_CHECK(fitRes.ok());
-  auto fittedWithBwdFiltering = *fitRes;
-  // Check the filtering and smoothing status flag
-  BOOST_CHECK(fittedWithBwdFiltering.forwardFiltered);
-  BOOST_CHECK(not fittedWithBwdFiltering.smoothed);
+  //~ // Replace one measurement with outlier
+  //~ std::vector<SourceLink> measurementsWithOneOutlier = {
+      //~ sourcelinks[0],           sourcelinks[1], sourcelinks[2],
+      //~ SourceLink{&outliers[3]}, sourcelinks[4], sourcelinks[5]};
 
-  // Count the number of 'smoothed' states
-  auto trackTip = fittedWithBwdFiltering.trackTip;
-  auto mj = fittedWithBwdFiltering.fittedStates;
-  size_t nSmoothed = 0;
-  mj.visitBackwards(trackTip, [&](const auto& state) {
-    if (state.hasBoundSmoothed())
-      nSmoothed++;
-  });
-  BOOST_CHECK_EQUAL(nSmoothed, 6u);
+  //~ // Make sure it works with one outlier
+  //~ fitRes = kFitter.fit<Updater, Smoother, MeasurementCalibrator>(measurementsWithOneOutlier, rStart, kfOptions);
+  //~ BOOST_CHECK(fitRes.ok());
+  //~ auto& fittedWithOneOutlier = *fitRes;
 
-  // Reset to use smoothing formalism
-  kfOptions.backwardFiltering = false;
-
-  // Extract outliers from result of propagation.
-  // This vector owns the outliers
-  std::vector<FittableMeasurement<SourceLink>> outliers = std::move(
-      mResult.template get<MeasurementCreator::result_type>().outliers);
-
-  // Replace one measurement with outlier
-  std::vector<SourceLink> measurementsWithOneOutlier = {
-      sourcelinks[0],           sourcelinks[1], sourcelinks[2],
-      SourceLink{&outliers[3]}, sourcelinks[4], sourcelinks[5]};
-
-  // Make sure it works with one outlier
-  fitRes = kFitter.fit<Updater, Smoother>(measurementsWithOneOutlier, rStart, kfOptions);
-  BOOST_CHECK(fitRes.ok());
-  auto& fittedWithOneOutlier = *fitRes;
-
-  // Count the number of outliers
-  trackTip = fittedWithOneOutlier.trackTip;
-  mj = fittedWithOneOutlier.fittedStates;
-  size_t nOutliers = 0;
-  mj.visitBackwards(trackTip, [&](const auto& state) {
-    auto typeFlags = state.typeFlags();
-    if (typeFlags.test(TrackStateFlag::OutlierFlag)) {
-      nOutliers++;
-    }
-  });
-  BOOST_CHECK_EQUAL(nOutliers, 1u);
+  //~ // Count the number of outliers
+  //~ trackTip = fittedWithOneOutlier.trackTip;
+  //~ mj = fittedWithOneOutlier.fittedStates;
+  //~ size_t nOutliers = 0;
+  //~ mj.visitBackwards(trackTip, [&](const auto& state) {
+    //~ auto typeFlags = state.typeFlags();
+    //~ if (typeFlags.test(TrackStateFlag::OutlierFlag)) {
+      //~ nOutliers++;
+    //~ }
+  //~ });
+  //~ BOOST_CHECK_EQUAL(nOutliers, 1u);
+std::cout << "fit done" << std::endl;
+kFitter.~KalmanFitter();
+std::cout << "deconstructed" << std::endl;
 }
 
 }  // namespace Test
