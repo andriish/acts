@@ -426,11 +426,11 @@ std::cout << "step size set to: " << result.currentFreeMeasurements[0].distance 
                   auto surface_it = std::find_if(
                       result.passedAgainObject.begin(),
                       result.passedAgainObject.end(),
-                      [=](const Surface* s) { return s == fSurface; });
+                      [=](const GeometryObject* s) { return s == fSurface; });
                   if (surface_it == result.passedAgainObject.end()) {
                     // If backward filtering missed this surface, then there is
                     // no smoothed parameter
-                    trackState.data().ismoothed =
+                    trackState.data().iboundsmoothed =
                         detail_lt::IndexData::kInvalid;
                   }
                 });

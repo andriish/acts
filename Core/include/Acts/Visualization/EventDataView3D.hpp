@@ -224,7 +224,7 @@ struct EventDataView3D {
 
       // First, if necessary, draw the surface
       if (surfaceConfig.visible) {
-        GeometryView::drawSurface(helper, *surface, gctx,
+        GeometryView3D::drawSurface(helper, *surface, gctx,
                                   Transform3D::Identity(), surfaceConfig);
       }
 

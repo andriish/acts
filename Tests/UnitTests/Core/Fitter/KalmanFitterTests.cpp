@@ -283,14 +283,14 @@ struct MinimalOutlierFinder {
   bool operator()(const track_state_t& state) const {
     // Can't determine if it's an outlier if no calibrated measurement or no
     // predicted parameters
-    if (not state.hasCalibrated() or not state.hasPredicted()) {
+    if (not state.hasCalibrated() or not state.hasBoundPredicted()) { // TODO: free case
       return false;
     }
 
     // The predicted parameters coefficients
-    const auto& predicted = state.predicted();
+    const auto& predicted = state.boundPredicted();
     // The predicted parameters covariance
-    const auto& predicted_covariance = state.predictedCovariance();
+    const auto& predicted_covariance = state.boundPredictedCovariance();
 
     // Calculate the chi2 using predicted parameters and calibrated measurement
     double chi2 = std::numeric_limits<double>::max();
