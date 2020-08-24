@@ -327,8 +327,8 @@ struct CylindricalTrackingGeometry {
     auto pVolumeBounds =
         std::make_shared<const CylinderVolumeBounds>(25., 300., 1100.);
     // create the Tracking volume
-    auto pVolume = TrackingVolume::create(nullptr, pVolumeBounds, nullptr,
-                                          std::move(pLayerArray), nullptr, {},
+    auto pVolume = Volume::makeShared<TrackingVolume>(nullptr, pVolumeBounds, nullptr,
+                                          std::move(pLayerArray), nullptr, MutableTrackingVolumeVector(),
                                           "Pixel::Barrel");
 
     // The combined volume

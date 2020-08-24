@@ -66,7 +66,7 @@ gridBoxFactory(size_t n = NBOXES, double hl = 1000, size_t octd = 5) {
       std::make_shared<CuboidVolumeBounds>(hl * 1.1, hl * 1.1, hl * 1.1);
 
   auto tv =
-      TrackingVolume::create(tvTrf, tvBounds, std::move(boxStore),
+      Volume::makeShared<TrackingVolume>(tvTrf, tvBounds, std::move(boxStore),
                              std::move(volumes), top, nullptr, "TheVolume");
 
   auto tg = std::make_shared<TrackingGeometry>(tv);

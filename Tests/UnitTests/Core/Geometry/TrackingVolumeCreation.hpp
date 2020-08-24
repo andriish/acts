@@ -79,8 +79,8 @@ TrackingVolumePtr constructCylinderVolume(
   auto volumeBounds = std::make_shared<const CylinderVolumeBounds>(
       innerVolumeR, outerVolumeR, bUmax + volumeEnvelope);
 
-  TrackingVolumePtr volume = TrackingVolume::create(
-      nullptr, volumeBounds, nullptr, std::move(layerArray), nullptr, {}, name);
+  TrackingVolumePtr volume = Volume::makeShared<TrackingVolume>(
+      nullptr, volumeBounds, nullptr, std::move(layerArray), nullptr, MutableTrackingVolumeVector(), name);
   ///  return the volume
   return volume;
 }
@@ -106,7 +106,7 @@ MutableTrackingVolumePtr constructContainerVolume(const GeometryContext& gctx,
       std::make_shared<const BinnedArrayXD<TrackingVolumePtr>>(
           volumes, std::move(vUtility));
   ///  create the container volume
-  auto hVolume = TrackingVolume::create(nullptr, hVolumeBounds, vArray, name);
+  auto hVolume = Volume::makeShared<TrackingVolume>(nullptr, hVolumeBounds, vArray, name);
   // return the container
   return hVolume;
 }

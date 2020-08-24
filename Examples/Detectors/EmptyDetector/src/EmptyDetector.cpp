@@ -37,7 +37,7 @@ auto EmptyDetector::finalize(
 
   // Create the world volume
   auto worldVolume =
-      Acts::TrackingVolume::create(nullptr, cvBounds, nullptr, "EmptyCylinder");
+      Acts::Volume::makeShared<Acts::TrackingVolume>(nullptr, cvBounds, nullptr, "EmptyCylinder");
 
   // Create the tracking geometry
   auto tgGeometry =

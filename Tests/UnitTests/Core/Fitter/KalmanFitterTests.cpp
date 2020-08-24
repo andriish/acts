@@ -199,7 +199,7 @@ struct MeasurementCreator {
 		const Vector3D pos = stepper.position(state.stepping);
 		
 		Measurement<SourceLink, FreeParametersIndices, eFreePos0, eFreePos1, eFreePos2> meas(
-				std::shared_ptr<const Volume>(state.navigation.currentVolume), {}, cov, pos.x() + dx, pos.y() + dy, pos.z() + dz);
+				state.navigation.currentVolume->getSharedPtr(), {}, cov, pos.x() + dx, pos.y() + dy, pos.z() + dz);
 		result.freeMeasurements.push_back(std::move(meas));
 	}
   }
@@ -470,17 +470,13 @@ std::transform(freeMeasurements.begin(), freeMeasurements.end(),
   auto& fittedTrack = *fitRes;
   
   auto state = fittedTrack.fittedStates.getTrackState(fittedTrack.trackTip);
-  std::cout << state.hasBoundFiltered() << " " << state.hasFreeFiltered() << std::endl;
-  while(state.hasFreeFiltered())
-	state = fittedTrack.fittedStates.getTrackState(state.previous());
-if(state.hasBoundFiltered())
-        std::cout << state.boundFiltered() << "\n" << state.boundFilteredCovariance() << std::endl;
+  //~ std::cout << state.hasBoundFiltered() << " " << state.hasFreeFiltered() << std::endl;
+  //~ while(state.hasFreeFiltered())
+	//~ state = fittedTrack.fittedStates.getTrackState(state.previous());
+//~ if(state.hasBoundFiltered())
+        //~ std::cout << state.boundFiltered() << "\n" << state.boundFilteredCovariance() << std::endl;
+
   //~ auto fittedParameters = fittedTrack.fittedParameters.value();
-std::cout << "start destruction" << std::endl;
-fittedTrack.currentFreeMeasurements.clear();
-std::cout << "clear " << &fittedTrack.currentFreeMeasurements << " | " << &fittedTrack.currentVolume << " | " << fittedTrack.currentVolume << std::endl;
-fittedTrack.~KalmanFitterResult<SourceLink>(); // TODO: this line breaks
-std::cout << "fitted track destroyed" << std::endl;
   //~ // Calculate global track parameters covariance matrix
   //~ const auto& [trackParamsCov, stateRowIndices] =
       //~ detail::globalTrackParametersCovariance(fittedTrack.fittedStates,
@@ -601,9 +597,6 @@ std::cout << "fitted track destroyed" << std::endl;
     //~ }
   //~ });
   //~ BOOST_CHECK_EQUAL(nOutliers, 1u);
-std::cout << "fit done" << std::endl;
-kFitter.~KalmanFitter();
-std::cout << "deconstructed" << std::endl;
 }
 
 }  // namespace Test

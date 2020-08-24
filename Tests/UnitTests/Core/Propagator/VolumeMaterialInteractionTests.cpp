@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE(volume_material_interaction_test) {
   auto bound = std::make_shared<const CuboidVolumeBounds>(1_m, 1_m, 1_m);
   Material mat(1., 2., 3., 4., 5.);
   auto volMat = std::make_shared<const HomogeneousVolumeMaterial>(mat);
-  auto volume = (TrackingVolume::create(htrans, bound, volMat)).get();
+  auto volume = (Volume::makeShared<TrackingVolume>(htrans, bound, volMat)).get();
 
   // Create a propagator state
   State state;
