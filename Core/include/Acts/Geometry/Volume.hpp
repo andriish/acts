@@ -31,8 +31,7 @@ using VolumeBoundsPtr = std::shared_ptr<const VolumeBounds>;
 
 class Volume : public virtual GeometryObject,
 			   public std::enable_shared_from_this<Volume> {
- public:
-  using BoundingBox = AxisAlignedBoundingBox<Volume, double, 3>;
+ protected:
 
   Volume();
 
@@ -52,6 +51,9 @@ class Volume : public virtual GeometryObject,
   /// @note This will automatically build an oriented bounding box with an
   /// envelope value of (0.05, 0.05, 0.05)mm
   Volume(const Volume& vol, const Transform3D* shift = nullptr);
+
+ public:
+  using BoundingBox = AxisAlignedBoundingBox<Volume, double, 3>;
 
   virtual ~Volume();
 
