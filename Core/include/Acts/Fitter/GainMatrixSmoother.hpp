@@ -68,8 +68,6 @@ class GainMatrixSmoother {
 		prev_ts.freeSmoothed() = prev_ts.freeFiltered();
 		prev_ts.freeSmoothedCovariance() = prev_ts.freeFilteredCovariance();
 	}
-	// Smoothing gain matrix
-	BoundSymMatrix G;
 
 	// make sure there is more than one track state
 	std::optional<std::error_code> error{std::nullopt};  // assume ok
@@ -88,25 +86,53 @@ class GainMatrixSmoother {
 			assert(ts.hasBoundFiltered());
 			assert(ts.hasBoundPredicted());
 			assert(ts.hasJacobianBoundToBound() || ts.hasJacobianFreeToBound());
+			
+			// previous trackstate should have smoothed and predicted
+			if(prev_ts.hasBoundPredicted())
+			{
+				assert(prev_ts.hasBoundSmoothed());
+				assert(prev_ts.hasBoundPredicted());
+				
+				if(smooth(error, ts.boundFiltered(), ts.boundSmoothed(), ts.boundFilteredCovariance(), ts.boundSmoothedCovariance(),
+																				prev_ts.boundPredicted(), prev_ts.boundSmoothed(), prev_ts.jacobianBoundToBound(),
+																				prev_ts.boundPredictedCovariance(), prev_ts.boundSmoothedCovariance()))
+				{
+					prev_ts = ts;
+					return true;  // continue execution
+				}
+				else
+					return false;		
+			}
+			else
+			{
+				assert(prev_ts.hasFreeSmoothed());
+				assert(prev_ts.hasFreePredicted());
+				
+				
+			}
+		
 		}
 		else
 		{
 			assert(ts.hasFreeFiltered());
 			assert(ts.hasFreePredicted());
 			assert(ts.hasJacobianFreeToFree() || ts.hasJacobianBoundToFree());
+			
+			// previous trackstate should have smoothed and predicted
+			if(prev_ts.hasBoundPredicted())
+			{
+				assert(prev_ts.hasBoundSmoothed());
+				assert(prev_ts.hasBoundPredicted());
+			}
+			else
+			{
+				assert(prev_ts.hasFreeSmoothed());
+				assert(prev_ts.hasFreePredicted());
+			}
+		
 		}
 		
-			// previous trackstate should have smoothed and predicted
-		if(prev_ts.hasBoundPredicted())
-		{
-			assert(prev_ts.hasBoundSmoothed());
-			assert(prev_ts.hasBoundPredicted());
-		}
-		else
-		{
-			assert(prev_ts.hasFreeSmoothed());
-			assert(prev_ts.hasFreePredicted());
-		}
+
 		
 		//~ ACTS_VERBOSE("Calculate smoothing matrix:");
 		//~ ACTS_VERBOSE("Filtered covariance:\n" << ts.hasBoundFilteredCovariance() ? ts.boundFilteredCovariance() : ts.freeFilteredCovariance());
@@ -115,17 +141,7 @@ class GainMatrixSmoother {
 					 //~ << prev_ts.hasBoundFilteredCovariance() ? prev_ts.boundFilteredCovariance() : prev_ts.freeFilteredCovariance()) << "\n, inverse: \n"
 					 //~ << prev_ts.hasBoundFilteredCovariance() ? prev_ts.boundFilteredCovariance().inverse() : prev_ts.freeFilteredCovariance().inverse());
 
-		// Gain smoothing matrix
-		// NB: The jacobian stored in a state is the jacobian from previous
-		// state to this state in forward propagation
-		G = ts.boundFilteredCovariance() *
-			prev_ts.jacobianBoundToBound().transpose() *
-			prev_ts.boundPredictedCovariance().inverse();
 
-		if (G.hasNaN()) {
-		  error = KalmanFitterError::SmoothFailed;  // set to error
-		  return false;                             // abort execution
-		}
 
 		//~ ACTS_VERBOSE("Gain smoothing matrix G:\n" << G);
 
@@ -136,10 +152,7 @@ class GainMatrixSmoother {
 		//~ ACTS_VERBOSE("Prev. predicted parameters: "
 					 //~ << prev_ts.boundPredicted().transpose());
 
-		// Calculate the smoothed parameters
-		ts.boundSmoothed() =
-			ts.boundFiltered() +
-			G * (prev_ts.boundSmoothed() - prev_ts.boundPredicted());
+
 
 		//~ ACTS_VERBOSE(
 			//~ "Smoothed parameters are: " << ts.boundSmoothed().transpose());
@@ -147,29 +160,6 @@ class GainMatrixSmoother {
 		//~ ACTS_VERBOSE("Calculate smoothed covariance:");
 		//~ ACTS_VERBOSE("Prev. smoothed covariance:\n"
 					 //~ << prev_ts.boundSmoothedCovariance());
-
-		// And the smoothed covariance
-		ts.boundSmoothedCovariance() = ts.boundFilteredCovariance() -
-									   G *
-										   (prev_ts.boundPredictedCovariance() -
-											prev_ts.boundSmoothedCovariance()) *
-										   G.transpose();
-
-		// Check if the covariance matrix is semi-positive definite.
-		// If not, make one (could do more) attempt to replace it with the
-		// nearest semi-positive def matrix,
-		// but it could still be non semi-positive
-		BoundSymMatrix smoothedCov = ts.boundSmoothedCovariance();
-		if (not detail::covariance_helper<BoundSymMatrix>::validate(
-				smoothedCov)) {
-		  ACTS_DEBUG(
-			  "Smoothed covariance is not positive definite. Could result in "
-			  "negative covariance!");
-		}
-		// Reset smoothed covariance
-		ts.boundSmoothedCovariance() = smoothedCov;
-		ACTS_VERBOSE("Smoothed covariance is: \n"
-					 << ts.boundSmoothedCovariance());
 
 		prev_ts = ts;
 		return true;  // continue execution
@@ -189,5 +179,60 @@ class GainMatrixSmoother {
 
   /// Getter for the logger, to support logging macros
   const Logger& logger() const;
+  
+  private:
+  template<size_t dimPrevTs, size_t dimTs>
+  bool smooth(
+  std::optional<std::error_code>& error,
+  const ActsVectorD<dimTs>& tsFiltered,
+  ActsVectorD<dimTs>& tsSmoothed,
+  const ActsSymMatrixD<dimTs>& tsFilteredCovariance,
+  ActsSymMatrixD<dimTs>& tsSmoothedCovariance,
+  const ActsVectorD<dimPrevTs>& prevTsPredicted,  
+  const ActsVectorD<dimPrevTs>& prevTsSmoothed,
+  const ActsMatrixD<dimPrevTs, dimTs>& prevTsJacobian,
+  const ActsSymMatrixD<dimPrevTs>& prevTsPredictedCovariance,
+  const ActsSymMatrixD<dimPrevTs>& prevTsSmoothedCovariance) const  {
+		// Gain smoothing matrix
+		// NB: The jacobian stored in a state is the jacobian from previous
+		// state to this state in forward propagation
+		const BoundSymMatrix G = tsFilteredCovariance *
+			prevTsJacobian.transpose() *
+			prevTsPredictedCovariance.inverse();
+
+		if (G.hasNaN()) {
+		  error = KalmanFitterError::SmoothFailed;  // set to error
+		  return false;                             // abort execution
+		}
+		
+		// Calculate the smoothed parameters
+		tsSmoothed =
+		tsFiltered +
+		G * (prevTsSmoothed - prevTsPredicted);
+
+			// And the smoothed covariance
+		tsSmoothedCovariance = tsFilteredCovariance -
+									   G *
+										   (prevTsPredictedCovariance -
+											prevTsSmoothedCovariance) *
+										   G.transpose();
+
+		// Check if the covariance matrix is semi-positive definite.
+		// If not, make one (could do more) attempt to replace it with the
+		// nearest semi-positive def matrix,
+		// but it could still be non semi-positive
+		BoundSymMatrix smoothedCov = tsSmoothedCovariance;
+		if (not detail::covariance_helper<BoundSymMatrix>::validate(
+				smoothedCov)) {
+		  ACTS_DEBUG(
+			  "Smoothed covariance is not positive definite. Could result in "
+			  "negative covariance!");
+		}
+		// Reset smoothed covariance
+		ts.boundSmoothedCovariance() = smoothedCov;
+		ACTS_VERBOSE("Smoothed covariance is: \n"
+					 << ts.boundSmoothedCovariance());
+		return true;
+	}
 };
 }  // namespace Acts
