@@ -66,7 +66,7 @@ class GainMatrixSmoother {
 	else
 	{
 		prev_ts.freeSmoothed() = prev_ts.freeFiltered();
-		prev_ts.freeSmoothedCovariance() = prev_ts.freeFilteredCovariance();
+		prev_ts.freeSmoothedCovariance() = prev_ts.freeFilteredCovariance();  				
 	}
 
 	// make sure there is more than one track state
@@ -84,15 +84,11 @@ class GainMatrixSmoother {
 		if(ts.hasBoundPredicted())
 		{
 			assert(ts.hasBoundFiltered());
-			assert(ts.hasBoundPredicted());
-			assert(ts.hasJacobianBoundToBound() || ts.hasJacobianFreeToBound());
-			
 			// previous trackstate should have smoothed and predicted
 			if(prev_ts.hasBoundPredicted())
 			{
 				assert(prev_ts.hasBoundSmoothed());
-				assert(prev_ts.hasBoundPredicted());
-				
+				assert(prev_ts.hasJacobianBoundToBound());
 				if(smooth<eBoundParametersSize, eBoundParametersSize>(error, ts.boundFiltered(), ts.boundSmoothed(), ts.boundFilteredCovariance(), ts.boundSmoothedCovariance(),
 																				prev_ts.boundPredicted(), prev_ts.boundSmoothed(), prev_ts.jacobianBoundToBound(),
 																				prev_ts.boundPredictedCovariance(), prev_ts.boundSmoothedCovariance()))
@@ -107,7 +103,7 @@ class GainMatrixSmoother {
 			{
 				assert(prev_ts.hasFreeSmoothed());
 				assert(prev_ts.hasFreePredicted());
-				
+				assert(prev_ts.hasJacobianBoundToFree());
 				if(smooth<eFreeParametersSize, eBoundParametersSize>(error, ts.boundFiltered(), ts.boundSmoothed(), ts.boundFilteredCovariance(), ts.boundSmoothedCovariance(),
 																				prev_ts.freePredicted(), prev_ts.freeSmoothed(), prev_ts.jacobianBoundToFree(),
 																				prev_ts.freePredictedCovariance(), prev_ts.freeSmoothedCovariance()))
@@ -117,21 +113,19 @@ class GainMatrixSmoother {
 				}
 				else
 					return false;
-			}
-		
+			}	
 		}
 		else
 		{
 			assert(ts.hasFreeFiltered());
 			assert(ts.hasFreePredicted());
-			assert(ts.hasJacobianFreeToFree() || ts.hasJacobianBoundToFree());
-			
+			assert(prev_ts.hasJacobianFreeToFree() || prev_ts.hasJacobianBoundToFree());
+
 			// previous trackstate should have smoothed and predicted
 			if(prev_ts.hasBoundPredicted())
 			{
 				assert(prev_ts.hasBoundSmoothed());
-				assert(prev_ts.hasBoundPredicted());
-				
+				assert(prev_ts.hasJacobianFreeToBound());
 				if(smooth<eBoundParametersSize, eFreeParametersSize>(error, ts.freeFiltered(), ts.freeSmoothed(), ts.freeFilteredCovariance(), ts.freeSmoothedCovariance(),
 																				prev_ts.boundPredicted(), prev_ts.boundSmoothed(), prev_ts.jacobianFreeToBound(),
 																				prev_ts.boundPredictedCovariance(), prev_ts.boundSmoothedCovariance()))
@@ -146,7 +140,7 @@ class GainMatrixSmoother {
 			{
 				assert(prev_ts.hasFreeSmoothed());
 				assert(prev_ts.hasFreePredicted());
-				
+				assert(prev_ts.hasJacobianFreeToFree());
 				if(smooth<eFreeParametersSize, eFreeParametersSize>(error, ts.freeFiltered(), ts.freeSmoothed(), ts.freeFilteredCovariance(), ts.freeSmoothedCovariance(),
 																				prev_ts.freePredicted(), prev_ts.freeSmoothed(), prev_ts.jacobianFreeToFree(),
 																				prev_ts.freePredictedCovariance(), prev_ts.freeSmoothedCovariance()))
@@ -157,7 +151,7 @@ class GainMatrixSmoother {
 				else
 					return false;
 			}
-		
+
 		}
 	  });
 	}
@@ -190,7 +184,7 @@ class GainMatrixSmoother {
   Eigen::Map<Eigen::Matrix<typename detail_lt::Types<dimPrevTs, false>::Scalar, dimPrevTs, dimTs, detail_lt::Types<dimPrevTs, false>::Flags>> prevTsJacobian,
   typename detail_lt::Types<dimPrevTs, false>::CovarianceMap prevTsPredictedCovariance,
   typename detail_lt::Types<dimPrevTs, false>::CovarianceMap prevTsSmoothedCovariance) const  {
-  				
+
 		ACTS_VERBOSE("Calculate smoothing matrix:");
 		ACTS_VERBOSE("Filtered covariance:\n" << tsFilteredCovariance);
 		ACTS_VERBOSE("Jacobian:\n" << prevTsJacobian);
@@ -211,7 +205,13 @@ class GainMatrixSmoother {
 		}
 
 		ACTS_VERBOSE("Gain smoothing matrix G:\n" << G);
-
+//~ std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+//~ ACTS_DEBUG("Testing inverse: " << prevTsPredictedCovariance.inverse() * prevTsPredictedCovariance);
+//~ ACTS_DEBUG("Gain smoothing matrix G:\n" << G);
+//~ ACTS_DEBUG("Filtered covariance:\n" << tsFilteredCovariance);
+//~ ACTS_DEBUG("Jacobian:\n" << prevTsJacobian);
+//~ ACTS_DEBUG("Prev. predicted covariance\n" << prevTsPredictedCovariance.inverse());
+					 
 		ACTS_VERBOSE("Calculate smoothed parameters:");
 		ACTS_VERBOSE("Filtered parameters: " << tsFiltered.transpose());
 		ACTS_VERBOSE("Prev. smoothed parameters: "
@@ -220,9 +220,7 @@ class GainMatrixSmoother {
 					 << prevTsPredicted.transpose());
 					 		
 		// Calculate the smoothed parameters
-		tsSmoothed =
-		tsFiltered +
-		G * (prevTsSmoothed - prevTsPredicted);
+		tsSmoothed = tsFiltered + G * (prevTsSmoothed - prevTsPredicted);
 
 		ACTS_VERBOSE(
 			"Smoothed parameters are: " << tsSmoothed.transpose());
@@ -232,18 +230,14 @@ class GainMatrixSmoother {
 					 << prevTsSmoothedCovariance);
 					 
 			// And the smoothed covariance
-		tsSmoothedCovariance = tsFilteredCovariance -
-									   G *
-										   (prevTsPredictedCovariance -
-											prevTsSmoothedCovariance) *
-										   G.transpose();
+		tsSmoothedCovariance = tsFilteredCovariance - G * (prevTsPredictedCovariance -	prevTsSmoothedCovariance) * G.transpose();
 
 		// Check if the covariance matrix is semi-positive definite.
 		// If not, make one (could do more) attempt to replace it with the
 		// nearest semi-positive def matrix,
 		// but it could still be non semi-positive
 		ActsSymMatrixD<dimTs> smoothedCov = tsSmoothedCovariance;
-		if (not detail::covariance_helper<ActsSymMatrixD<dimTs>>::validate(
+		if (not detail::covariance_helper<ActsSymMatrixD<dimTs>, 5>::validate(
 				smoothedCov)) {
 		  ACTS_DEBUG(
 			  "Smoothed covariance is not positive definite. Could result in "
@@ -253,6 +247,9 @@ class GainMatrixSmoother {
 		tsSmoothedCovariance = smoothedCov;
 		ACTS_VERBOSE("Smoothed covariance is: \n"
 					 << tsSmoothedCovariance);
+//~ ACTS_DEBUG("Smoothed parameters are: " << tsSmoothed.transpose());
+//~ ACTS_DEBUG("Smoothed covariance is AFTER: \n" << tsFilteredCovariance - tsSmoothedCovariance);
+
 		return true;
 	}
 };

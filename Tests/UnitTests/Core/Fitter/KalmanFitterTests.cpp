@@ -459,17 +459,23 @@ std::transform(freeMeasurements.begin(), freeMeasurements.end(),
   outlierFinder.measurementSignificanceCutoff = 0.05;
 
   KalmanFitter kFitter(rPropagator,
-                       getDefaultLogger("KalmanFilter", Logging::FATAL));
+                       getDefaultLogger("KalmanFilter", Logging::VERBOSE));
 
   KalmanFitterOptions<MinimalOutlierFinder> kfOptions(
       tgContext, mfContext, calContext, outlierFinder, rSurface);
-
+  kfOptions.backwardFiltering = true; // TODO: test
+  
+std::cout << "Num Measurements: " << sourcelinks.size() << " " << freeSourcelinks.size() << std::endl;
   // Fit the track
   auto fitRes = kFitter.fit<Updater, Smoother, MeasurementCalibrator>(sourcelinks, rStart, kfOptions, freeSourcelinks);
   BOOST_CHECK(fitRes.ok());
   auto& fittedTrack = *fitRes;
-  
-  auto state = fittedTrack.fittedStates.getTrackState(fittedTrack.trackTip);
+  auto params = fittedTrack.fittedParameters;
+  BOOST_CHECK(params.has_value());
+std::cout << "Parameters: " << params->parameters().transpose() << std::endl;
+std::cout << "Covariance: " << *params->covariance() << std::endl;
+
+  //~ auto state = fittedTrack.fittedStates.getTrackState(fittedTrack.trackTip);
   //~ std::cout << state.hasBoundFiltered() << " " << state.hasFreeFiltered() << std::endl;
   //~ while(state.hasFreeFiltered())
 	//~ state = fittedTrack.fittedStates.getTrackState(state.previous());

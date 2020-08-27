@@ -42,7 +42,7 @@ enum struct TrackStatePropMask : uint16_t {
   ToBoundAll = BoundPredicted + BoundFiltered + BoundSmoothed +
              JacobianFreeToBound + Uncalibrated + Calibrated,
   ToFreeAll = FreePredicted + FreeFiltered + FreeSmoothed +
-             JacobianBoundToBound + Uncalibrated + Calibrated,
+             JacobianBoundToFree + Uncalibrated + Calibrated,
   FreeAll = FreePredicted + FreeFiltered + FreeSmoothed +
              JacobianFreeToFree + Uncalibrated + Calibrated,
   

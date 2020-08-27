@@ -169,7 +169,6 @@ private:
 						: KalmanFitterError::BackwardUpdateFailed;  // set to error
 				return false;  // abort execution
 			  }
-
 			  filtered = predicted + K * (calibrated - H * predicted);
 			  filteredCovariance =
 				  (ActsSymMatrixD<parameter_size_t>::Identity() - K * H) * predictedCovariance;
@@ -194,7 +193,6 @@ private:
       // error is set, return result
       return *error;
     }
-std::cout << "trace: " << predictedCovariance.trace() << " " << filteredCovariance.trace() << std::endl;		
     // always succeed, no outlier logic yet
     return Result<void>::success();
   }
