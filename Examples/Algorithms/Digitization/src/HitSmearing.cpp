@@ -9,6 +9,7 @@
 #include "ACTFW/Digitization/HitSmearing.hpp"
 
 #include "ACTFW/EventData/GeometryContainers.hpp"
+#include "ACTFW/EventData/IndexContainers.hpp"
 #include "ACTFW/EventData/SimHit.hpp"
 #include "ACTFW/EventData/SimSourceLink.hpp"
 #include "ACTFW/Framework/WhiteBoard.hpp"
@@ -22,6 +23,9 @@ FW::HitSmearing::HitSmearing(const Config& cfg, Acts::Logging::Level lvl)
   }
   if (m_cfg.outputSourceLinks.empty()) {
     throw std::invalid_argument("Missing output source links collection");
+  }
+  if (m_cfg.outputHitParticlesMap.empty()) {
+    throw std::invalid_argument("Missing hit-particles map output collection");
   }
   if ((m_cfg.sigmaLoc0 < 0) or (m_cfg.sigmaLoc1 < 0)) {
     throw std::invalid_argument("Invalid resolution setting");
@@ -48,6 +52,9 @@ FW::ProcessCode FW::HitSmearing::execute(const AlgorithmContext& ctx) const {
       ctx.eventStore.get<SimHitContainer>(m_cfg.inputSimulatedHits);
   SimSourceLinkContainer sourceLinks;
   sourceLinks.reserve(hits.size());
+
+  IndexMultimap<ActsFatras::Barcode> hitParticlesMap;
+  hitParticlesMap.reserve(hits.size());
 
   // setup random number generator
   auto rng = m_cfg.randomNumbers->spawnGenerator(ctx);
@@ -87,9 +94,14 @@ FW::ProcessCode FW::HitSmearing::execute(const AlgorithmContext& ctx) const {
         ACTS_FATAL("The hit ordering broke. Run for your life.");
         return ProcessCode::ABORT;
       }
+      auto hitIndex = sourceLinks.index_of(it);
+      // push to the hitParticle map
+      hitParticlesMap.emplace_hint(
+          hitParticlesMap.end(), hitIndex, hit.particleId());
     }
   }
-
+  
+  ctx.eventStore.add(m_cfg.outputHitParticlesMap, std::move(hitParticlesMap));
   ctx.eventStore.add(m_cfg.outputSourceLinks, std::move(sourceLinks));
   return ProcessCode::SUCCESS;
 }

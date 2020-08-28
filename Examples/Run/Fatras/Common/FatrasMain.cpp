@@ -29,6 +29,7 @@
 #include "FatrasDigitizationBase.hpp"
 #include "FatrasEvgenBase.hpp"
 #include "FatrasSimulationBase.hpp"
+#include "ReconTruthBase.hpp"
 
 int FW::fatrasMain(int argc, char* argv[],
                    std::shared_ptr<FW::IBaseDetector> detector) {
@@ -87,7 +88,11 @@ int FW::fatrasMain(int argc, char* argv[],
 
   // (C) DIGITIZATION
   // Setup the digitization
-  setupDigitization(vm, sequencer, randomNumberSvc, tGeometry);
+  //~ setupDigitization(vm, sequencer, randomNumberSvc, tGeometry);
+
+  // (D) RECONSTRUCTION
+  // Set up the truth recon
+  setupReconTruth(vm, sequencer, tGeometry);
 
   return sequencer.run();
 }

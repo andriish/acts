@@ -1,5 +1,6 @@
 add_library(
   ActsExamplesFatrasCommon SHARED
+  ReconTruthBase.cpp
   FatrasDigitizationBase.cpp
   FatrasEvgenBase.cpp
   FatrasMain.cpp
@@ -16,7 +17,10 @@ target_link_libraries(
     ActsExamplesGenerators ActsExamplesGeneratorsPythia8
     ActsExamplesMagneticField ActsExamplesDetectorsCommon
     ActsExamplesFatras ActsExamplesDigitization
+    ActsExamplesFitting
     ActsExamplesIoCsv ActsExamplesIoRoot
+    ActsExamplesTruthTracking
+    ActsExamplesIoPerformance
     Boost::program_options)
 
 install(
