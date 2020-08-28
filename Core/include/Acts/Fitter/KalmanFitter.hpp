@@ -1190,7 +1190,6 @@ class KalmanFitter {
 	// Sort elements by distance
 	std::sort(candidates.begin(), candidates.end(), [&](const typename result_type::FreeMeasurementCandidate& a, const typename result_type::FreeMeasurementCandidate& b) 
 		{ return a.distance < b.distance;});
-// TODO: distances can be 3D but outlier check should be in all dimensions - otherwise it's not performed
     return candidates;
   }
   

@@ -184,9 +184,9 @@ struct MeasurementCreator {
     }
     if(!surface && state.navigation.currentVolume)
     {
-		const double resX = 200_um;
+		const double resX = 50_um;
 		const double resY = 200_um;
-		const double resZ = 200_um;
+		const double resZ = 100_um;
 		SymMatrix3D cov;
 		cov << resX * resX, 0, 0,
 			   0, resY * resY, 0,
@@ -239,29 +239,30 @@ struct MaterialScattering {
     // Check if there is a surface with material and a covariance is existing
     if (state.navigation.currentSurface &&
         state.navigation.currentSurface->surfaceMaterial() &&
-        state.stepping.cov != typename stepper_t::Covariance::Zero()) {
+        std::get_if<BoundSymMatrix>(&state.stepping.cov) && std::get<BoundSymMatrix>(state.stepping.cov) != BoundSymMatrix::Zero()) {
+	  BoundSymMatrix& cov = std::get<BoundSymMatrix>(state.stepping.cov);
       // Sample angles
       std::normal_distribution<double> scatterAngle(
           0., 0.017);  //< \approx 1 degree
       double dPhi = scatterAngle(generator), dTheta = scatterAngle(generator);
 
       // Update the covariance
-      state.stepping.cov(ePHI, ePHI) += dPhi * dPhi;
-      state.stepping.cov(eTHETA, eTHETA) += dTheta * dTheta;
+      cov(ePHI, ePHI) += dPhi * dPhi;
+      cov(eTHETA, eTHETA) += dTheta * dTheta;
 
       // Update the angles
       auto direction = stepper.direction(state.stepping);
       double theta = std::acos(direction.z());
       double phi = std::atan2(direction.y(), direction.x());
 
-      state.stepping.update(
+      stepper.update(state.stepping,
           stepper.position(state.stepping),
           {std::sin(theta + dTheta) * std::cos(phi + dPhi),
            std::sin(theta + dTheta) * std::sin(phi + dPhi),
            std::cos(theta + dTheta)},
           std::max(stepper.momentum(state.stepping) -
                        std::abs(gauss(generator)) * UnitConstants::MeV,
-                   0.));
+                   0.), stepper.time(state.stepping));
     }
   }
 };
@@ -346,19 +347,24 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
   mNavigator.resolveSensitive = true;
 
   // Use straingt line stepper to create the measurements
-  StraightLineStepper mStepper;
-
+  //~ StraightLineStepper mStepper;
+  ConstantBField bField(Vector3D(0., 0.5_T, 0.));
+  using RecoStepper = EigenStepper<ConstantBField>;
+  RecoStepper mStepper(bField);
+  RecoStepper rStepper(bField);
+  
   // Define the measurement propagator
-  using MeasurementPropagator = Propagator<StraightLineStepper, Navigator>;
+  //~ using MeasurementPropagator = Propagator<StraightLineStepper, Navigator>;
+  using MeasurementPropagator = Propagator<RecoStepper, Navigator>;
 
   // Build propagator for the measurement creation
   MeasurementPropagator mPropagator(mStepper, mNavigator);
-  Vector3D mPos(-3_m, 0., 0.), mMom(1_GeV, 0., 0);
-  SingleCurvilinearTrackParameters<NeutralPolicy> mStart(std::nullopt, mPos,
-                                                         mMom, 42_ns);
+  Vector3D mPos(-3_m, 0., 0.), mMom(10_GeV, 0., 0);
+  SingleCurvilinearTrackParameters<ChargedPolicy> mStart(std::nullopt, mPos,
+                                                         mMom, 1._e, 42_ns);
 
   // Create action list for the measurement creation
-  using MeasurementActions = ActionList<MeasurementCreator, DebugOutput>;
+  using MeasurementActions = ActionList<MeasurementCreator, MaterialScattering, DebugOutput>;
   using MeasurementAborters = AbortList<EndOfWorldReached>;
 
   auto pixelResX = Resolution(eLOC_0, 25_um);
@@ -429,9 +435,9 @@ std::transform(freeMeasurements.begin(), freeMeasurements.end(),
   rNavigator.resolveSensitive = true;
 
   // Configure propagation with deactivated B-field
-  ConstantBField bField(Vector3D(0., 0., 0.));
-  using RecoStepper = EigenStepper<ConstantBField>;
-  RecoStepper rStepper(bField);
+  //~ ConstantBField bField(Vector3D(0., 0., 0.));
+  //~ using RecoStepper = EigenStepper<ConstantBField>;
+  //~ RecoStepper rStepper(bField);
   using RecoPropagator = Propagator<RecoStepper, Navigator>;
   RecoPropagator rPropagator(rStepper, rNavigator);
 
@@ -441,12 +447,14 @@ std::transform(freeMeasurements.begin(), freeMeasurements.end(),
       0., 0., 0., 0., 0., 0., 0.05, 0., 0., 0., 0., 0., 0., 0.01, 0., 0., 0.,
       0., 0., 0., 1.;
 
-  Vector3D rPos(-3_m, 10_um * gauss(generator), 100_um * gauss(generator));
-  Vector3D rMom(1_GeV, 0.025_GeV * gauss(generator),
-                0.025_GeV * gauss(generator));
+  //~ Vector3D rPos(-3_m, 10_um * gauss(generator), 100_um * gauss(generator));
+  //~ Vector3D rMom(1_GeV, 0.025_GeV * gauss(generator),
+                //~ 0.025_GeV * gauss(generator));
+  Vector3D rPos(-3_m, 10_um, 100_um);
+  Vector3D rMom(10_GeV, 0.25_GeV, 0.25_GeV);
 
   SingleCurvilinearTrackParameters<ChargedPolicy> rStart(cov, rPos, rMom, 1.,
-                                                         42.);
+                                                         42._ns);
 
   const Surface* rSurface = &rStart.referenceSurface();
 
@@ -459,7 +467,7 @@ std::transform(freeMeasurements.begin(), freeMeasurements.end(),
   outlierFinder.measurementSignificanceCutoff = 0.05;
 
   KalmanFitter kFitter(rPropagator,
-                       getDefaultLogger("KalmanFilter", Logging::VERBOSE));
+                       getDefaultLogger("KalmanFilter", Logging::DEBUG));
 
   KalmanFitterOptions<MinimalOutlierFinder> kfOptions(
       tgContext, mfContext, calContext, outlierFinder, rSurface);
@@ -474,6 +482,16 @@ std::cout << "Num Measurements: " << sourcelinks.size() << " " << freeSourcelink
   BOOST_CHECK(params.has_value());
 std::cout << "Parameters: " << params->parameters().transpose() << std::endl;
 std::cout << "Covariance: " << *params->covariance() << std::endl;
+
+  auto fitRes2 = kFitter.fit<Updater, Smoother, MeasurementCalibrator>(sourcelinks, rStart, kfOptions, {});
+BOOST_CHECK(fitRes2.ok());
+  auto& fittedTrack2 = *fitRes2;
+  auto params2 = fittedTrack2.fittedParameters;
+  std::cout << "Parameters: " << params2->parameters().transpose() << std::endl;
+std::cout << "Covariance: " << *params2->covariance() << std::endl;
+
+std::cout << "Truth Parameters: " << mStart.parameters().transpose() << std::endl;
+std::cout << "Truth Covariance: " << *mStart.covariance() << std::endl;
 
   //~ auto state = fittedTrack.fittedStates.getTrackState(fittedTrack.trackTip);
   //~ std::cout << state.hasBoundFiltered() << " " << state.hasFreeFiltered() << std::endl;

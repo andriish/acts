@@ -171,7 +171,7 @@ class GainMatrixSmoother {
   const Logger& logger() const;
   
   private:
-  
+
   template<unsigned int dimPrevTs, unsigned int dimTs>
   bool smooth(
   std::optional<std::error_code>& error,
@@ -204,14 +204,7 @@ class GainMatrixSmoother {
 		  return false;                             // abort execution
 		}
 
-		ACTS_VERBOSE("Gain smoothing matrix G:\n" << G);
-//~ std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
-//~ ACTS_DEBUG("Testing inverse: " << prevTsPredictedCovariance.inverse() * prevTsPredictedCovariance);
-//~ ACTS_DEBUG("Gain smoothing matrix G:\n" << G);
-//~ ACTS_DEBUG("Filtered covariance:\n" << tsFilteredCovariance);
-//~ ACTS_DEBUG("Jacobian:\n" << prevTsJacobian);
-//~ ACTS_DEBUG("Prev. predicted covariance\n" << prevTsPredictedCovariance.inverse());
-					 
+		ACTS_VERBOSE("Gain smoothing matrix G:\n" << G);					 
 		ACTS_VERBOSE("Calculate smoothed parameters:");
 		ACTS_VERBOSE("Filtered parameters: " << tsFiltered.transpose());
 		ACTS_VERBOSE("Prev. smoothed parameters: "
@@ -247,9 +240,6 @@ class GainMatrixSmoother {
 		tsSmoothedCovariance = smoothedCov;
 		ACTS_VERBOSE("Smoothed covariance is: \n"
 					 << tsSmoothedCovariance);
-//~ ACTS_DEBUG("Smoothed parameters are: " << tsSmoothed.transpose());
-//~ ACTS_DEBUG("Smoothed covariance is AFTER: \n" << tsFilteredCovariance - tsSmoothedCovariance);
-
 		return true;
 	}
 };

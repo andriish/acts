@@ -113,7 +113,6 @@ class GainMatrixUpdater {
   const Logger& logger() const;
   
 private:
-
   /// @brief This function runs the actual gain matrix update
   ///
   /// @tparam track_state_t Type of the track state
