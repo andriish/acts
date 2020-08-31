@@ -63,7 +63,6 @@ struct SourceLink
 };
 
 // A few initialisations and definitionas
-//~ using SourceLink = MinimalSourceLink;
 using Covariance = BoundSymMatrix;
 
 using Resolution = std::pair<ParID_t, double>;

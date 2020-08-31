@@ -38,6 +38,9 @@ class HitSmearing final : public BareAlgorithm {
     /// Width of the Gaussian smearing, i.e. resolution; must be positive.
     double sigmaLoc0 = -1;
     double sigmaLoc1 = -1;
+    double sigmaGlob0 = -1;
+    double sigmaGlob1 = -1;
+    double sigmaGlob2 = -1;
     /// Tracking geometry required to access global-to-local transforms.
     std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry;
     /// Random numbers tool.

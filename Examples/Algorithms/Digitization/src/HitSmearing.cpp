@@ -11,7 +11,7 @@
 #include "ACTFW/EventData/GeometryContainers.hpp"
 #include "ACTFW/EventData/IndexContainers.hpp"
 #include "ACTFW/EventData/SimHit.hpp"
-#include "ACTFW/EventData/SimSourceLink.hpp"
+#include "ACTFW/EventData/EffectiveSourceLink.hpp"
 #include "ACTFW/Framework/WhiteBoard.hpp"
 #include "Acts/Geometry/TrackingGeometry.hpp"
 #include "Acts/Utilities/Definitions.hpp"
@@ -50,8 +50,10 @@ FW::ProcessCode FW::HitSmearing::execute(const AlgorithmContext& ctx) const {
   // setup input and output containers
   const auto& hits =
       ctx.eventStore.get<SimHitContainer>(m_cfg.inputSimulatedHits);
-  SimSourceLinkContainer sourceLinks;
+  EffectiveSourceLinkContainer sourceLinks;
+  EffectiveSourceLinkContainer freeSourceLinks;
   sourceLinks.reserve(hits.size());
+  freeSourceLinks.reserve(hits.size());
 
   IndexMultimap<ActsFatras::Barcode> hitParticlesMap;
   hitParticlesMap.reserve(hits.size());
@@ -62,9 +64,14 @@ FW::ProcessCode FW::HitSmearing::execute(const AlgorithmContext& ctx) const {
 
   // setup local covariance
   // TODO add support for per volume/layer/module settings
-  Acts::BoundMatrix cov = Acts::BoundMatrix::Zero();
-  cov(Acts::eLOC_0, Acts::eLOC_0) = m_cfg.sigmaLoc0 * m_cfg.sigmaLoc0;
-  cov(Acts::eLOC_1, Acts::eLOC_1) = m_cfg.sigmaLoc1 * m_cfg.sigmaLoc1;
+  Acts::BoundMatrix covLoc = Acts::BoundMatrix::Zero();
+  covLoc(Acts::eLOC_0, Acts::eLOC_0) = m_cfg.sigmaLoc0 * m_cfg.sigmaLoc0;
+  covLoc(Acts::eLOC_1, Acts::eLOC_1) = m_cfg.sigmaLoc1 * m_cfg.sigmaLoc1;
+  
+  Acts::BoundMatrix covGlob = Acts::BoundMatrix::Zero();
+  covGlob(Acts::eFreePos0, Acts::eFreePos0) = m_cfg.sigmaGlob0 * m_cfg.sigmaGlob0;
+  covGlob(Acts::eFreePos1, Acts::eFreePos1) = m_cfg.sigmaGlob1 * m_cfg.sigmaGlob1;
+  covGlob(Acts::eFreePos2, Acts::eFreePos2) = m_cfg.sigmaGlob2 * m_cfg.sigmaGlob2;
 	
   for (auto&& [moduleGeoId, moduleHits] : groupByModule(hits)) {
     // check if we should create hits for this surface
@@ -87,7 +94,7 @@ FW::ProcessCode FW::HitSmearing::execute(const AlgorithmContext& ctx) const {
 
       // create source link at the end of the container
       auto it = sourceLinks.emplace_hint(sourceLinks.end(), *surface, hit, 2,
-                                         loc, cov);
+                                         loc, covLoc);
       // ensure hits and links share the same order to prevent ugly surprises
       if (std::next(it) != sourceLinks.end()) {
         ACTS_FATAL("The hit ordering broke. Run for your life.");

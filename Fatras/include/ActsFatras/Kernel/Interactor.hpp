@@ -48,7 +48,6 @@ struct InteractorResult {
   std::vector<Particle> generatedParticles;
   /// Hits created by the propagated particle.
   std::vector<Hit> hits;
-  std::vector<Hit> freeHits;
 };
 
 /// Fatras interactor plugin for the Acts propagator.
@@ -121,9 +120,9 @@ std::cout << "CurrentVolume: " << state.navigation.currentVolume->volumeName() <
 				.setAbsMomentum(stepper.momentum(state.stepping));
 			
 			result.particle = part;	
-			result.freeHits.emplace_back(
+			result.hits.emplace_back(
 			  state.navigation.currentVolume->geoID(), part.particleId(),
-			  part.position4(), part.momentum4(), part.momentum4(), result.freeHits.size());
+			  part.position4(), part.momentum4(), part.momentum4(), result.hits.size());
 			// TODO: Material doesn't mean sensitive; requires a selection as for the surfaces
 		}
 		return;
