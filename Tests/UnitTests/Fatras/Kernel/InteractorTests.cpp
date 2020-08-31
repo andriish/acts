@@ -14,6 +14,8 @@
 #include "Acts/Tests/CommonHelpers/FloatComparisons.hpp"
 #include "Acts/Tests/CommonHelpers/PredefinedMaterials.hpp"
 #include "ActsFatras/Kernel/Interactor.hpp"
+#include "Acts/Propagator/ConstrainedStep.hpp"
+#include "Acts/Utilities/Definitions.hpp"
 
 #include <limits>
 #include <random>
@@ -44,6 +46,9 @@ struct MockStepperState {
   Scalar time;
   Vector3 direction;
   Scalar momentum;
+  
+    Acts::NavigationDirection navDir;
+	Acts::ConstrainedStep stepSize{std::numeric_limits<double>::max()};
 };
 
 struct MockStepper {
@@ -61,6 +66,9 @@ struct MockStepper {
     state.direction = direction;
     state.momentum = momentum;
   }
+  
+  void
+  setStepSize(MockStepperState& /*state*/, double /*size*/, Acts::ConstrainedStep::Type /*stype*/) const {}
 };
 
 struct MockPropagatorState {

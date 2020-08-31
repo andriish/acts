@@ -77,28 +77,31 @@ FW::ProcessCode FW::HitSmearing::execute(const AlgorithmContext& ctx) const {
     const auto is = m_surfaces.find(moduleGeoId);
     if (is == m_surfaces.end()) {
 		const Acts::TrackingVolume* trVol = m_cfg.trackingGeometry->lowestTrackingVolume(ctx.geoContext, moduleHits.begin()->position()); // TODO: Association by geoId
-		const Acts::Volume* vol = static_cast<const Acts::Volume*>(trVol);
-		if (vol != nullptr)
+		if(trVol)
 		{
-			for (const auto& hit : moduleHits) {
-			  // smear truth to create local measurement
-			  Acts::BoundVector glob = Acts::BoundVector::Zero();
-			  glob[Acts::eFreePos0] = hit.position()[Acts::eFreePos0] + m_cfg.sigmaGlob0 * stdNormal(rng);
-			  glob[Acts::eFreePos1] = hit.position()[Acts::eFreePos1] + m_cfg.sigmaGlob1 * stdNormal(rng);
-			  glob[Acts::eFreePos2] = hit.position()[Acts::eFreePos2] + m_cfg.sigmaGlob2 * stdNormal(rng);
+			const Acts::Volume* vol = static_cast<const Acts::Volume*>(trVol);
+			if (vol != nullptr)
+			{
+				for (const auto& hit : moduleHits) {
+				  // smear truth to create local measurement
+				  Acts::BoundVector glob = Acts::BoundVector::Zero();
+				  glob[Acts::eFreePos0] = hit.position()[Acts::eFreePos0] + m_cfg.sigmaGlob0 * stdNormal(rng);
+				  glob[Acts::eFreePos1] = hit.position()[Acts::eFreePos1] + m_cfg.sigmaGlob1 * stdNormal(rng);
+				  glob[Acts::eFreePos2] = hit.position()[Acts::eFreePos2] + m_cfg.sigmaGlob2 * stdNormal(rng);
 
-			  // create source link at the end of the container
-			  auto it = sourceLinks.emplace_hint(sourceLinks.end(), *vol, hit, 3,
-												 glob, covGlob);
-			  // ensure hits and links share the same order to prevent ugly surprises
-			  if (std::next(it) != sourceLinks.end()) {
-				ACTS_FATAL("The hit ordering broke. Run for your life.");
-				return ProcessCode::ABORT;
-			  }
-			  auto hitIndex = sourceLinks.index_of(it);
-			  // push to the hitParticle map
-			  hitParticlesMap.emplace_hint(
-				  hitParticlesMap.end(), hitIndex, hit.particleId());
+				  // create source link at the end of the container
+				  auto it = sourceLinks.emplace_hint(sourceLinks.end(), *vol, hit, 3,
+													 glob, covGlob);
+				  // ensure hits and links share the same order to prevent ugly surprises
+				  if (std::next(it) != sourceLinks.end()) {
+					ACTS_FATAL("The hit ordering broke. Run for your life.");
+					return ProcessCode::ABORT;
+				  }
+				  auto hitIndex = sourceLinks.index_of(it);
+				  // push to the hitParticle map
+				  hitParticlesMap.emplace_hint(
+					  hitParticlesMap.end(), hitIndex, hit.particleId());
+				}
 			}
 		}
       continue;

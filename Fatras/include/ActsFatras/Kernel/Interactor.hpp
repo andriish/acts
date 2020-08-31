@@ -13,6 +13,7 @@
 #include "Acts/Geometry/TrackingVolume.hpp"
 #include "ActsFatras/EventData/Hit.hpp"
 #include "ActsFatras/EventData/Particle.hpp"
+#include "Acts/Propagator/ConstrainedStep.hpp"
 
 #include <cassert>
 
@@ -98,10 +99,12 @@ struct Interactor {
   template <typename propagator_state_t, typename stepper_t>
   void operator()(propagator_state_t &state, stepper_t &stepper,
                   result_type &result) const {
-	if(state.navigation.currentVolume->volumeName().find("TPC") != std::string::npos)
+
+	// Reduce step size in TPC
+	if(state.navigation.currentVolume && state.navigation.currentVolume->volumeName().find("TPC") != std::string::npos)
 	{
-		stepper.setStepSize(state.stepping, 10. * state.stepping.navDir, ConstrainedStep::user);
-	} else { state.stepping.stepSize.release(ConstrainedStep::user); }
+		stepper.setStepSize(state.stepping, 10. * state.stepping.navDir, Acts::ConstrainedStep::user);
+	} else { state.stepping.stepSize.release(Acts::ConstrainedStep::user); }
 		
     assert(generator and "The generator pointer must be valid");
 
@@ -111,13 +114,13 @@ struct Interactor {
     }
     // If we are not on a surface, there is nothing for us to do
     if (not state.navigation.currentSurface) {
-std::cout << "CurrentVolume: " << state.navigation.currentVolume->volumeName() << std::endl;
-		if(state.navigation.currentVolume && state.navigation.currentVolume->volumeMaterial()) // TODO: Without material available, this will be replaced by string comparison
+		//~ if(state.navigation.currentVolume && state.navigation.currentVolume->volumeMaterial()) // TODO: Without material available, this will be replaced by string comparison
+		if(state.navigation.currentVolume && state.navigation.currentVolume->volumeName().find("TPC") != std::string::npos)
 		{
 			const auto part =
 				Particle(particle)
 				// include passed material from the initial particle state
-				.setMaterialPassed(particle.pathInX0() + result.pathInX0,
+				.setMaterialPassed(particle.pathInX0() + result.pathInX0, // TODO: Is the material tracked in dense environment?
 								   particle.pathInL0() + result.pathInL0)
 				.setPosition4(stepper.position(state.stepping),
 							  stepper.time(state.stepping))
