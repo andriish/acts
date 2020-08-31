@@ -98,6 +98,11 @@ struct Interactor {
   template <typename propagator_state_t, typename stepper_t>
   void operator()(propagator_state_t &state, stepper_t &stepper,
                   result_type &result) const {
+	if(state.navigation.currentVolume->volumeName().find("TPC") != std::string::npos)
+	{
+		stepper.setStepSize(state.stepping, 10. * state.stepping.navDir, ConstrainedStep::user);
+	} else { state.stepping.stepSize.release(ConstrainedStep::user); }
+		
     assert(generator and "The generator pointer must be valid");
 
     // If we are on target, everything should have been done
