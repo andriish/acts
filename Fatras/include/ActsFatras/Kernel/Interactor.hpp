@@ -10,6 +10,7 @@
 
 #include "Acts/Material/ISurfaceMaterial.hpp"
 #include "Acts/Surfaces/Surface.hpp"
+#include "Acts/Geometry/TrackingVolume.hpp"
 #include "ActsFatras/EventData/Hit.hpp"
 #include "ActsFatras/EventData/Particle.hpp"
 
@@ -47,6 +48,7 @@ struct InteractorResult {
   std::vector<Particle> generatedParticles;
   /// Hits created by the propagated particle.
   std::vector<Hit> hits;
+  std::vector<Hit> freeHits;
 };
 
 /// Fatras interactor plugin for the Acts propagator.
@@ -105,7 +107,26 @@ struct Interactor {
     }
     // If we are not on a surface, there is nothing for us to do
     if (not state.navigation.currentSurface) {
-      return;
+std::cout << "CurrentVolume: " << state.navigation.currentVolume->volumeName() << std::endl;
+		if(state.navigation.currentVolume && state.navigation.currentVolume->volumeMaterial()) // TODO: Without material available, this will be replaced by string comparison
+		{
+			const auto part =
+				Particle(particle)
+				// include passed material from the initial particle state
+				.setMaterialPassed(particle.pathInX0() + result.pathInX0,
+								   particle.pathInL0() + result.pathInL0)
+				.setPosition4(stepper.position(state.stepping),
+							  stepper.time(state.stepping))
+				.setDirection(stepper.direction(state.stepping))
+				.setAbsMomentum(stepper.momentum(state.stepping));
+			
+			result.particle = part;	
+			result.freeHits.emplace_back(
+			  state.navigation.currentVolume->geoID(), part.particleId(),
+			  part.position4(), part.momentum4(), part.momentum4(), result.freeHits.size());
+			// TODO: Material doesn't mean sensitive; requires a selection as for the surfaces
+		}
+		return;
     }
     const Acts::Surface &surface = *state.navigation.currentSurface;
 

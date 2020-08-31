@@ -67,6 +67,7 @@ struct MockPropagatorState {
   struct {
     bool targetReached = false;
     Acts::Surface *currentSurface = nullptr;
+    Acts::TrackingVolume* currentVolume = nullptr;
   } navigation;
   MockStepperState stepping;
   Acts::GeometryContext geoContext;

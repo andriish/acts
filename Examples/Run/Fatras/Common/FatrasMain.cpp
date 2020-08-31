@@ -88,7 +88,7 @@ int FW::fatrasMain(int argc, char* argv[],
 
   // (C) DIGITIZATION
   // Setup the digitization
-  //~ setupDigitization(vm, sequencer, randomNumberSvc, tGeometry);
+  // setupDigitization(vm, sequencer, randomNumberSvc, tGeometry);
 
   // (D) RECONSTRUCTION
   // Set up the truth recon

@@ -49,9 +49,9 @@ namespace {
 
 /// Simple struct to select surfaces where hits should be generated.
 struct HitSurfaceSelector {
-  bool sensitive = false;
-  bool material = false;
-  bool passive = false;
+  bool sensitive = true;
+  bool material = true;
+  bool passive = true;
 
   /// Check if the surface should be used.
   bool operator()(const Acts::Surface& surface) const {

@@ -38,10 +38,11 @@ struct FitterFunctionImpl {
   FW::FittingAlgorithm::FitterResult operator()(
       const std::vector<FW::SimSourceLink>& sourceLinks,
       const FW::TrackParameters& initialParameters,
-      const Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>& options) const {
+      const Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>& options,
+      const std::vector<FW::SimSourceLink>& freeSourceLinks = {}) const {
 	using Updater = Acts::GainMatrixUpdater;
 	using Smoother = Acts::GainMatrixSmoother;
-    return fitter.template fit<Updater, Smoother>(sourceLinks, initialParameters, options);
+    return fitter.template fit<Updater, Smoother>(sourceLinks, initialParameters, options, freeSourceLinks);
   };
 };
 }  // namespace

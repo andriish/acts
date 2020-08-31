@@ -65,14 +65,13 @@ FW::ProcessCode FW::HitSmearing::execute(const AlgorithmContext& ctx) const {
   Acts::BoundMatrix cov = Acts::BoundMatrix::Zero();
   cov(Acts::eLOC_0, Acts::eLOC_0) = m_cfg.sigmaLoc0 * m_cfg.sigmaLoc0;
   cov(Acts::eLOC_1, Acts::eLOC_1) = m_cfg.sigmaLoc1 * m_cfg.sigmaLoc1;
-
+	
   for (auto&& [moduleGeoId, moduleHits] : groupByModule(hits)) {
     // check if we should create hits for this surface
     const auto is = m_surfaces.find(moduleGeoId);
     if (is == m_surfaces.end()) {
       continue;
     }
-
     // smear all truth hits for this module
     const Acts::Surface* surface = is->second;
     for (const auto& hit : moduleHits) {
@@ -100,7 +99,6 @@ FW::ProcessCode FW::HitSmearing::execute(const AlgorithmContext& ctx) const {
           hitParticlesMap.end(), hitIndex, hit.particleId());
     }
   }
-  
   ctx.eventStore.add(m_cfg.outputHitParticlesMap, std::move(hitParticlesMap));
   ctx.eventStore.add(m_cfg.outputSourceLinks, std::move(sourceLinks));
   return ProcessCode::SUCCESS;
