@@ -1,6 +1,7 @@
 add_library(
   ActsExamplesFramework SHARED
   src/EventData/SimMultiTrajectory.cpp
+  src/EventData/EffectiveMultiTrajectory.cpp
   src/Framework/BareAlgorithm.cpp
   src/Framework/BareService.cpp
   src/Framework/RandomNumbers.cpp

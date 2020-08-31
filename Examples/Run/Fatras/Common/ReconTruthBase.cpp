@@ -21,7 +21,7 @@
 #include "ACTFW/Io/Csv/CsvOptionsReader.hpp"
 #include "ACTFW/Io/Performance/TrackFinderPerformanceWriter.hpp"
 #include "ACTFW/Io/Performance/TrackFitterPerformanceWriter.hpp"
-#include "ACTFW/Io/Root/RootTrajectoryWriter.hpp"
+#include "ACTFW/Io/Root/RootEffectiveTrajectoryWriter.hpp"
 #include "ACTFW/Options/CommonOptions.hpp"
 #include "ACTFW/Plugins/BField/BFieldOptions.hpp"
 #include "ACTFW/TruthTracking/ParticleSmearing.hpp"
@@ -114,14 +114,14 @@ FW::setupReconTruth(
       std::make_shared<FW::FittingAlgorithm>(fitter, logLevel));
 
   // write tracks from fitting
-  FW::RootTrajectoryWriter::Config trackWriter;
+  FW::RootEffectiveTrajectoryWriter::Config trackWriter;
   trackWriter.inputParticles    = inputParticles;
   trackWriter.inputTrajectories = fitter.outputTrajectories;
   trackWriter.outputDir         = outputDir;
   trackWriter.outputFilename    = "tracks.root";
   trackWriter.outputTreename    = "tracks";
   sequencer.addWriter(
-      std::make_shared<FW::RootTrajectoryWriter>(trackWriter, logLevel));
+      std::make_shared<FW::RootEffectiveTrajectoryWriter>(trackWriter, logLevel));
 
   // write reconstruction performance data
   FW::TrackFinderPerformanceWriter::Config perfFinder;

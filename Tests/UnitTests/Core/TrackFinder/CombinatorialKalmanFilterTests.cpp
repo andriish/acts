@@ -47,6 +47,8 @@ namespace Test {
 struct ExtendedMinimalSourceLink {
   size_t sourceID = 0;
 
+  using MeasurementType = FittableMeasurement<ExtendedMinimalSourceLink>;
+  
   const FittableMeasurement<ExtendedMinimalSourceLink>* meas{nullptr};
 
   bool operator==(const ExtendedMinimalSourceLink& rhs) const {
