@@ -36,10 +36,10 @@ struct FitterFunctionImpl {
   FitterFunctionImpl(Fitter&& f) : fitter(std::move(f)) {}
 
   FW::FittingAlgorithm::FitterResult operator()(
-      const std::vector<FW::SimSourceLink>& sourceLinks,
+      const std::vector<FW::EffectiveSourceLink>& sourceLinks,
       const FW::TrackParameters& initialParameters,
       const Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>& options,
-      const std::vector<FW::SimSourceLink>& freeSourceLinks = {}) const {
+      const std::vector<FW::EffectiveSourceLink>& freeSourceLinks = {}) const {
 	using Updater = Acts::GainMatrixUpdater;
 	using Smoother = Acts::GainMatrixSmoother;
     return fitter.template fit<Updater, Smoother>(sourceLinks, initialParameters, options, freeSourceLinks);

@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "ACTFW/EventData/SimSourceLink.hpp"
+#include "ACTFW/EventData/EffectiveSourceLink.hpp"
 #include "ACTFW/EventData/Track.hpp"
 #include "ACTFW/Framework/BareAlgorithm.hpp"
 #include "ACTFW/Plugins/BField/BFieldOptions.hpp"
@@ -23,13 +23,13 @@ namespace FW {
 
 class FittingAlgorithm final : public BareAlgorithm {
  public:
-  using FitterResult = Acts::Result<Acts::KalmanFitterResult<SimSourceLink>>;
+  using FitterResult = Acts::Result<Acts::KalmanFitterResult<EffectiveSourceLink>>;
   /// Fit function that takes input measurements, initial trackstate and fitter
   /// options and returns some fit-specific result.
   using FitterFunction = std::function<FitterResult(
-      const std::vector<SimSourceLink>&, const TrackParameters&,
+      const std::vector<EffectiveSourceLink>&, const TrackParameters&,
       const Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>&,
-      const std::vector<SimSourceLink>&)>;
+      const std::vector<EffectiveSourceLink>&)>;
 
   /// Create the fitter function implementation.
   ///

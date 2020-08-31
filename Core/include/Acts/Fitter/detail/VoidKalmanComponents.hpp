@@ -56,7 +56,7 @@ struct VoidMeasurementCalibrator {
     static_assert(SourceLinkConcept<source_link_t>,
                   "Source link does fulfill SourceLinkConcept.");
     static_assert(
-        concept ::converts_to<FittableMeasurement<source_link_t>,
+        concept ::converts_to<typename source_link_t::MeasurementType,
                               concept ::detail_slc::dereferenceable_t,
                               source_link_t>,
         "For DefaultMeasurementCalibrator, source link needs to implement "

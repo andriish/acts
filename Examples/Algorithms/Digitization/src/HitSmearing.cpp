@@ -14,6 +14,7 @@
 #include "ACTFW/EventData/EffectiveSourceLink.hpp"
 #include "ACTFW/Framework/WhiteBoard.hpp"
 #include "Acts/Geometry/TrackingGeometry.hpp"
+#include "Acts/Geometry/TrackingVolume.hpp"
 #include "Acts/Utilities/Definitions.hpp"
 
 FW::HitSmearing::HitSmearing(const Config& cfg, Acts::Logging::Level lvl)
@@ -75,15 +76,16 @@ FW::ProcessCode FW::HitSmearing::execute(const AlgorithmContext& ctx) const {
     // check if we should create hits for this surface
     const auto is = m_surfaces.find(moduleGeoId);
     if (is == m_surfaces.end()) {
-		const Acts::TrackingVolume* vol = m_cfg.trackingGeometry->lowestTrackingVolume(ctx.geoContext, moduleHits[0].position()); // TODO: Association by geoId
+		const Acts::TrackingVolume* trVol = m_cfg.trackingGeometry->lowestTrackingVolume(ctx.geoContext, moduleHits.begin()->position()); // TODO: Association by geoId
+		const Acts::Volume* vol = static_cast<const Acts::Volume*>(trVol);
 		if (vol != nullptr)
 		{
 			for (const auto& hit : moduleHits) {
 			  // smear truth to create local measurement
 			  Acts::BoundVector glob = Acts::BoundVector::Zero();
-			  glob[Acts::eFreePos0] = pos[0] + m_cfg.sigmaGlob0 * stdNormal(rng);
-			  glob[Acts::eFreePos1] = pos[1] + m_cfg.sigmaGlob1 * stdNormal(rng);
-			  glob[Acts::eFreePos2] = pos[2] + m_cfg.sigmaGlob2 * stdNormal(rng);
+			  glob[Acts::eFreePos0] = hit.position()[Acts::eFreePos0] + m_cfg.sigmaGlob0 * stdNormal(rng);
+			  glob[Acts::eFreePos1] = hit.position()[Acts::eFreePos1] + m_cfg.sigmaGlob1 * stdNormal(rng);
+			  glob[Acts::eFreePos2] = hit.position()[Acts::eFreePos2] + m_cfg.sigmaGlob2 * stdNormal(rng);
 
 			  // create source link at the end of the container
 			  auto it = sourceLinks.emplace_hint(sourceLinks.end(), *vol, hit, 3,

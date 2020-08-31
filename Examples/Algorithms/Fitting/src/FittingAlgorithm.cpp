@@ -9,9 +9,11 @@
 #include "ACTFW/Fitting/FittingAlgorithm.hpp"
 
 #include "ACTFW/EventData/ProtoTrack.hpp"
-#include "ACTFW/EventData/Track.hpp"
+#include "ACTFW/EventData/EffectiveMultiTrajectory.hpp"
 #include "ACTFW/Framework/WhiteBoard.hpp"
 #include "Acts/Surfaces/PerigeeSurface.hpp"
+#include "ACTFW/EventData/EffectiveSourceLink.hpp"
+#include "Acts/EventData/MeasurementHelpers.hpp"
 
 #include <stdexcept>
 
@@ -36,7 +38,7 @@ FW::ProcessCode FW::FittingAlgorithm::execute(
     const FW::AlgorithmContext& ctx) const {
   // Read input data
   const auto sourceLinks =
-      ctx.eventStore.get<SimSourceLinkContainer>(m_cfg.inputSourceLinks);
+      ctx.eventStore.get<EffectiveSourceLinkContainer>(m_cfg.inputSourceLinks);
   const auto protoTracks =
       ctx.eventStore.get<ProtoTrackContainer>(m_cfg.inputProtoTracks);
   const auto initialParameters = ctx.eventStore.get<TrackParametersContainer>(
@@ -49,7 +51,7 @@ FW::ProcessCode FW::FittingAlgorithm::execute(
   }
 
   // Prepare the output data with MultiTrajectory
-  TrajectoryContainer trajectories;
+  std::vector<EffectiveMultiTrajectory> trajectories;
   trajectories.reserve(protoTracks.size());
 
   // Construct a perigee surface as the target surface
@@ -57,7 +59,8 @@ FW::ProcessCode FW::FittingAlgorithm::execute(
       Acts::Vector3D{0., 0., 0.});
 
   // Perform the fit for each input track
-  std::vector<SimSourceLink> trackSourceLinks;
+  std::vector<EffectiveSourceLink> trackSourceLinks;
+  std::vector<EffectiveSourceLink> freeTrackSourceLinks;
   for (std::size_t itrack = 0; itrack < protoTracks.size(); ++itrack) {
     // The list of hits and the initial start parameters
     const auto& protoTrack = protoTracks[itrack];
@@ -65,7 +68,7 @@ FW::ProcessCode FW::FittingAlgorithm::execute(
 
     // We can have empty tracks which must give empty fit results
     if (protoTrack.empty()) {
-      trajectories.push_back(SimMultiTrajectory());
+      trajectories.push_back(EffectiveMultiTrajectory());
       ACTS_WARNING("Empty track " << itrack << " found.");
       continue;
     }
@@ -73,6 +76,8 @@ FW::ProcessCode FW::FittingAlgorithm::execute(
     // Clear & reserve the right size
     trackSourceLinks.clear();
     trackSourceLinks.reserve(protoTrack.size());
+    freeTrackSourceLinks.clear();
+    freeTrackSourceLinks.reserve(protoTrack.size());
 
     // Fill the source links via their indices from the container
     for (auto hitIndex : protoTrack) {
@@ -82,7 +87,10 @@ FW::ProcessCode FW::FittingAlgorithm::execute(
                                   << hitIndex);
         return ProcessCode::ABORT;
       }
-      trackSourceLinks.push_back(*sourceLink);
+      if(Acts::MeasurementHelpers::getSize(**sourceLink) == 3)
+		freeTrackSourceLinks.push_back(*sourceLink);
+	  else
+		trackSourceLinks.push_back(*sourceLink);
     }
 
     // Set the KalmanFitter options
@@ -92,7 +100,7 @@ FW::ProcessCode FW::FittingAlgorithm::execute(
    kfOptions.backwardFiltering = true;
   
     ACTS_DEBUG("Invoke fitter");
-    auto result = m_cfg.fit(trackSourceLinks, initialParams, kfOptions, {});
+    auto result = m_cfg.fit(trackSourceLinks, initialParams, kfOptions, freeTrackSourceLinks);
     if (result.ok()) {
       // Get the fit output object
       const auto& fitOutput = result.value();
@@ -112,14 +120,14 @@ FW::ProcessCode FW::FittingAlgorithm::execute(
       } else {
         ACTS_DEBUG("No fitted paramemeters for track " << itrack);
       }
-      // Create a SimMultiTrajectory
+      // Create a EffectiveMultiTrajectory
       trajectories.emplace_back(std::move(fitOutput.fittedStates),
                                 std::move(trackTips), std::move(indexedParams));
     } else {
       ACTS_WARNING("Fit failed for track " << itrack << " with error"
                                            << result.error());
       // Fit failed, but still create an empty SimMultiTrajectory
-      trajectories.push_back(SimMultiTrajectory());
+      trajectories.push_back(EffectiveMultiTrajectory());
     }
   }
 
