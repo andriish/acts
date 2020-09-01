@@ -299,9 +299,6 @@ class KalmanFitter {
 	  updateFreeMeasurementCandidates(state, stepper, result);
 	  if(!result.currentFreeMeasurements.empty())
 	  {
-std::cout << "CurrentFreeMeasurements: " << std::endl;
-for(const auto& cfm : result.currentFreeMeasurements)
-	std::cout << cfm.distance << ", " << cfm.position.transpose() << ", " << stepper.position(state.stepping).transpose() << std::endl;
 		  if(std::abs(result.currentFreeMeasurements[0].distance) < state.stepping.tolerance)
 		  {
 			  // filter
@@ -495,28 +492,29 @@ std::cout << "StartSurface: " << startSurface << " " << st.pathLength() << " " <
             // Update material effects for last measurement state in backward
             // direction
             materialInteractor(state.navigation.currentSurface, state, stepper);
-               
-          } else {
-			const Volume* startVolume = dynamic_cast<const Volume*>(&st.referenceObject());
-			// Set the navigation state
-            state.navigation.startVolume = startVolume;
-            state.navigation.startSurface = nullptr;
+            return false;  // abort execution
+		}   
+          //~ } else {
+			//~ const Volume* startVolume = dynamic_cast<const Volume*>(&st.referenceObject());
+			//~ // Set the navigation state
+            //~ state.navigation.startVolume = (TrackingVolume*) startVolume;
+            //~ state.navigation.startSurface = nullptr;
             
-            state.navigation.targetSurface = targetSurface;
-            state.navigation.currentSurface = state.navigation.startSurface;
-            state.navigation.currentVolume = state.navigation.startVolume;
+            //~ state.navigation.targetSurface = targetSurface;
+            //~ state.navigation.currentSurface = state.navigation.startSurface;
+            //~ state.navigation.currentVolume = state.navigation.startVolume;
 
-            // Update the stepping state
-            stepper.resetState(state.stepping, st.freeFiltered(),
-                               FreeMatrix(st.freeFilteredCovariance()), backward,
-                               state.options.maxStepSize);
+            //~ // Update the stepping state
+            //~ stepper.resetState(state.stepping, st.freeFiltered(),
+                               //~ FreeMatrix(st.freeFilteredCovariance()), backward,
+                               //~ state.options.maxStepSize);
 
-            // For the last measurement state, smoothed is filtered
-            st.freeSmoothed() = st.freeFiltered();
-            st.freeSmoothedCovariance() = st.freeFilteredCovariance();
-            result.passedAgainObject.push_back(startVolume);
-		  }
-		  return false;  // abort execution
+            //~ // For the last measurement state, smoothed is filtered
+            //~ st.freeSmoothed() = st.freeFiltered();
+            //~ st.freeSmoothedCovariance() = st.freeFilteredCovariance();
+            //~ result.passedAgainObject.push_back(startVolume);
+		  //~ }
+		  //~ return false;  // abort execution
         }
         return true;  // continue execution
       });
@@ -539,12 +537,12 @@ std::cout << "Filter bound" << std::endl;
         ACTS_VERBOSE("Measurement surface " << surface->geoID()
                                             << " detected.");
 
-        // Update state and stepper with pre material effects
-        materialInteractor(surface, state, stepper, preUpdate);
-
         // Transport & bind the state to the current surface
         auto [boundParams, jacobian, pathLength] =
             stepper.boundState(state.stepping, *surface);
+            
+        // Update state and stepper with pre material effects
+        materialInteractor(surface, state, stepper, preUpdate);
 
 		using TrackState = typename MultiTrajectory<source_link_t>::TrackStateProxy;
 		TrackState trackStateProxy = std::visit([&](const auto& jac) -> TrackState {
@@ -851,6 +849,7 @@ std::cout << "TrackTip: " << result.trackTip << std::endl;
       // Try to find the surface in the measurement surfaces
       auto sourcelink_it = boundInputMeasurements.find(surface);
       if (sourcelink_it != boundInputMeasurements.end()) {
+std::cout << "Backwards bound" << std::endl;
         // Screen output message
         ACTS_VERBOSE("Measurement surface "
                      << surface->geoID()
@@ -864,12 +863,12 @@ std::cout << "TrackTip: " << result.trackTip << std::endl;
           return Result<void>::success();
         }
 
-        // Update state and stepper with pre material effects
-        materialInteractor(surface, state, stepper, preUpdate);
-
         // Transport & bind the state to the current surface
         auto [boundParams, jacobian, pathLength] =
             stepper.boundState(state.stepping, *surface);
+            
+        // Update state and stepper with pre material effects
+        materialInteractor(surface, state, stepper, preUpdate);
 
 		using TrackState = typename MultiTrajectory<source_link_t>::TrackStateProxy;
 		TrackState trackStateProxy = std::visit([&](const auto& jac) -> TrackState {
@@ -907,7 +906,6 @@ std::cout << "TrackTip: " << result.trackTip << std::endl;
             },
             m_calibrator(trackStateProxy.uncalibrated(),
                          trackStateProxy.boundPredicted()));
-
         // If the update is successful, set covariance and
         auto updateRes = m_updater(state.geoContext, trackStateProxy, backward);
         if (!updateRes.ok()) {
@@ -944,6 +942,7 @@ std::cout << "TrackTip: " << result.trackTip << std::endl;
           // Update state and stepper with post material effects
           materialInteractor(surface, state, stepper, postUpdate);
         }
+std::cout << "Backwards bound Ende" << std::endl;
       } else if (surface->surfaceMaterial() != nullptr) {
         // Transport covariance
         if (surface->associatedDetectorElement() != nullptr) {
@@ -963,7 +962,6 @@ std::cout << "TrackTip: " << result.trackTip << std::endl;
         // Update state and stepper with material effects
         materialInteractor(surface, state, stepper);
       }
-
       return Result<void>::success();
     }
     
@@ -975,7 +973,7 @@ std::cout << "TrackTip: " << result.trackTip << std::endl;
     Result<void> backwardFilter(State& state,
                                 const KalmanStepper& stepper,
                                 result_type& result) const {
-									
+std::cout << "Backwards free" << std::endl;									
 	const source_link_t& sourceLink = *result.currentFreeMeasurements[0].sourceLink;
 
 		auto [freeParams, jacobian, pathLength] = stepper.freeState(state.stepping);
@@ -1049,7 +1047,7 @@ std::cout << "TrackTip: " << result.trackTip << std::endl;
                 trackStateProxy.freeFiltered(),
                 FreeSymMatrix(trackStateProxy.freeFilteredCovariance()));
         }
-
+std::cout << "Backwards free Ende" << std::endl;
       return Result<void>::success();
     }
 
@@ -1089,7 +1087,6 @@ std::cout << "TrackTip: " << result.trackTip << std::endl;
                        << "varianceTheta = " << interaction.varianceTheta
                        << ", "
                        << "varianceQoverP = " << interaction.varianceQoverP);
-
           // Update the state and stepper with material effects
           interaction.updateState(state, stepper);
         }
@@ -1193,6 +1190,9 @@ std::cout << "TrackTip: " << result.trackTip << std::endl;
 			 result.currentFreeMeasurements = collectCandidates(measurementsInCurrentVolume->second);
 			 calculateAllDistancesToMeasurement(state, stepper, result.currentFreeMeasurements);
 			 sortFreeInputMeasurements(result.currentFreeMeasurements);
+std::cout << "CurrentFreeMeasurements: " << std::endl;
+for(const auto& cfm : result.currentFreeMeasurements)
+	std::cout << cfm.distance << ", " << cfm.position.transpose() << ", " << stepper.position(state.stepping).transpose() << std::endl;
 			 while(!result.currentFreeMeasurements.empty() && result.currentFreeMeasurements[0].distance < 0.)
 			 {
 				result.currentFreeMeasurements.erase(result.currentFreeMeasurements.begin()); 
@@ -1267,7 +1267,7 @@ std::cout << "TrackTip: " << result.trackTip << std::endl;
 	auto plane = Plane(direction, candidate.position);
   
 	// Store intersection distance and source link
-	candidate.distance = -1. * plane.signedDistance(position);
+	candidate.distance = -1. * state.stepping.navDir * plane.signedDistance(position);
   }
   
     /// Pointer to a logger that is owned by the parent, KalmanFilter

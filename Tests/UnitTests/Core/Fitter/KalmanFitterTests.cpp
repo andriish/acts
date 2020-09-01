@@ -327,6 +327,7 @@ struct MinimalOutlierFinder {
     // The p-Value
     double pValue = 1 - boost::math::cdf(chiDist, chi2);
     // If pValue is NOT significant enough => outlier
+std::cout << "pValue: " << pValue << " " << measurementSignificanceCutoff << " " << chi2 << std::endl;
     return pValue > measurementSignificanceCutoff ? false : true;
   }
 };
@@ -347,7 +348,7 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
 
   // Use straingt line stepper to create the measurements
   //~ StraightLineStepper mStepper;
-  ConstantBField bField(Vector3D(0., 0.1_T, 0.));
+  ConstantBField bField(Vector3D(0., 0._T, 0.));
   using RecoStepper = EigenStepper<ConstantBField>;
   RecoStepper mStepper(bField);
   RecoStepper rStepper(bField);
@@ -358,12 +359,13 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
 
   // Build propagator for the measurement creation
   MeasurementPropagator mPropagator(mStepper, mNavigator);
-  Vector3D mPos(-3_m, 0., 0.), mMom(10_GeV, 0., 0);
+  Vector3D mPos(-3_m, 0., 0.), mMom(1_GeV, 0., 0);
   SingleCurvilinearTrackParameters<ChargedPolicy> mStart(std::nullopt, mPos,
                                                          mMom, 1._e, 42_ns);
 
   // Create action list for the measurement creation
   using MeasurementActions = ActionList<MeasurementCreator, MaterialScattering, DebugOutput>;
+  //~ using MeasurementActions = ActionList<MeasurementCreator, DebugOutput>;
   using MeasurementAborters = AbortList<EndOfWorldReached>;
 
   auto pixelResX = Resolution(eLOC_0, 25_um);
@@ -450,9 +452,9 @@ std::transform(freeMeasurements.begin(), freeMeasurements.end(),
   //~ Vector3D rMom(1_GeV, 0.025_GeV * gauss(generator),
                 //~ 0.025_GeV * gauss(generator));
   Vector3D rPos(-3_m, 10_um, 100_um);
-  Vector3D rMom(10_GeV, 0.25_GeV, 0.25_GeV);
+  Vector3D rMom(1_GeV, 0.025_GeV, 0.025_GeV);
 
-  SingleCurvilinearTrackParameters<ChargedPolicy> rStart(cov, rPos, rMom, 1.,
+  SingleCurvilinearTrackParameters<ChargedPolicy> rStart(cov, rPos, rMom, 1._e,
                                                          42._ns);
 
   const Surface* rSurface = &rStart.referenceSurface();
