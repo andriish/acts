@@ -299,6 +299,9 @@ class KalmanFitter {
 	  updateFreeMeasurementCandidates(state, stepper, result);
 	  if(!result.currentFreeMeasurements.empty())
 	  {
+std::cout << "CurrentFreeMeasurements: " << std::endl;
+for(const auto& cfm : result.currentFreeMeasurements)
+	std::cout << cfm.distance << ", " << cfm.position.transpose() << ", " << stepper.position(state.stepping).transpose() << std::endl;
 		  if(std::abs(result.currentFreeMeasurements[0].distance) < state.stepping.tolerance)
 		  {
 			  // filter
@@ -461,9 +464,11 @@ class KalmanFitter {
       // sensitive surface
       state.navigation = typename propagator_t::NavigatorState();
       result.fittedStates.applyBackwards(result.trackTip, [&](auto st) {
+std::cout << "Index: " << st.index() << " " << st.typeFlags().test(Acts::TrackStateFlag::MeasurementFlag) << std::endl;
         if (st.typeFlags().test(Acts::TrackStateFlag::MeasurementFlag)) {
           const Surface* startSurface =
               dynamic_cast<const Surface*>(&st.referenceObject());
+std::cout << "StartSurface: " << startSurface << " " << st.pathLength() << " " << st.index() << std::endl;
           if (startSurface != nullptr) {
             // Set the navigation state
             state.navigation.startSurface = startSurface;
@@ -490,12 +495,32 @@ class KalmanFitter {
             // Update material effects for last measurement state in backward
             // direction
             materialInteractor(state.navigation.currentSurface, state, stepper);
+               
+          } else {
+			const Volume* startVolume = dynamic_cast<const Volume*>(&st.referenceObject());
+			// Set the navigation state
+            state.navigation.startVolume = startVolume;
+            state.navigation.startSurface = nullptr;
+            
+            state.navigation.targetSurface = targetSurface;
+            state.navigation.currentSurface = state.navigation.startSurface;
+            state.navigation.currentVolume = state.navigation.startVolume;
 
-            return false;  // abort execution
-          }
+            // Update the stepping state
+            stepper.resetState(state.stepping, st.freeFiltered(),
+                               FreeMatrix(st.freeFilteredCovariance()), backward,
+                               state.options.maxStepSize);
+
+            // For the last measurement state, smoothed is filtered
+            st.freeSmoothed() = st.freeFiltered();
+            st.freeSmoothedCovariance() = st.freeFilteredCovariance();
+            result.passedAgainObject.push_back(startVolume);
+		  }
+		  return false;  // abort execution
         }
         return true;  // continue execution
       });
+std::cout << "Finished reverse" << std::endl;
     }
 
     /// @brief Kalman actor operation : update
@@ -509,6 +534,7 @@ class KalmanFitter {
       // Try to find the surface in the measurement surfaces
       auto sourcelink_it = boundInputMeasurements.find(surface);
       if (sourcelink_it != boundInputMeasurements.end()) {
+std::cout << "Filter bound" << std::endl;
         // Screen output message
         ACTS_VERBOSE("Measurement surface " << surface->geoID()
                                             << " detected.");
@@ -716,6 +742,7 @@ class KalmanFitter {
         // Update state and stepper with material effects
         materialInteractor(surface, state, stepper, fullUpdate);
       }
+std::cout << "TrackTip: " << result.trackTip << std::endl;
       return Result<void>::success();
     }
 
@@ -725,7 +752,7 @@ class KalmanFitter {
     /// @param stepper The stepper in use
     /// @param result The mutable result state object
     Result<void> filter(State& state, const KalmanStepper& stepper, result_type& result) const {
-		
+std::cout << "Filter free" << std::endl;		
 	  const source_link_t& sourceLink = *result.currentFreeMeasurements[0].sourceLink;
 
 		auto [freeParams, jacobian, pathLength] = stepper.freeState(state.stepping);
@@ -807,6 +834,7 @@ class KalmanFitter {
         }
         // We count the processed state
         ++result.processedStates;
+std::cout << "TrackTip: " << result.trackTip << std::endl;
       return Result<void>::success();
     }
     

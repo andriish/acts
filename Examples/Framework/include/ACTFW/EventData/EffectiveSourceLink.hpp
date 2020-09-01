@@ -38,7 +38,6 @@ class EffectiveSourceLink {
   EffectiveSourceLink(const EffectiveSourceLink&) = default;
   EffectiveSourceLink& operator=(EffectiveSourceLink&&) = default;
   EffectiveSourceLink& operator=(const EffectiveSourceLink&) = default;
-  ~EffectiveSourceLink() { if(m_meas != nullptr) delete(m_meas); }
 
   using MeasurementType = std::variant<Acts::Measurement<EffectiveSourceLink, Acts::BoundParametersIndices, Acts::BoundParametersIndices::eLOC_0>,
 						  Acts::Measurement<EffectiveSourceLink, Acts::BoundParametersIndices,Acts::BoundParametersIndices::eLOC_0, Acts::BoundParametersIndices::eLOC_1>, 
@@ -76,9 +75,7 @@ class EffectiveSourceLink {
   size_t m_dim = 0u;
 	 Acts::GeometryID m_geometryId;
 	 const Acts::GeometryObject* m_referenceObject;
-	 MeasurementType* m_meas;
 	 const ActsFatras::Hit* m_truthHit;
-  
 
   friend constexpr bool operator==(const EffectiveSourceLink& lhs,
                                    const EffectiveSourceLink& rhs) {

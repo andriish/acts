@@ -183,9 +183,9 @@ struct MeasurementCreator {
     }
     if(!surface && state.navigation.currentVolume)
     {
-		const double resX = 50_um;
+		const double resX = 200_um;
 		const double resY = 200_um;
-		const double resZ = 100_um;
+		const double resZ = 200_um;
 		SymMatrix3D cov;
 		cov << resX * resX, 0, 0,
 			   0, resY * resY, 0,
@@ -347,7 +347,7 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
 
   // Use straingt line stepper to create the measurements
   //~ StraightLineStepper mStepper;
-  ConstantBField bField(Vector3D(0., 0.5_T, 0.));
+  ConstantBField bField(Vector3D(0., 0.1_T, 0.));
   using RecoStepper = EigenStepper<ConstantBField>;
   RecoStepper mStepper(bField);
   RecoStepper rStepper(bField);
@@ -480,17 +480,17 @@ std::cout << "Num Measurements: " << sourcelinks.size() << " " << freeSourcelink
   auto params = fittedTrack.fittedParameters;
   BOOST_CHECK(params.has_value());
 std::cout << "Parameters: " << params->parameters().transpose() << std::endl;
-std::cout << "Covariance: " << *params->covariance() << std::endl;
+std::cout << "Covariance:\n" << *params->covariance() << std::endl;
 
   auto fitRes2 = kFitter.fit<Updater, Smoother, MeasurementCalibrator>(sourcelinks, rStart, kfOptions, {});
 BOOST_CHECK(fitRes2.ok());
   auto& fittedTrack2 = *fitRes2;
   auto params2 = fittedTrack2.fittedParameters;
   std::cout << "Parameters: " << params2->parameters().transpose() << std::endl;
-std::cout << "Covariance: " << *params2->covariance() << std::endl;
+std::cout << "Covariance:\n" << *params2->covariance() << std::endl;
 
 std::cout << "Truth Parameters: " << mStart.parameters().transpose() << std::endl;
-std::cout << "Truth Covariance: " << *mStart.covariance() << std::endl;
+std::cout << "Truth Covariance:\n" << *mStart.covariance() << std::endl;
 
   //~ auto state = fittedTrack.fittedStates.getTrackState(fittedTrack.trackTip);
   //~ std::cout << state.hasBoundFiltered() << " " << state.hasFreeFiltered() << std::endl;

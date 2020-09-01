@@ -87,14 +87,12 @@ FW::ProcessCode FW::FittingAlgorithm::execute(
                                   << hitIndex);
         return ProcessCode::ABORT;
       }
-std::cout << "FA5.5 " << std::endl;
-std::cout << Acts::MeasurementHelpers::getSize(**sourceLink) << std::endl;
       if(Acts::MeasurementHelpers::getSize(**sourceLink) == 3)
 		freeTrackSourceLinks.push_back(*sourceLink);
 	  else
 		trackSourceLinks.push_back(*sourceLink);
     }
-std::cout << "FA6" << std::endl;
+
     // Set the KalmanFitter options
     Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> kfOptions(
         ctx.geoContext, ctx.magFieldContext, ctx.calibContext,
@@ -103,6 +101,7 @@ std::cout << "FA6" << std::endl;
 
     ACTS_DEBUG("Invoke fitter");
     auto result = m_cfg.fit(trackSourceLinks, initialParams, kfOptions, freeTrackSourceLinks);
+std::cout << "KF done" << std::endl;
     if (result.ok()) {
       // Get the fit output object
       const auto& fitOutput = result.value();
