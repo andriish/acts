@@ -551,7 +551,6 @@ std::cout << "operator():  " << state.navigation.navigationBreak << ", " << step
       // Try to find the surface in the measurement surfaces
       auto sourcelink_it = boundInputMeasurements.find(surface);
       if (sourcelink_it != boundInputMeasurements.end()) {
-std::cout << "Filter bound" << std::endl;
         // Screen output message
         ACTS_VERBOSE("Measurement surface " << surface->geoID()
                                             << " detected.");
@@ -759,7 +758,6 @@ std::cout << "Filter bound" << std::endl;
         // Update state and stepper with material effects
         materialInteractor(surface, state, stepper, fullUpdate);
       }
-std::cout << "TrackTip: " << result.trackTip << std::endl;
       return Result<void>::success();
     }
 
@@ -769,7 +767,6 @@ std::cout << "TrackTip: " << result.trackTip << std::endl;
     /// @param stepper The stepper in use
     /// @param result The mutable result state object
     Result<void> filter(State& state, const KalmanStepper& stepper, result_type& result) const {
-std::cout << "Filter free" << std::endl;		
 	  const source_link_t& sourceLink = *result.currentFreeMeasurements[0].sourceLink;
 
 		auto [freeParams, jacobian, pathLength] = stepper.freeState(state.stepping);
@@ -851,7 +848,6 @@ std::cout << "Filter free" << std::endl;
         }
         // We count the processed state
         ++result.processedStates;
-std::cout << "TrackTip: " << result.trackTip << std::endl;
       return Result<void>::success();
     }
     
@@ -868,7 +864,6 @@ std::cout << "TrackTip: " << result.trackTip << std::endl;
       // Try to find the surface in the measurement surfaces
       auto sourcelink_it = boundInputMeasurements.find(surface);
       if (sourcelink_it != boundInputMeasurements.end()) {
-std::cout << "Backwards bound" << std::endl;
         // Screen output message
         ACTS_VERBOSE("Measurement surface "
                      << surface->geoID()
@@ -961,7 +956,6 @@ std::cout << "Backwards bound" << std::endl;
           // Update state and stepper with post material effects
           materialInteractor(surface, state, stepper, postUpdate);
         }
-std::cout << "Backwards bound Ende" << std::endl;
       } else if (surface->surfaceMaterial() != nullptr) {
         // Transport covariance
         if (surface->associatedDetectorElement() != nullptr) {
@@ -992,7 +986,6 @@ std::cout << "Backwards bound Ende" << std::endl;
     Result<void> backwardFilter(State& state,
                                 const KalmanStepper& stepper,
                                 result_type& result) const {
-std::cout << "Backwards free" << std::endl;									
 	const source_link_t& sourceLink = *result.currentFreeMeasurements[0].sourceLink;
 
 		auto [freeParams, jacobian, pathLength] = stepper.freeState(state.stepping);
@@ -1066,7 +1059,6 @@ std::cout << "Backwards free" << std::endl;
                 trackStateProxy.freeFiltered(),
                 FreeSymMatrix(trackStateProxy.freeFilteredCovariance()));
         }
-std::cout << "Backwards free Ende" << std::endl;
       return Result<void>::success();
     }
 
