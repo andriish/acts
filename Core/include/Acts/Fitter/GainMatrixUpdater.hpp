@@ -184,7 +184,7 @@ private:
 				   ((cov_t::Identity() - H * K) * calibrated_covariance).inverse() *
 				   residual)
 					  .value();
-
+// TODO: If a direction component was changed, a normalisation is required
 			  ACTS_VERBOSE("Chi2: " << trackState.chi2());
 			  return true;  // continue execution
 			});

@@ -244,7 +244,7 @@ class Navigator {
     debugLog(state, [&] { return std::string("Entering navigator::status."); });
 
     // (a) Pre-stepping call from propgator
-    if (not state.navigation.startVolume or not state.navigation.startSurface) {
+    if (not state.navigation.startVolume) {
       // Initialize and return
       initialize(state, stepper);
       return;

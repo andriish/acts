@@ -293,7 +293,7 @@ class KalmanFitter {
         // been processed
         result.reset = false;
       }
-
+std::cout << "operator():  " << state.navigation.navigationBreak << ", " << stepper.position(state.stepping).transpose() << std::endl;
       // Update:
       // - Collect current free measurements
 	  updateFreeMeasurementCandidates(state, stepper, result);
@@ -386,7 +386,7 @@ class KalmanFitter {
           }
         }
       }
-
+      
       // Post-finalization:
       // - Progress to target/reference surface and built the final track
       // parameters
@@ -461,11 +461,9 @@ class KalmanFitter {
       // sensitive surface
       state.navigation = typename propagator_t::NavigatorState();
       result.fittedStates.applyBackwards(result.trackTip, [&](auto st) {
-std::cout << "Index: " << st.index() << " " << st.typeFlags().test(Acts::TrackStateFlag::MeasurementFlag) << std::endl;
         if (st.typeFlags().test(Acts::TrackStateFlag::MeasurementFlag)) {
           const Surface* startSurface =
               dynamic_cast<const Surface*>(&st.referenceObject());
-std::cout << "StartSurface: " << startSurface << " " << st.pathLength() << " " << st.index() << std::endl;
           if (startSurface != nullptr) {
             // Set the navigation state
             state.navigation.startSurface = startSurface;
@@ -492,33 +490,54 @@ std::cout << "StartSurface: " << startSurface << " " << st.pathLength() << " " <
             // Update material effects for last measurement state in backward
             // direction
             materialInteractor(state.navigation.currentSurface, state, stepper);
-            return false;  // abort execution
-		}   
-          //~ } else {
-			//~ const Volume* startVolume = dynamic_cast<const Volume*>(&st.referenceObject());
-			//~ // Set the navigation state
-            //~ state.navigation.startVolume = (TrackingVolume*) startVolume;
-            //~ state.navigation.startSurface = nullptr;
+          } else {
+			const Volume* startVolume = dynamic_cast<const Volume*>(&st.referenceObject());
+			// Set the navigation state
+            state.navigation.startVolume = (TrackingVolume*) startVolume;
+            state.navigation.startSurface = nullptr;
+            state.navigation.startLayer =
+				state.navigation.startVolume->associatedLayer(
+                state.geoContext, stepper.position(state.stepping));
+                
+            state.navigation.targetSurface = targetSurface;
+            state.navigation.currentSurface = state.navigation.startSurface;
+            state.navigation.currentVolume = state.navigation.startVolume;
             
-            //~ state.navigation.targetSurface = targetSurface;
-            //~ state.navigation.currentSurface = state.navigation.startSurface;
-            //~ state.navigation.currentVolume = state.navigation.startVolume;
+            // Update the stepping state
+            stepper.resetState(state.stepping, st.freeFiltered(),
+                               FreeMatrix(st.freeFilteredCovariance()), backward,
+                               state.options.maxStepSize);
 
-            //~ // Update the stepping state
-            //~ stepper.resetState(state.stepping, st.freeFiltered(),
-                               //~ FreeMatrix(st.freeFilteredCovariance()), backward,
-                               //~ state.options.maxStepSize);
-
-            //~ // For the last measurement state, smoothed is filtered
-            //~ st.freeSmoothed() = st.freeFiltered();
-            //~ st.freeSmoothedCovariance() = st.freeFilteredCovariance();
-            //~ result.passedAgainObject.push_back(startVolume);
-		  //~ }
-		  //~ return false;  // abort execution
+            // For the last measurement state, smoothed is filtered
+            st.freeSmoothed() = st.freeFiltered();
+            st.freeSmoothedCovariance() = st.freeFilteredCovariance();
+            result.passedAgainObject.push_back(startVolume);
+            
+              updateFreeMeasurementCandidates(state, stepper, result);
+			  if(!result.currentFreeMeasurements.empty())
+			  {
+				  if(std::abs(result.currentFreeMeasurements[0].distance) < state.stepping.tolerance)
+				  {
+					result.currentFreeMeasurements.erase(result.currentFreeMeasurements.begin());
+					  if(!result.currentFreeMeasurements.empty())
+					  {
+						  calculateDistanceToMeasurement(state, stepper, result.currentFreeMeasurements[0]);
+						  stepper.setStepSize(state.stepping, result.currentFreeMeasurements[0].distance * state.stepping.navDir, ConstrainedStep::user);
+					  }
+					  else
+						  state.stepping.stepSize.release(ConstrainedStep::user);
+				  }
+				  else
+				  {
+					  // This shouldn't happen - the starting point should be within the tolerance
+					  stepper.setStepSize(state.stepping, result.currentFreeMeasurements[0].distance * state.stepping.navDir, ConstrainedStep::user);
+				  }
+			  }
+		  }
+		  return false;  // abort execution
         }
         return true;  // continue execution
       });
-std::cout << "Finished reverse" << std::endl;
     }
 
     /// @brief Kalman actor operation : update
@@ -1190,9 +1209,6 @@ std::cout << "Backwards free Ende" << std::endl;
 			 result.currentFreeMeasurements = collectCandidates(measurementsInCurrentVolume->second);
 			 calculateAllDistancesToMeasurement(state, stepper, result.currentFreeMeasurements);
 			 sortFreeInputMeasurements(result.currentFreeMeasurements);
-std::cout << "CurrentFreeMeasurements: " << std::endl;
-for(const auto& cfm : result.currentFreeMeasurements)
-	std::cout << cfm.distance << ", " << cfm.position.transpose() << ", " << stepper.position(state.stepping).transpose() << std::endl;
 			 while(!result.currentFreeMeasurements.empty() && result.currentFreeMeasurements[0].distance < 0.)
 			 {
 				result.currentFreeMeasurements.erase(result.currentFreeMeasurements.begin()); 
