@@ -51,7 +51,7 @@ FW::ProcessCode FW::HitSmearing::execute(const AlgorithmContext& ctx) const {
   // setup input and output containers
   const auto& hits =
       ctx.eventStore.get<SimHitContainer>(m_cfg.inputSimulatedHits);
-std::cout << "HS called" << std::endl;
+
   EffectiveSourceLinkContainer sourceLinks;
   sourceLinks.reserve(hits.size());
 
@@ -72,7 +72,7 @@ std::cout << "HS called" << std::endl;
   covGlob(Acts::eFreePos0, Acts::eFreePos0) = m_cfg.sigmaGlob0 * m_cfg.sigmaGlob0;
   covGlob(Acts::eFreePos1, Acts::eFreePos1) = m_cfg.sigmaGlob1 * m_cfg.sigmaGlob1;
   covGlob(Acts::eFreePos2, Acts::eFreePos2) = m_cfg.sigmaGlob2 * m_cfg.sigmaGlob2;
-std::cout << "HS called 1" << std::endl;	
+
   for (auto&& [moduleGeoId, moduleHits] : groupByModule(hits)) {
     // check if we should create hits for this surface
     const auto is = m_surfaces.find(moduleGeoId);
@@ -80,10 +80,8 @@ std::cout << "HS called 1" << std::endl;
 		const Acts::TrackingVolume* trVol = m_cfg.trackingGeometry->lowestTrackingVolume(ctx.geoContext, moduleHits.begin()->position()); // TODO: Association by geoId
 		if(trVol != nullptr)
 		{
-std::cout << "HS called 1.5" << std::endl;	
 			const Acts::Volume* vol = static_cast<const Acts::Volume*>(trVol);
 			for (const auto& hit : moduleHits) {
-std::cout << "HS called 1.75" << std::endl;	
 			  // smear truth to create local measurement
 			  Acts::BoundVector glob = Acts::BoundVector::Zero();
 			  glob[Acts::eFreePos0] = hit.position()[Acts::eFreePos0] + m_cfg.sigmaGlob0 * stdNormal(rng);
@@ -106,7 +104,6 @@ std::cout << "HS called 1.75" << std::endl;
 		}
       continue;
     }
-std::cout << "HS called 2" << std::endl;	
     // smear all truth hits for this module
     const Acts::Surface* surface = is->second;
     for (const auto& hit : moduleHits) {
@@ -134,7 +131,6 @@ std::cout << "HS called 2" << std::endl;
           hitParticlesMap.end(), hitIndex, hit.particleId());
     }
   }
-std::cout << "HS called 3" << std::endl;	
   ctx.eventStore.add(m_cfg.outputHitParticlesMap, std::move(hitParticlesMap));
   ctx.eventStore.add(m_cfg.outputSourceLinks, std::move(sourceLinks));
   return ProcessCode::SUCCESS;
