@@ -123,18 +123,18 @@ FW::setupReconTruth(
   sequencer.addWriter(
       std::make_shared<FW::RootEffectiveTrajectoryWriter>(trackWriter, logLevel));
 
-  // write reconstruction performance data
-  FW::TrackFinderPerformanceWriter::Config perfFinder;
-  perfFinder.inputParticles       = inputParticles;
-  perfFinder.inputHitParticlesMap = hitSmearingCfg.outputHitParticlesMap;
-  perfFinder.inputProtoTracks     = trackFinderCfg.outputProtoTracks;
-  perfFinder.outputDir            = outputDir;
-  sequencer.addWriter(
-      std::make_shared<FW::TrackFinderPerformanceWriter>(perfFinder, logLevel));
-  FW::TrackFitterPerformanceWriter::Config perfFitter;
-  perfFitter.inputParticles    = inputParticles;
-  perfFitter.inputTrajectories = fitter.outputTrajectories;
-  perfFitter.outputDir         = outputDir;
-  sequencer.addWriter(
-      std::make_shared<FW::TrackFitterPerformanceWriter>(perfFitter, logLevel));
+  //~ // write reconstruction performance data
+  //~ FW::TrackFinderPerformanceWriter::Config perfFinder;
+  //~ perfFinder.inputParticles       = inputParticles;
+  //~ perfFinder.inputHitParticlesMap = hitSmearingCfg.outputHitParticlesMap;
+  //~ perfFinder.inputProtoTracks     = trackFinderCfg.outputProtoTracks;
+  //~ perfFinder.outputDir            = outputDir;
+  //~ sequencer.addWriter(
+      //~ std::make_shared<FW::TrackFinderPerformanceWriter>(perfFinder, logLevel));
+  //~ FW::TrackFitterPerformanceWriter::Config perfFitter;
+  //~ perfFitter.inputParticles    = inputParticles;
+  //~ perfFitter.inputTrajectories = fitter.outputTrajectories;
+  //~ perfFitter.outputDir         = outputDir;
+  //~ sequencer.addWriter(
+      //~ std::make_shared<FW::TrackFitterPerformanceWriter>(perfFitter, logLevel));
 }

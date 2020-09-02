@@ -347,7 +347,7 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
 
   // Use straingt line stepper to create the measurements
   //~ StraightLineStepper mStepper;
-  ConstantBField bField(Vector3D(0., 0._T, 0.));
+  ConstantBField bField(Vector3D(0., 0.5_T, 0.));
   using RecoStepper = EigenStepper<ConstantBField>;
   RecoStepper mStepper(bField);
   RecoStepper rStepper(bField);
@@ -453,7 +453,7 @@ std::transform(freeMeasurements.begin(), freeMeasurements.end(),
   //~ Vector3D rPos(-3_m, 10_um, 100_um);
   //~ Vector3D rMom(1_GeV, 0.025_GeV, 0.025_GeV);
   Vector3D rPos(-3_m, 0_um, 0_um);
-  Vector3D rMom(1_GeV, 0.0_GeV, 0.0_GeV);
+  Vector3D rMom(1_GeV, 0.025_GeV, 0.025_GeV);
 
   SingleCurvilinearTrackParameters<ChargedPolicy> rStart(cov, rPos, rMom, 1._e,
                                                          42._ns);

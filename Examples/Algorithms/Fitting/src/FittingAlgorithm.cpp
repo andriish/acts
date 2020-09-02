@@ -101,7 +101,7 @@ FW::ProcessCode FW::FittingAlgorithm::execute(
 
     ACTS_DEBUG("Invoke fitter");
     auto result = m_cfg.fit(trackSourceLinks, initialParams, kfOptions, freeTrackSourceLinks);
-std::cout << "KF done" << std::endl;
+
     if (result.ok()) {
       // Get the fit output object
       const auto& fitOutput = result.value();

@@ -78,7 +78,7 @@ FW::RootEffectiveTrajectoryWriter::RootEffectiveTrajectoryWriter(
     m_outputTree->Branch("t_phi", &m_t_phi);
     m_outputTree->Branch("t_eta", &m_t_eta);
     m_outputTree->Branch("t_pT", &m_t_pT);
-
+  
     m_outputTree->Branch("t_x", &m_t_x);
     m_outputTree->Branch("t_y", &m_t_y);
     m_outputTree->Branch("t_z", &m_t_z);
@@ -92,7 +92,7 @@ FW::RootEffectiveTrajectoryWriter::RootEffectiveTrajectoryWriter(
     m_outputTree->Branch("t_eTHETA", &m_t_eTHETA);
     m_outputTree->Branch("t_eQOP", &m_t_eQOP);
     m_outputTree->Branch("t_eT", &m_t_eT);
-
+  
     m_outputTree->Branch("nStates", &m_nStates);
     m_outputTree->Branch("nMeasurements", &m_nMeasurements);
     m_outputTree->Branch("volume_id", &m_volumeID);
@@ -105,12 +105,15 @@ FW::RootEffectiveTrajectoryWriter::RootEffectiveTrajectoryWriter(
     m_outputTree->Branch("g_z_hit", &m_z_hit);
     m_outputTree->Branch("res_x_hit", &m_res_x_hit);
     m_outputTree->Branch("res_y_hit", &m_res_y_hit);
+    m_outputTree->Branch("res_z_hit", &m_res_z_hit);
     m_outputTree->Branch("err_x_hit", &m_err_x_hit);
     m_outputTree->Branch("err_y_hit", &m_err_y_hit);
+    m_outputTree->Branch("err_z_hit", &m_err_z_hit);
     m_outputTree->Branch("pull_x_hit", &m_pull_x_hit);
     m_outputTree->Branch("pull_y_hit", &m_pull_y_hit);
+    m_outputTree->Branch("pull_z_hit", &m_pull_z_hit);
     m_outputTree->Branch("dim_hit", &m_dim_hit);
-
+  
     m_outputTree->Branch("hasFittedParams", &m_hasFittedParams);
     m_outputTree->Branch("eLOC0_fit", &m_eLOC0_fit);
     m_outputTree->Branch("eLOC1_fit", &m_eLOC1_fit);
@@ -124,31 +127,55 @@ FW::RootEffectiveTrajectoryWriter::RootEffectiveTrajectoryWriter(
     m_outputTree->Branch("err_eTHETA_fit", &m_err_eTHETA_fit);
     m_outputTree->Branch("err_eQOP_fit", &m_err_eQOP_fit);
     m_outputTree->Branch("err_eT_fit", &m_err_eT_fit);
-
+  
     m_outputTree->Branch("nPredicted", &m_nPredicted);
     m_outputTree->Branch("predicted", &m_prt);
     m_outputTree->Branch("eLOC0_prt", &m_eLOC0_prt);
     m_outputTree->Branch("eLOC1_prt", &m_eLOC1_prt);
     m_outputTree->Branch("ePHI_prt", &m_ePHI_prt);
     m_outputTree->Branch("eTHETA_prt", &m_eTHETA_prt);
+    m_outputTree->Branch("ePos0_prt", &m_ePos0_prt);
+    m_outputTree->Branch("ePos1_prt", &m_ePos1_prt);
+    m_outputTree->Branch("ePos2_prt", &m_ePos2_prt);
+    m_outputTree->Branch("eDir0_prt", &m_eDir0_prt);
+    m_outputTree->Branch("eDir1_prt", &m_eDir1_prt);
+    m_outputTree->Branch("eDir2_prt", &m_eDir2_prt);
     m_outputTree->Branch("eQOP_prt", &m_eQOP_prt);
     m_outputTree->Branch("eT_prt", &m_eT_prt);
     m_outputTree->Branch("res_eLOC0_prt", &m_res_eLOC0_prt);
     m_outputTree->Branch("res_eLOC1_prt", &m_res_eLOC1_prt);
     m_outputTree->Branch("res_ePHI_prt", &m_res_ePHI_prt);
     m_outputTree->Branch("res_eTHETA_prt", &m_res_eTHETA_prt);
+    m_outputTree->Branch("res_ePos0_prt", &m_res_ePos0_prt);
+    m_outputTree->Branch("res_ePos1_prt", &m_res_ePos1_prt);
+    m_outputTree->Branch("res_ePos2_prt", &m_res_ePos2_prt);
+    m_outputTree->Branch("res_eDir0_prt", &m_res_eDir0_prt);
+    m_outputTree->Branch("res_eDir1_prt", &m_res_eDir1_prt);
+    m_outputTree->Branch("res_eDir2_prt", &m_res_eDir2_prt);
     m_outputTree->Branch("res_eQOP_prt", &m_res_eQOP_prt);
     m_outputTree->Branch("res_eT_prt", &m_res_eT_prt);
     m_outputTree->Branch("err_eLOC0_prt", &m_err_eLOC0_prt);
     m_outputTree->Branch("err_eLOC1_prt", &m_err_eLOC1_prt);
     m_outputTree->Branch("err_ePHI_prt", &m_err_ePHI_prt);
     m_outputTree->Branch("err_eTHETA_prt", &m_err_eTHETA_prt);
+    m_outputTree->Branch("err_ePos0_prt", &m_err_ePos0_prt);
+    m_outputTree->Branch("err_ePos1_prt", &m_err_ePos1_prt);
+    m_outputTree->Branch("err_ePos2_prt", &m_err_ePos2_prt);
+    m_outputTree->Branch("err_eDir0_prt", &m_err_eDir0_prt);
+    m_outputTree->Branch("err_eDir1_prt", &m_err_eDir1_prt);
+    m_outputTree->Branch("err_eDir2_prt", &m_err_eDir2_prt);
     m_outputTree->Branch("err_eQOP_prt", &m_err_eQOP_prt);
     m_outputTree->Branch("err_eT_prt", &m_err_eT_prt);
     m_outputTree->Branch("pull_eLOC0_prt", &m_pull_eLOC0_prt);
     m_outputTree->Branch("pull_eLOC1_prt", &m_pull_eLOC1_prt);
     m_outputTree->Branch("pull_ePHI_prt", &m_pull_ePHI_prt);
     m_outputTree->Branch("pull_eTHETA_prt", &m_pull_eTHETA_prt);
+    m_outputTree->Branch("pull_ePos0_prt", &m_pull_ePos0_prt);
+    m_outputTree->Branch("pull_ePos1_prt", &m_pull_ePos1_prt);
+    m_outputTree->Branch("pull_ePos2_prt", &m_pull_ePos2_prt);
+    m_outputTree->Branch("pull_eDir0_prt", &m_pull_eDir0_prt);
+    m_outputTree->Branch("pull_eDir1_prt", &m_pull_eDir1_prt);
+    m_outputTree->Branch("pull_eDir2_prt", &m_pull_eDir2_prt);
     m_outputTree->Branch("pull_eQOP_prt", &m_pull_eQOP_prt);
     m_outputTree->Branch("pull_eT_prt", &m_pull_eT_prt);
     m_outputTree->Branch("g_x_prt", &m_x_prt);
@@ -159,31 +186,55 @@ FW::RootEffectiveTrajectoryWriter::RootEffectiveTrajectoryWriter(
     m_outputTree->Branch("pz_prt", &m_pz_prt);
     m_outputTree->Branch("eta_prt", &m_eta_prt);
     m_outputTree->Branch("pT_prt", &m_pT_prt);
-
+  
     m_outputTree->Branch("nFiltered", &m_nFiltered);
     m_outputTree->Branch("filtered", &m_flt);
     m_outputTree->Branch("eLOC0_flt", &m_eLOC0_flt);
     m_outputTree->Branch("eLOC1_flt", &m_eLOC1_flt);
     m_outputTree->Branch("ePHI_flt", &m_ePHI_flt);
     m_outputTree->Branch("eTHETA_flt", &m_eTHETA_flt);
+    m_outputTree->Branch("ePos0_flt", &m_ePos0_flt);
+    m_outputTree->Branch("ePos1_flt", &m_ePos1_flt);
+    m_outputTree->Branch("ePos2_flt", &m_ePos2_flt);
+    m_outputTree->Branch("eDir0_flt", &m_eDir0_flt);
+    m_outputTree->Branch("eDir1_flt", &m_eDir1_flt);
+    m_outputTree->Branch("eDir2_flt", &m_eDir2_flt);
     m_outputTree->Branch("eQOP_flt", &m_eQOP_flt);
     m_outputTree->Branch("eT_flt", &m_eT_flt);
     m_outputTree->Branch("res_eLOC0_flt", &m_res_eLOC0_flt);
     m_outputTree->Branch("res_eLOC1_flt", &m_res_eLOC1_flt);
     m_outputTree->Branch("res_ePHI_flt", &m_res_ePHI_flt);
     m_outputTree->Branch("res_eTHETA_flt", &m_res_eTHETA_flt);
+    m_outputTree->Branch("res_ePos0_flt", &m_res_ePos0_flt);
+    m_outputTree->Branch("res_ePos1_flt", &m_res_ePos1_flt);
+    m_outputTree->Branch("res_ePos2_flt", &m_res_ePos2_flt);
+    m_outputTree->Branch("res_eDir0_flt", &m_res_eDir0_flt);
+    m_outputTree->Branch("res_eDir1_flt", &m_res_eDir1_flt);
+    m_outputTree->Branch("res_eDir2_flt", &m_res_eDir2_flt);
     m_outputTree->Branch("res_eQOP_flt", &m_res_eQOP_flt);
     m_outputTree->Branch("res_eT_flt", &m_res_eT_flt);
     m_outputTree->Branch("err_eLOC0_flt", &m_err_eLOC0_flt);
     m_outputTree->Branch("err_eLOC1_flt", &m_err_eLOC1_flt);
     m_outputTree->Branch("err_ePHI_flt", &m_err_ePHI_flt);
     m_outputTree->Branch("err_eTHETA_flt", &m_err_eTHETA_flt);
+    m_outputTree->Branch("err_ePos0_flt", &m_err_ePos0_flt);
+    m_outputTree->Branch("err_ePos1_flt", &m_err_ePos1_flt);
+    m_outputTree->Branch("err_ePos2_flt", &m_err_ePos2_flt);
+    m_outputTree->Branch("err_eDir0_flt", &m_err_eDir0_flt);
+    m_outputTree->Branch("err_eDir1_flt", &m_err_eDir1_flt);
+    m_outputTree->Branch("err_eDir2_flt", &m_err_eDir2_flt);
     m_outputTree->Branch("err_eQOP_flt", &m_err_eQOP_flt);
     m_outputTree->Branch("err_eT_flt", &m_err_eT_flt);
     m_outputTree->Branch("pull_eLOC0_flt", &m_pull_eLOC0_flt);
     m_outputTree->Branch("pull_eLOC1_flt", &m_pull_eLOC1_flt);
     m_outputTree->Branch("pull_ePHI_flt", &m_pull_ePHI_flt);
     m_outputTree->Branch("pull_eTHETA_flt", &m_pull_eTHETA_flt);
+    m_outputTree->Branch("pull_ePos0_flt", &m_pull_ePos0_flt);
+    m_outputTree->Branch("pull_ePos1_flt", &m_pull_ePos1_flt);
+    m_outputTree->Branch("pull_ePos2_flt", &m_pull_ePos2_flt);
+    m_outputTree->Branch("pull_eDir0_flt", &m_pull_eDir0_flt);
+    m_outputTree->Branch("pull_eDir1_flt", &m_pull_eDir1_flt);
+    m_outputTree->Branch("pull_eDir2_flt", &m_pull_eDir2_flt);
     m_outputTree->Branch("pull_eQOP_flt", &m_pull_eQOP_flt);
     m_outputTree->Branch("pull_eT_flt", &m_pull_eT_flt);
     m_outputTree->Branch("g_x_flt", &m_x_flt);
@@ -195,31 +246,55 @@ FW::RootEffectiveTrajectoryWriter::RootEffectiveTrajectoryWriter(
     m_outputTree->Branch("eta_flt", &m_eta_flt);
     m_outputTree->Branch("pT_flt", &m_pT_flt);
     m_outputTree->Branch("chi2", &m_chi2);
-
+  
     m_outputTree->Branch("nSmoothed", &m_nSmoothed);
     m_outputTree->Branch("smoothed", &m_smt);
     m_outputTree->Branch("eLOC0_smt", &m_eLOC0_smt);
     m_outputTree->Branch("eLOC1_smt", &m_eLOC1_smt);
     m_outputTree->Branch("ePHI_smt", &m_ePHI_smt);
     m_outputTree->Branch("eTHETA_smt", &m_eTHETA_smt);
+    m_outputTree->Branch("ePos0_smt", &m_ePos0_smt);
+    m_outputTree->Branch("ePos1_smt", &m_ePos1_smt);
+    m_outputTree->Branch("ePos2_smt", &m_ePos2_smt);
+    m_outputTree->Branch("eDir0_smt", &m_eDir0_smt);
+    m_outputTree->Branch("eDir1_smt", &m_eDir1_smt);
+    m_outputTree->Branch("eDir2_smt", &m_eDir2_smt);
     m_outputTree->Branch("eQOP_smt", &m_eQOP_smt);
     m_outputTree->Branch("eT_smt", &m_eT_smt);
     m_outputTree->Branch("res_eLOC0_smt", &m_res_eLOC0_smt);
     m_outputTree->Branch("res_eLOC1_smt", &m_res_eLOC1_smt);
     m_outputTree->Branch("res_ePHI_smt", &m_res_ePHI_smt);
     m_outputTree->Branch("res_eTHETA_smt", &m_res_eTHETA_smt);
+    m_outputTree->Branch("res_ePos0_smt", &m_res_ePos0_smt);
+    m_outputTree->Branch("res_ePos1_smt", &m_res_ePos1_smt);
+    m_outputTree->Branch("res_ePos2_smt", &m_res_ePos2_smt);
+    m_outputTree->Branch("res_eDir0_smt", &m_res_eDir0_smt);
+    m_outputTree->Branch("res_eDir1_smt", &m_res_eDir1_smt);
+    m_outputTree->Branch("res_eDir2_smt", &m_res_eDir2_smt);
     m_outputTree->Branch("res_eQOP_smt", &m_res_eQOP_smt);
     m_outputTree->Branch("res_eT_smt", &m_res_eT_smt);
     m_outputTree->Branch("err_eLOC0_smt", &m_err_eLOC0_smt);
     m_outputTree->Branch("err_eLOC1_smt", &m_err_eLOC1_smt);
     m_outputTree->Branch("err_ePHI_smt", &m_err_ePHI_smt);
     m_outputTree->Branch("err_eTHETA_smt", &m_err_eTHETA_smt);
+    m_outputTree->Branch("err_ePos0_smt", &m_err_ePos0_smt);
+    m_outputTree->Branch("err_ePos1_smt", &m_err_ePos1_smt);
+    m_outputTree->Branch("err_ePos2_smt", &m_err_ePos2_smt);
+    m_outputTree->Branch("err_eDir0_smt", &m_err_eDir0_smt);
+    m_outputTree->Branch("err_eDir1_smt", &m_err_eDir1_smt);
+    m_outputTree->Branch("err_eDir2_smt", &m_err_eDir2_smt);
     m_outputTree->Branch("err_eQOP_smt", &m_err_eQOP_smt);
     m_outputTree->Branch("err_eT_smt", &m_err_eT_smt);
     m_outputTree->Branch("pull_eLOC0_smt", &m_pull_eLOC0_smt);
     m_outputTree->Branch("pull_eLOC1_smt", &m_pull_eLOC1_smt);
     m_outputTree->Branch("pull_ePHI_smt", &m_pull_ePHI_smt);
     m_outputTree->Branch("pull_eTHETA_smt", &m_pull_eTHETA_smt);
+    m_outputTree->Branch("pull_ePos0_smt", &m_pull_ePos0_smt);
+    m_outputTree->Branch("pull_ePos1_smt", &m_pull_ePos1_smt);
+    m_outputTree->Branch("pull_ePos2_smt", &m_pull_ePos2_smt);
+    m_outputTree->Branch("pull_eDir0_smt", &m_pull_eDir0_smt);
+    m_outputTree->Branch("pull_eDir1_smt", &m_pull_eDir1_smt);
+    m_outputTree->Branch("pull_eDir2_smt", &m_pull_eDir2_smt);
     m_outputTree->Branch("pull_eQOP_smt", &m_pull_eQOP_smt);
     m_outputTree->Branch("pull_eT_smt", &m_pull_eT_smt);
     m_outputTree->Branch("g_x_smt", &m_x_smt);
@@ -229,7 +304,7 @@ FW::RootEffectiveTrajectoryWriter::RootEffectiveTrajectoryWriter(
     m_outputTree->Branch("py_smt", &m_py_smt);
     m_outputTree->Branch("pz_smt", &m_pz_smt);
     m_outputTree->Branch("eta_smt", &m_eta_smt);
-    m_outputTree->Branch("pT_smt", &m_pT_smt);
+    m_outputTree->Branch("pT_smt", &m_pT_smt);  
   }
 }
 

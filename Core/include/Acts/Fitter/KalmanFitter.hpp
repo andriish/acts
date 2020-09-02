@@ -293,7 +293,7 @@ class KalmanFitter {
         // been processed
         result.reset = false;
       }
-std::cout << "operator():  " << state.navigation.navigationBreak << ", " << stepper.position(state.stepping).transpose() << std::endl;
+
       // Update:
       // - Collect current free measurements
 	  updateFreeMeasurementCandidates(state, stepper, result);
