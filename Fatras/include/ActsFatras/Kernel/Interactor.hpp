@@ -126,7 +126,7 @@ struct Interactor {
 							  stepper.time(state.stepping))
 				.setDirection(stepper.direction(state.stepping))
 				.setAbsMomentum(stepper.momentum(state.stepping));
-			
+//~ std::cout << "Interactor: " << part.position4().transpose() << std::endl;			
 			result.particle = part;	
 			result.hits.emplace_back(
 			  state.navigation.currentVolume->geoID(), part.particleId(),

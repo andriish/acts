@@ -78,7 +78,7 @@ FW::ProcessCode FW::HitSmearing::execute(const AlgorithmContext& ctx) const {
     const auto is = m_surfaces.find(moduleGeoId);
     if (is == m_surfaces.end()) {
 		const Acts::TrackingVolume* trVol = m_cfg.trackingGeometry->lowestTrackingVolume(ctx.geoContext, moduleHits.begin()->position()); // TODO: Association by geoId
-		if(trVol != nullptr)
+		if(trVol != nullptr && trVol->volumeName().find("TPC") != std::string::npos)
 		{
 			const Acts::Volume* vol = static_cast<const Acts::Volume*>(trVol);
 			for (const auto& hit : moduleHits) {
@@ -87,7 +87,7 @@ FW::ProcessCode FW::HitSmearing::execute(const AlgorithmContext& ctx) const {
 			  glob[Acts::eFreePos0] = hit.position()[Acts::eFreePos0] + m_cfg.sigmaGlob0 * stdNormal(rng);
 			  glob[Acts::eFreePos1] = hit.position()[Acts::eFreePos1] + m_cfg.sigmaGlob1 * stdNormal(rng);
 			  glob[Acts::eFreePos2] = hit.position()[Acts::eFreePos2] + m_cfg.sigmaGlob2 * stdNormal(rng);
-
+//~ std::cout << "Truth/SmearedHits: " << hit.position().transpose() << " | " << glob.transpose() << std::endl;
 			  // create source link at the end of the container
 			  auto it = sourceLinks.emplace_hint(sourceLinks.end(), *vol, hit, 3,
 												 glob, covGlob);

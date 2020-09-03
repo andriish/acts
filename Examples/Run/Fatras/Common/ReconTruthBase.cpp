@@ -63,9 +63,9 @@ FW::setupReconTruth(
   hitSmearingCfg.outputHitParticlesMap = "hit_particles_map";
   hitSmearingCfg.sigmaLoc0             = 25_um;
   hitSmearingCfg.sigmaLoc1             = 100_um;
-  hitSmearingCfg.sigmaGlob0             = 200_um;
-  hitSmearingCfg.sigmaGlob1             = 200_um;
-  hitSmearingCfg.sigmaGlob2             = 200_um;
+  hitSmearingCfg.sigmaGlob0             = 100_um;
+  hitSmearingCfg.sigmaGlob1             = 100_um;
+  hitSmearingCfg.sigmaGlob2             = 100_um;
   hitSmearingCfg.randomNumbers         = rnd;
   hitSmearingCfg.trackingGeometry      = trackingGeometry;
   sequencer.addAlgorithm(
