@@ -135,6 +135,10 @@ struct Interactor {
 		}
 		return;
     }
+    
+    if(state.navigation.currentVolume && state.navigation.currentVolume->volumeName().find("TPC") != std::string::npos)
+		return;
+		
     const Acts::Surface &surface = *state.navigation.currentSurface;
 
     // avoid having a clumsy `initialized` flag by reconstructing the particle
