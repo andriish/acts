@@ -104,6 +104,7 @@ FW::ProcessCode FW::HitSmearing::execute(const AlgorithmContext& ctx) const {
 		}
       continue;
     }
+    
     // smear all truth hits for this module
     const Acts::Surface* surface = is->second;
     for (const auto& hit : moduleHits) {

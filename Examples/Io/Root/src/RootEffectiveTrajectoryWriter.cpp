@@ -592,7 +592,8 @@ std::cout << "Pull Pos0 Bound Prt: " << state.index() << ", " << freePosition.x(
     << " (" << (parameters[Acts::eBoundLoc0] - truthLOC0) << " " << (parameters[Acts::eBoundLoc1] - truthLOC1) <<
     " | " << (parameters[Acts::eBoundLoc0] - meas->parameters()[Acts::eBoundLoc0]) << " " << (parameters[Acts::eBoundLoc1] - meas->parameters()[Acts::eBoundLoc1])
     << ") : " << parameters[Acts::eBoundLoc0] - truthLOC0 << " | " 
-	<< sqrt(covariance(Acts::eBoundLoc0, Acts::eBoundLoc0)) << " | " << m_pull_eLOC0_prt.back() << std::endl;
+	<< sqrt(covariance(Acts::eBoundLoc0, Acts::eBoundLoc0)) << ", " << sqrt(covariance(Acts::eBoundLoc1, Acts::eBoundLoc1))
+	<< " | " << m_pull_eLOC0_prt.back() << std::endl;
 		  } else {
 			// push default values if no predicted parameter
 			m_res_x_hit.push_back(-99.);
@@ -709,11 +710,11 @@ std::cout << "Pull Pos0 Bound Prt: " << state.index() << ", " << freePosition.x(
 			m_pT_flt.push_back(perp(freeMomentum));
 			m_eta_flt.push_back(eta(freePosition));
 			m_chi2.push_back(state.chi2());
-std::cout << "Pull Pos0 Bound Flt: " << state.index() << ", " << freePosition.x() << " " << freePosition.y() << " " << freePosition.z()
-    << " (" << (parameters[Acts::eBoundLoc0] - truthLOC0) << " " << (parameters[Acts::eBoundLoc1] - truthLOC1) <<
-    " | " << (parameters[Acts::eBoundLoc0] - meas->parameters()[Acts::eBoundLoc0]) << " " << (parameters[Acts::eBoundLoc1] - meas->parameters()[Acts::eBoundLoc1])
-    << ") : " << parameters[Acts::eBoundLoc0] - truthLOC0 << " | " 
-	<< sqrt(covariance(Acts::eBoundLoc0, Acts::eBoundLoc0)) << " | " << m_pull_eLOC0_flt.back() << std::endl;
+//~ std::cout << "Pull Pos0 Bound Flt: " << state.index() << ", " << freePosition.x() << " " << freePosition.y() << " " << freePosition.z()
+    //~ << " (" << (parameters[Acts::eBoundLoc0] - truthLOC0) << " " << (parameters[Acts::eBoundLoc1] - truthLOC1) <<
+    //~ " | " << (parameters[Acts::eBoundLoc0] - meas->parameters()[Acts::eBoundLoc0]) << " " << (parameters[Acts::eBoundLoc1] - meas->parameters()[Acts::eBoundLoc1])
+    //~ << ") : " << parameters[Acts::eBoundLoc0] - truthLOC0 << " | " 
+	//~ << sqrt(covariance(Acts::eBoundLoc0, Acts::eBoundLoc0)) << " | " << m_pull_eLOC0_flt.back() << std::endl;
 		  } else {
 			// push default values if no filtered parameter
 			m_eLOC0_flt.push_back(-99.);
@@ -989,7 +990,7 @@ std::cout << "Pull Pos0 Bound Flt: " << state.index() << ", " << freePosition.x(
 
 			// predicted parameter pull
 			m_pull_ePos0_prt.push_back((parameters[Acts::eFreePos0] - truthHit.position().x())/
-				sqrt(covariance(Acts::eFreePos0, Acts::eFreePos0)));
+				sqrt(10. * covariance(Acts::eFreePos0, Acts::eFreePos0)));
 			m_pull_ePos1_prt.push_back((parameters[Acts::eFreePos1] - truthHit.position().y())/
 				sqrt(covariance(Acts::eFreePos1, Acts::eFreePos1)));
 			m_pull_ePos2_prt.push_back((parameters[Acts::eFreePos2] - truthHit.position().z())/
@@ -999,7 +1000,8 @@ std::cout << "Pull Pos0 Free Prt: " << state.index() << ", " << parameters[Acts:
     << " (" << (parameters[Acts::eFreePos0] - truthHit.position().x()) << " " << (parameters[Acts::eFreePos1] - truthHit.position().y()) << " " << (parameters[Acts::eFreePos2] - truthHit.position().z())
     << " | " << (parameters[Acts::eFreePos0] - meas->parameters().x()) << " " << (parameters[Acts::eFreePos1] - meas->parameters().y()) << " " << (parameters[Acts::eFreePos2] - meas->parameters().z())
     << ") : " << parameters[Acts::eFreePos0] - truthHit.position().x() << " | " 
-	<< sqrt(covariance(Acts::eFreePos0, Acts::eFreePos0)) << " | " << m_pull_ePos0_prt.back() << std::endl;
+	<< sqrt(covariance(Acts::eFreePos0, Acts::eFreePos0)) << ", " << sqrt(covariance(Acts::eFreePos1, Acts::eFreePos1)) << ", " << sqrt(covariance(Acts::eFreePos2, Acts::eFreePos2))
+	<< " | " << m_pull_ePos0_prt.back() << std::endl;
 //~ if(std::abs(m_pull_ePos0_prt.back()) < 1)
 //~ std::cout << "Pull Pos0 Small: " << state.index() << ", " << parameters[Acts::eFreePos0] << " " << parameters[Acts::eFreePos1] << " " << parameters[Acts::eFreePos2]
     //~ << " (" << (parameters[Acts::eFreePos0] - truthHit.position().x()) << " " << (parameters[Acts::eFreePos1] - truthHit.position().y()) << " " << (parameters[Acts::eFreePos2] - truthHit.position().z())
@@ -1152,11 +1154,11 @@ std::cout << "Pull Pos0 Free Prt: " << state.index() << ", " << parameters[Acts:
 				sqrt(covariance(Acts::eFreeDir2, Acts::eFreeDir2)));
 			m_pull_eQOP_flt.push_back((parameters[Acts::eFreeQOverP] - m_t_charge / truthHit.momentum4Before().template head<3>().norm())/
 				sqrt(covariance(Acts::eFreeQOverP, Acts::eFreeQOverP)));
-std::cout << "Pull Pos0 Free Flt: " << state.index() << ", " << parameters[Acts::eFreePos0] << " " << parameters[Acts::eFreePos1] << " " << parameters[Acts::eFreePos2]
-    << " (" << (parameters[Acts::eFreePos0] - truthHit.position().x()) << " " << (parameters[Acts::eFreePos1] - truthHit.position().y()) << " " << (parameters[Acts::eFreePos2] - truthHit.position().z())
-    << " | " << (parameters[Acts::eFreePos0] - meas->parameters().x()) << " " << (parameters[Acts::eFreePos1] - meas->parameters().y()) << " " << (parameters[Acts::eFreePos2] - meas->parameters().z())
-    << ") : " << parameters[Acts::eFreePos0] - truthHit.position().x() << " | " 
-	<< sqrt(covariance(Acts::eFreePos0, Acts::eFreePos0)) << " | " << m_pull_ePos0_flt.back() << std::endl;
+//~ std::cout << "Pull Pos0 Free Flt: " << state.index() << ", " << parameters[Acts::eFreePos0] << " " << parameters[Acts::eFreePos1] << " " << parameters[Acts::eFreePos2]
+    //~ << " (" << (parameters[Acts::eFreePos0] - truthHit.position().x()) << " " << (parameters[Acts::eFreePos1] - truthHit.position().y()) << " " << (parameters[Acts::eFreePos2] - truthHit.position().z())
+    //~ << " | " << (parameters[Acts::eFreePos0] - meas->parameters().x()) << " " << (parameters[Acts::eFreePos1] - meas->parameters().y()) << " " << (parameters[Acts::eFreePos2] - meas->parameters().z())
+    //~ << ") : " << parameters[Acts::eFreePos0] - truthHit.position().x() << " | " 
+	//~ << sqrt(covariance(Acts::eFreePos0, Acts::eFreePos0)) << " | " << m_pull_ePos0_flt.back() << std::endl;
 				
 			m_chi2.push_back(state.chi2());
 		  } else {
