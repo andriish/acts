@@ -471,9 +471,6 @@ void covarianceTransport(
       // Store The global and bound jacobian (duplication for the moment)
       jacobian = jacFull;
     } else {
-	  //~ FreeSymMatrix covTmp = FreeSymMatrix(backup * std::get<BoundSymMatrix>(covarianceMatrix) * backup.transpose());
-	  //~ covTmp(0, 0) += 400.;
-	  //~ covarianceMatrix = FreeSymMatrix(transportJacobian * covTmp * transportJacobian.transpose());
       covarianceMatrix =
           FreeSymMatrix((*jacobianLocalToGlobal) *
                         std::get<BoundSymMatrix>(covarianceMatrix) *

@@ -163,7 +163,7 @@ struct Interactor {
       // TODO what to do in case of invalid return value?
       surface.globalToLocal(state.geoContext, before.position(),
                             before.unitDirection(), local);
-      Acts::MaterialProperties slab =
+      Acts::MaterialProperties slab = 
           surface.surfaceMaterial()->materialProperties(local);
 
       // again: no valid material -> no interaction

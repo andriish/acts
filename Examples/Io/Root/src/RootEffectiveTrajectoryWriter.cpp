@@ -941,8 +941,8 @@ std::cout << "Pull Pos0 Bound Prt: " << state.index() << ", " << freePosition.x(
 
 		  // get the predicted parameter
 		  bool predicted = false;
-		  if (state.hasFreePredicted()) {
-		  //~ if (state.hasFreePredicted() && state.hasJacobianBoundToFree()) {
+		  //~ if (state.hasFreePredicted()) {
+		  if (state.hasFreePredicted() && state.hasJacobianBoundToFree()) {
 			predicted = true;
 			m_nPredicted++;
 			auto parameters = state.freePredicted();
@@ -972,12 +972,12 @@ const auto mc = mc1 + mc2;
 			
 			//~ residual = eVec * (parameters.template segment<3>(Acts::eFreePos0) - truthHit.position());
 			//~ resCov = eVal;
-			residual = eVec * (mc - truthHit.position());
+			residual = eVec.inverse() * (mc - truthHit.position());
 			resCov = eVal;
 std::cout << "mc: " << mc1.transpose() << " | " << mc2.transpose() << " | " << mc.transpose() << std::endl;
 std::cout << "truth: " << truthHit.position().transpose() << " | " << (mc - truthHit.position()).transpose() << " | " << (eVec * (mc - truthHit.position())).transpose()
 	<< " | " << (eVec.inverse() * (mc - truthHit.position())).transpose() << std::endl;
-//~ std::cout << "sigmac:\n" << sigmac << std::endl;		
+std::cout << "sigmac:\n" << sigmac << std::endl;		
 std::cout << "eVal:\n" << eVal << std::endl << sqrt(eVal(0, 0)) << " | " << sqrt(eVal(1, 1)) << " | " << sqrt(eVal(2, 2)) << std::endl;		
 			m_res_x_hit.push_back(residual(Acts::eFreePos0));
 			m_res_y_hit.push_back(residual(Acts::eFreePos1));
@@ -1112,13 +1112,13 @@ std::cout << "Pull Pos0 Free Prt: " << state.index() << ", " << parameters[Acts:
 			m_err_eDir1_prt.push_back(-99);
 			m_err_eDir2_prt.push_back(-99);
 			m_err_eQOP_prt.push_back(-99);
-			m_pull_ePos0_prt.push_back(-99.);
-			m_pull_ePos1_prt.push_back(-99.);
-			m_pull_ePos2_prt.push_back(-99.);
+			//~ m_pull_ePos0_prt.push_back(-99.);
+			//~ m_pull_ePos1_prt.push_back(-99.);
+			//~ m_pull_ePos2_prt.push_back(-99.);
 			m_pull_eT_prt.push_back(-99.);
-			m_pull_eDir0_prt.push_back(-99.);
-			m_pull_eDir1_prt.push_back(-99.);
-			m_pull_eDir2_prt.push_back(-99.);
+			//~ m_pull_eDir0_prt.push_back(-99.);
+			//~ m_pull_eDir1_prt.push_back(-99.);
+			//~ m_pull_eDir2_prt.push_back(-99.);
 			m_pull_eQOP_prt.push_back(-99.);
 			m_x_prt.push_back(-99.);
 			m_y_prt.push_back(-99.);
@@ -1132,25 +1132,37 @@ std::cout << "Pull Pos0 Free Prt: " << state.index() << ", " << parameters[Acts:
 
 		  // get the filtered parameter
 		  bool filtered = false;
-		  if (state.hasFreeFiltered()) {
+		  //~ if (state.hasFreeFiltered()) {
+		  if (state.hasFreeFiltered() && state.hasJacobianBoundToFree()) {
 			filtered = true;
 			m_nFiltered++;
 			auto parameters = state.freeFiltered();
 			auto covariance = state.freeFilteredCovariance();
 			// local hit residual info
 			auto H = meas->projector();
+const auto covInv = cov.inverse();			
+Acts::ActsSymMatrixD<3> covPrt = H * covariance * H.transpose();
+const auto covInvPrt = covPrt.inverse();
+Acts::ActsSymMatrixD<3> sigmac = (covInv + covInvPrt).inverse();
+const auto measParams = meas->parameters();
+const auto mc1 = sigmac * covInv * measParams;
+const auto mc2 = sigmac * covInvPrt * parameters.template segment<3>(Acts::eFreePos0);
+const auto mc = mc1 + mc2;
 			Acts::ActsSymMatrixD<3> resCov = cov + H * covariance * H.transpose();
 			auto residual = meas->residual(parameters);
-			
-			//~ auto residual = parameters.template segment<3>(Acts::eFreePos0) - truthHit.position();
-			Eigen::EigenSolver<Acts::ActsSymMatrixD<3>> es(resCov);
+
+
+			Eigen::EigenSolver<Acts::ActsSymMatrixD<3>> es(sigmac);
 			Acts::ActsSymMatrixD<3> eVal = Eigen::Matrix3cd(es.eigenvalues().asDiagonal()).real();
 			auto eVec = es.eigenvectors().real();
-			eVec = eVec.colwise().normalized();
-			
-			residual = eVec * (parameters.template segment<3>(Acts::eFreePos0) - truthHit.position());
+
+			residual = eVec.inverse() * (mc - truthHit.position());
 			resCov = eVal;
-			
+//~ std::cout << "mc: " << mc1.transpose() << " | " << mc2.transpose() << " | " << mc.transpose() << std::endl;
+//~ std::cout << "truth: " << truthHit.position().transpose() << " | " << (mc - truthHit.position()).transpose() << " | " << (eVec * (mc - truthHit.position())).transpose()
+	//~ << " | " << (eVec.inverse() * (mc - truthHit.position())).transpose() << std::endl;
+//~ std::cout << "sigmac:\n" << sigmac << std::endl;		
+//~ std::cout << "eVal:\n" << eVal << std::endl << sqrt(eVal(0, 0)) << " | " << sqrt(eVal(1, 1)) << " | " << sqrt(eVal(2, 2)) << std::endl;			
 			// Filtered parameter
 			m_ePos0_flt.push_back(parameters[Acts::eFreePos0]);
 			m_ePos1_flt.push_back(parameters[Acts::eFreePos1]);
@@ -1225,11 +1237,11 @@ std::cout << "Pull Pos0 Free Prt: " << state.index() << ", " << parameters[Acts:
 				sqrt(covariance(Acts::eFreeDir2, Acts::eFreeDir2)));
 			m_pull_eQOP_flt.push_back((parameters[Acts::eFreeQOverP] - m_t_charge / truthHit.momentum4Before().template head<3>().norm())/
 				sqrt(covariance(Acts::eFreeQOverP, Acts::eFreeQOverP)));
-//~ std::cout << "Pull Pos0 Free Flt: " << state.index() << ", " << parameters[Acts::eFreePos0] << " " << parameters[Acts::eFreePos1] << " " << parameters[Acts::eFreePos2]
-    //~ << " (" << (parameters[Acts::eFreePos0] - truthHit.position().x()) << " " << (parameters[Acts::eFreePos1] - truthHit.position().y()) << " " << (parameters[Acts::eFreePos2] - truthHit.position().z())
-    //~ << " | " << (parameters[Acts::eFreePos0] - meas->parameters().x()) << " " << (parameters[Acts::eFreePos1] - meas->parameters().y()) << " " << (parameters[Acts::eFreePos2] - meas->parameters().z())
-    //~ << ") : " << parameters[Acts::eFreePos0] - truthHit.position().x() << " | " 
-	//~ << sqrt(covariance(Acts::eFreePos0, Acts::eFreePos0)) << " | " << m_pull_ePos0_flt.back() << std::endl;
+std::cout << "Pull Pos0 Free Flt: " << state.index() << ", " << parameters[Acts::eFreePos0] << " " << parameters[Acts::eFreePos1] << " " << parameters[Acts::eFreePos2]
+    << " (" << (parameters[Acts::eFreePos0] - truthHit.position().x()) << " " << (parameters[Acts::eFreePos1] - truthHit.position().y()) << " " << (parameters[Acts::eFreePos2] - truthHit.position().z())
+    << " | " << (parameters[Acts::eFreePos0] - meas->parameters().x()) << " " << (parameters[Acts::eFreePos1] - meas->parameters().y()) << " " << (parameters[Acts::eFreePos2] - meas->parameters().z())
+    << ") : " << parameters[Acts::eFreePos0] - truthHit.position().x() << " | " 
+	<< sqrt(covariance(Acts::eFreePos0, Acts::eFreePos0)) << " | " << m_pull_ePos0_flt.back() << std::endl;
 				
 			m_chi2.push_back(state.chi2());
 		  } else {
@@ -1258,13 +1270,13 @@ std::cout << "Pull Pos0 Free Prt: " << state.index() << ", " << parameters[Acts:
 			m_err_eDir1_flt.push_back(-99);
 			m_err_eDir2_flt.push_back(-99);
 			m_err_eQOP_flt.push_back(-99);
-			m_pull_ePos0_flt.push_back(-99.);
-			m_pull_ePos1_flt.push_back(-99.);
-			m_pull_ePos2_flt.push_back(-99.);
+			//~ m_pull_ePos0_flt.push_back(-99.);
+			//~ m_pull_ePos1_flt.push_back(-99.);
+			//~ m_pull_ePos2_flt.push_back(-99.);
 			m_pull_eT_flt.push_back(-99.);
-			m_pull_eDir0_flt.push_back(-99.);
-			m_pull_eDir1_flt.push_back(-99.);
-			m_pull_eDir2_flt.push_back(-99.);
+			//~ m_pull_eDir0_flt.push_back(-99.);
+			//~ m_pull_eDir1_flt.push_back(-99.);
+			//~ m_pull_eDir2_flt.push_back(-99.);
 			m_pull_eQOP_flt.push_back(-99.);
 			m_x_flt.push_back(-99.);
 			m_y_flt.push_back(-99.);
@@ -1286,16 +1298,23 @@ std::cout << "Pull Pos0 Free Prt: " << state.index() << ", " << parameters[Acts:
 			auto covariance = state.freeSmoothedCovariance();
 			// local hit residual info
 			auto H = meas->projector();
+const auto covInv = cov.inverse();			
+Acts::ActsSymMatrixD<3> covPrt = H * covariance * H.transpose();
+const auto covInvPrt = covPrt.inverse();
+Acts::ActsSymMatrixD<3> sigmac = (covInv + covInvPrt).inverse();
+const auto measParams = meas->parameters();
+const auto mc1 = sigmac * covInv * measParams;
+const auto mc2 = sigmac * covInvPrt * parameters.template segment<3>(Acts::eFreePos0);
+const auto mc = mc1 + mc2;
 			Acts::ActsSymMatrixD<3> resCov = cov + H * covariance * H.transpose();
 			auto residual = meas->residual(parameters);
-			
-			//~ auto residual = parameters.template segment<3>(Acts::eFreePos0) - truthHit.position();
-			Eigen::EigenSolver<Acts::ActsSymMatrixD<3>> es(resCov);
+
+
+			Eigen::EigenSolver<Acts::ActsSymMatrixD<3>> es(sigmac);
 			Acts::ActsSymMatrixD<3> eVal = Eigen::Matrix3cd(es.eigenvalues().asDiagonal()).real();
 			auto eVec = es.eigenvectors().real();
-			eVec = eVec.colwise().normalized();
-			
-			residual = eVec * (parameters.template segment<3>(Acts::eFreePos0) - truthHit.position());
+
+			residual = eVec.inverse() * (mc - truthHit.position());
 			resCov = eVal;
 			
 			// Smoothed parameter
@@ -1355,11 +1374,9 @@ std::cout << "Pull Pos0 Free Prt: " << state.index() << ", " << parameters[Acts:
 				//~ sqrt(covariance(Acts::eFreePos1, Acts::eFreePos1)));
 			//~ m_pull_ePos2_smt.push_back((parameters[Acts::eFreePos2] - truthHit.position().z())/
 				//~ sqrt(covariance(Acts::eFreePos2, Acts::eFreePos2)));
-			if(std::abs((residual.x())/ sqrt(resCov(Acts::eFreePos0, Acts::eFreePos0))) < 100)
-				m_pull_ePos0_smt.push_back((residual.x())/
+			m_pull_ePos0_smt.push_back((residual.x())/
 					sqrt(resCov(Acts::eFreePos0, Acts::eFreePos0)));
-			if(std::abs((residual.y())/ sqrt(resCov(Acts::eFreePos1, Acts::eFreePos1))) < 100)
-				m_pull_ePos1_smt.push_back((residual.y())/
+			m_pull_ePos1_smt.push_back((residual.y())/
 					sqrt(resCov(Acts::eFreePos1, Acts::eFreePos1)));
 			m_pull_ePos2_smt.push_back((residual.z())/
 				sqrt(resCov(Acts::eFreePos2, Acts::eFreePos2)));
