@@ -531,6 +531,7 @@ auto Acts::RiddersPropagator<propagator_t>::calculateCovariance(
     jac.col(i) = fitLinear(derivatives[i], deviations);
   }
   FreeMatrix jacobian = jac * anglesToDirectionsJacobian(direction);
+
   return FreeSymMatrix(jacobian * std::get<Acts::FreeSymMatrix>(startCov) *
                        jacobian.transpose());
 }

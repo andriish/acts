@@ -153,7 +153,15 @@ private:
 					  .template topLeftCorner<measdim, parameter_size_t>();
 
 			  ACTS_VERBOSE("Measurement projector H:\n" << H);
-
+			  if constexpr (parameter_size_t == 8 && measdim == 3)
+			  {
+				  Vector3D dir = predicted.template segment<3>(eFreeDir0);
+				  ActsSymMatrixD<3> dirMat = dir * dir.transpose();
+				  ActsSymMatrixD<3> dirMat2 = dirMat + predictedCovariance.template block<3, 3>(eFreeDir0, eFreeDir0);
+				  double v = calibrated_covariance.diagonal().sum();
+				  predictedCovariance = predictedCovariance + H.transpose() * Tv * dirMat2 * H;
+			  }
+			  
 			  const ActsMatrixD<parameter_size_t, measdim> K =
 				  predictedCovariance * H.transpose() *
 				  (H * predictedCovariance * H.transpose() + calibrated_covariance)

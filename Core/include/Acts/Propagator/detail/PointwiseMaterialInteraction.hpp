@@ -98,7 +98,6 @@ struct PointwiseMaterialInteraction {
     } else if (surface == state.navigation.targetSurface) {
       updateStage = preUpdate;
     }
-
     // Retrieve the material properties
     slab =
         state.navigation.currentSurface->surfaceMaterial()->materialProperties(

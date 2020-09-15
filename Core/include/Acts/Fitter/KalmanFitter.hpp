@@ -299,7 +299,7 @@ class KalmanFitter {
 	  updateFreeMeasurementCandidates(state, stepper, result);
 	  if(!result.currentFreeMeasurements.empty())
 	  {
-		  if(std::abs(result.currentFreeMeasurements[0].distance) < state.stepping.tolerance)
+		  if(std::abs(result.currentFreeMeasurements[0].distance) < 1e-10)//state.stepping.tolerance)
 		  {
 			  // filter
 			  if (state.stepping.navDir == forward and not result.smoothed and
@@ -1276,6 +1276,7 @@ class KalmanFitter {
   
 	// Store intersection distance and source link
 	candidate.distance = -1. * state.stepping.navDir * plane.signedDistance(position);
+	candidate.distance = candidate.position.x() - position.x();
   }
   
     /// Pointer to a logger that is owned by the parent, KalmanFilter

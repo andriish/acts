@@ -332,7 +332,6 @@ auto covariance_curvilinear(const Propagator_type& propagator,
   const auto result =
       propagator.template propagate<end_parameters_t>(start, options).value();
   const auto& tp = result.endParameters;
-
   return *(tp->covariance());
 }
 

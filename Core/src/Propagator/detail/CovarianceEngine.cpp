@@ -454,6 +454,7 @@ void covarianceTransport(
     bool toLocal) {
   // Test if we started on a surface
   if (jacobianLocalToGlobal.has_value()) {
+//~ auto backup = *jacobianLocalToGlobal;
     jacobianLocalToGlobal = transportJacobian * (*jacobianLocalToGlobal);
 
     // Test if we went to a surface
@@ -470,6 +471,9 @@ void covarianceTransport(
       // Store The global and bound jacobian (duplication for the moment)
       jacobian = jacFull;
     } else {
+	  //~ FreeSymMatrix covTmp = FreeSymMatrix(backup * std::get<BoundSymMatrix>(covarianceMatrix) * backup.transpose());
+	  //~ covTmp(0, 0) += 400.;
+	  //~ covarianceMatrix = FreeSymMatrix(transportJacobian * covTmp * transportJacobian.transpose());
       covarianceMatrix =
           FreeSymMatrix((*jacobianLocalToGlobal) *
                         std::get<BoundSymMatrix>(covarianceMatrix) *

@@ -897,9 +897,9 @@ BOOST_DATA_TEST_CASE(covariance_transport_to_free,
                      pT, phi, theta, charge, plimit, rand1, rand2, rand3) {
   (void)rand3;
   // define start parameters
-  double x = 1.;
-  double y = 0.;
-  double z = 0.;
+  double x = 1;
+  double y = 0;
+  double z = 0;
   double px = pT * cos(phi);
   double py = pT * sin(phi);
   double pz = pT / tan(theta);
@@ -915,8 +915,8 @@ BOOST_DATA_TEST_CASE(covariance_transport_to_free,
     // take some major correlations (off-diagonals)
     // clang-format off
     cov <<
-     10_mm, 0, 0.123, 0, 0.5, 0,
-     0, 10_mm, 0, 0.162, 0, 0,
+     10_um, 0, 0.123, 0, 0.5, 0,
+     0, 10_um, 0, 0.162, 0, 0,
      0.123, 0, 0.1, 0, 0, 0,
      0, 0.162, 0, 0.1, 0, 0,
      0.5, 0, 0, 0, 1_e / 10_GeV, 0,
@@ -966,12 +966,13 @@ BOOST_DATA_TEST_CASE(covariance_transport_to_free,
         }
       }
     CHECK_CLOSE_COVARIANCE(covObtained, covCalculated, 1e-3);
-
     // covariance check for eigen stepper
-    covObtained = covariance_curvilinear<FreeTrackParameters>(epropagator,
-                                                              startCC, plimit);
     covCalculated = covariance_curvilinear<FreeTrackParameters>(
         repropagator, startCC, plimit);
+        
+    covObtained = covariance_curvilinear<FreeTrackParameters>(epropagator,
+                                                              startCC, plimit);
+
 
     // Numerical fluctuations in the covariances cause errors in relative
     // comparison. This needs to be tested and avoided by setting both entries

@@ -63,9 +63,9 @@ FW::setupReconTruth(
   hitSmearingCfg.outputHitParticlesMap = "hit_particles_map";
   hitSmearingCfg.sigmaLoc0             = 25_um;
   hitSmearingCfg.sigmaLoc1             = 100_um;
-  hitSmearingCfg.sigmaGlob0             = 100_um;
-  hitSmearingCfg.sigmaGlob1             = 100_um;
-  hitSmearingCfg.sigmaGlob2             = 100_um;
+  hitSmearingCfg.sigmaGlob0             = 175_um;
+  hitSmearingCfg.sigmaGlob1             = 175_um;
+  hitSmearingCfg.sigmaGlob2             = 750_um;
   hitSmearingCfg.randomNumbers         = rnd;
   hitSmearingCfg.trackingGeometry      = trackingGeometry;
   sequencer.addAlgorithm(
@@ -96,7 +96,7 @@ FW::setupReconTruth(
   particleSmearingCfg.sigmaZ0PtB = 0.3 / 1_GeV;
   particleSmearingCfg.sigmaPhi   = 1_degree;
   particleSmearingCfg.sigmaTheta = 1_degree;
-  particleSmearingCfg.sigmaPRel  = 0.01;
+  particleSmearingCfg.sigmaPRel  = 0.2; //0.01;
   particleSmearingCfg.sigmaT0    = 1_ns;
   sequencer.addAlgorithm(
       std::make_shared<FW::ParticleSmearing>(particleSmearingCfg, logLevel));
