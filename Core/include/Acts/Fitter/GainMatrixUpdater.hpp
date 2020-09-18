@@ -155,22 +155,32 @@ private:
 			  ACTS_VERBOSE("Measurement projector H:\n" << H);
 			  ActsMatrixD<parameter_size_t, measdim> K;
 			  ActsMatrixD<parameter_size_t, measdim> Q;
+			  ActsMatrixD<parameter_size_t, parameter_size_t> B;
 			  if constexpr (parameter_size_t == 8 && measdim == 3)
 			  {
 				  Vector3D dir = predicted.template segment<3>(eFreeDir0);
 				  ActsSymMatrixD<3> dirMat = dir * dir.transpose();
 				  ActsSymMatrixD<3> dirMat2 = dirMat + predictedCovariance.template block<3, 3>(eFreeDir0, eFreeDir0);
 				  double v = calibrated_covariance.diagonal().sum();
-				  predictedCovariance = predictedCovariance + H.transpose() * v * dirMat2 * H;
+				  B = H.transpose() * v * dirMat2 * H;
+				  predictedCovariance = predictedCovariance + B;
 				  
-				  Vector3D vNorm = calibrated_covariance.diagonal().normalized();
-				  Q = H.transpose() * (dir * vNorm.transpose()) * v;
-				  
+				  //~ K =
+				  //~ predictedCovariance * H.transpose() *
+				  //~ (H * predictedCovariance * H.transpose() + calibrated_covariance)
+					  //~ .inverse();
+				  //~ K =
+				  //~ (predictedCovariance * H.transpose() - Q) *
+				  //~ (H * predictedCovariance * H.transpose() + calibrated_covariance - H * Q - Q.transpose() * H.transpose())
+					  //~ .inverse();
+				  //~ K =
+				  //~ (predictedCovariance - B) * H.transpose() *
+				  //~ (H * predictedCovariance * H.transpose() + calibrated_covariance - H * Q - Q.transpose() * H.transpose())
+					  //~ .inverse();
 				  K =
-				  (predictedCovariance * H.transpose() - Q) *
-				  (H * predictedCovariance * H.transpose() + calibrated_covariance + H * Q - Q.transpose() * H.transpose())
+				  (predictedCovariance - B) * H.transpose() *
+				  (H * predictedCovariance * H.transpose() + calibrated_covariance)
 					  .inverse();
-
 			  } else {
 				K =
 				  predictedCovariance * H.transpose() *
@@ -190,8 +200,14 @@ private:
 			  filtered = predicted + K * (calibrated - H * predicted);
 			  if constexpr (parameter_size_t == 8 && measdim == 3)
 			  {
-				  filteredCovariance = (ActsSymMatrixD<parameter_size_t>::Identity() - K * H) * predictedCovariance
-				  + K * Q.transpose();
+				  //~ filteredCovariance = (ActsSymMatrixD<parameter_size_t>::Identity() - K * H) * predictedCovariance + K * H * B;
+				  //~ filteredCovariance = (ActsSymMatrixD<parameter_size_t>::Identity() - K * H) * predictedCovariance + 2. * B - B * H.transpose() * K.transpose();
+				  filteredCovariance = (ActsSymMatrixD<parameter_size_t>::Identity() - K * H) * (predictedCovariance - B);
+				  predictedCovariance = predictedCovariance - B;
+//~ std::cout << "(ActsSymMatrixD<parameter_size_t>::Identity() - K * H)\n" << (ActsSymMatrixD<parameter_size_t>::Identity() - K * H) << std::endl;
+//~ std::cout << "Predicted:\n" << predictedCovariance << std::endl;
+//~ std::cout << "K * Q.transpose()\n" << K * Q.transpose() << std::endl;
+//~ std::cout << "Filtered:\n" << filteredCovariance << std::endl;
 			  } else {
 				  filteredCovariance =
 					  (ActsSymMatrixD<parameter_size_t>::Identity() - K * H) * predictedCovariance;
