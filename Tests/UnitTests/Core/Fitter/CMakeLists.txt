@@ -1,3 +1,3 @@
 add_unittest(GainMatrixSmootherTests GainMatrixSmootherTests.cpp)
 add_unittest(GainMatrixUpdaterTests GainMatrixUpdaterTests.cpp)
-add_unittest(KalmanFitterTests KalmanFitterTests.cpp)
+#~ add_unittest(KalmanFitterTests KalmanFitterTests.cpp)

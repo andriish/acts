@@ -26,11 +26,18 @@ namespace FW {
 class EffectiveSourceLink {
  public:
   EffectiveSourceLink(const Acts::GeometryObject& referenceObject, const ActsFatras::Hit& truthHit,
-                size_t dim, Acts::BoundVector values, Acts::BoundMatrix cov)
+                size_t dim, Acts::FreeVector values, Acts::FreeMatrix cov)
       : m_values(values), m_cov(cov), m_dim(dim),
         m_geometryId(truthHit.geometryId()),
         m_referenceObject(&referenceObject),
         m_truthHit(&truthHit) {}
+  EffectiveSourceLink(const Acts::GeometryObject& referenceObject, const ActsFatras::Hit& truthHit,
+                size_t dim, Acts::BoundVector values, Acts::BoundMatrix cov)
+      : m_dim(dim),
+        m_geometryId(truthHit.geometryId()),
+        m_referenceObject(&referenceObject),
+        m_truthHit(&truthHit) {m_values.template head<6>() = values;
+			m_cov.template topLeftCorner<6, 6>() = cov;}
   
   /// Must be default_constructible to satisfy SourceLinkConcept.
   EffectiveSourceLink() = default;
@@ -41,7 +48,11 @@ class EffectiveSourceLink {
 
   using MeasurementType = std::variant<Acts::Measurement<EffectiveSourceLink, Acts::BoundParametersIndices, Acts::BoundParametersIndices::eLOC_0>,
 						  Acts::Measurement<EffectiveSourceLink, Acts::BoundParametersIndices,Acts::BoundParametersIndices::eLOC_0, Acts::BoundParametersIndices::eLOC_1>, 
-						  Acts::Measurement<EffectiveSourceLink, Acts::FreeParametersIndices, Acts::FreeParametersIndices::eFreePos0, Acts::FreeParametersIndices::eFreePos1, Acts::FreeParametersIndices::eFreePos2>>;
+						  Acts::Measurement<EffectiveSourceLink, Acts::FreeParametersIndices, Acts::FreeParametersIndices::eFreePos0, Acts::FreeParametersIndices::eFreePos1, Acts::FreeParametersIndices::eFreePos2>,
+						  //~ Acts::Measurement<EffectiveSourceLink, Acts::FreeParametersIndices, Acts::FreeParametersIndices::eFreePos0, Acts::FreeParametersIndices::eFreePos1, 
+									//~ Acts::FreeParametersIndices::eFreePos2, Acts::FreeParametersIndices::eFreeTime, Acts::FreeParametersIndices::eFreeDir0, Acts::FreeParametersIndices::eFreeDir1,
+									//~ Acts::FreeParametersIndices::eFreeDir2, Acts::FreeParametersIndices::eFreeQOverP>,
+						  Acts::Measurement<EffectiveSourceLink, Acts::BoundParametersIndices,Acts::BoundParametersIndices::eLOC_0, Acts::BoundParametersIndices::eLOC_1, Acts::BoundParametersIndices::eBoundPhi, Acts::BoundParametersIndices::eBoundTheta, Acts::BoundParametersIndices::eBoundQOverP, Acts::BoundParametersIndices::eBoundTime>>;
 						  
   constexpr Acts::GeometryID geometryId() const { return m_geometryId; }
   constexpr const Acts::GeometryObject& referenceObject() const { return *m_referenceObject; }
@@ -58,6 +69,11 @@ class EffectiveSourceLink {
 								   Acts::ParDef::eLOC_0, Acts::ParDef::eLOC_1>(
 			  dynamic_cast<const Acts::Surface*>(m_referenceObject)->getSharedPtr(), *this, m_cov.topLeftCorner<2, 2>(),
 			  m_values[0], m_values[1]);
+		} else if (m_dim == 6) {
+		  return Acts::Measurement<EffectiveSourceLink, Acts::BoundParametersIndices,
+								   Acts::ParDef::eLOC_0, Acts::ParDef::eLOC_1, Acts::ParDef::eBoundPhi, Acts::ParDef::eBoundTheta, Acts::ParDef::eBoundQOverP, Acts::ParDef::eBoundTime>(
+			  dynamic_cast<const Acts::Surface*>(m_referenceObject)->getSharedPtr(), *this, m_cov.topLeftCorner<6, 6>(),
+			  m_values[0], m_values[1], m_values[2], m_values[3], m_values[4], m_values[5]);
 	    } else if (m_dim == 3) {
 			return Acts::Measurement<EffectiveSourceLink, Acts::FreeParametersIndices,
 								   Acts::FreeParametersIndices::eFreePos0, Acts::FreeParametersIndices::eFreePos1, Acts::FreeParametersIndices::eFreePos2>(
@@ -70,8 +86,8 @@ class EffectiveSourceLink {
 	}
 	  
  private:
-   Acts::BoundVector m_values;
-  Acts::BoundMatrix m_cov;
+   Acts::FreeVector m_values;
+  Acts::FreeMatrix m_cov;
   size_t m_dim = 0u;
 	 Acts::GeometryID m_geometryId;
 	 const Acts::GeometryObject* m_referenceObject;
