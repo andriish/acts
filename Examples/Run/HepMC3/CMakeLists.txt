@@ -21,4 +21,3 @@ target_link_libraries(
 install(
   TARGETS ActsExampleHepMC3 ActsExampleHepMC3Histogram
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-  
