@@ -7,6 +7,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "ActsExamples/Geant4HepMC/EventRecording.hpp"
+#include "ActsExamples/Geant4HepMC/EventRecording.hpp"
 #include "ActsExamples/EventData/SimParticle.hpp"
 #include "ActsExamples/Framework/WhiteBoard.hpp"
 #include "ActsExamples/Geant4/GdmlDetectorConstruction.hpp"
@@ -39,7 +40,6 @@ ActsExamples::EventRecording::EventRecording(
   if (!m_cfg.detectorConstruction) {
     throw std::invalid_argument("Missing detector construction object");
   }
-  std::vector<std::string> filter = {"Transportation"};
 
   /// Now set up the Geant4 simulation
   m_runManager->SetUserInitialization(m_cfg.detectorConstruction.release());
