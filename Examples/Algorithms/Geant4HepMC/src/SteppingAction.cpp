@@ -11,7 +11,6 @@
 #include <G4RunManager.hh>
 #include <G4Step.hh>
 #include <G4VProcess.hh>
-#include "EventAction.hpp"
 
 #include <HepMC3/Attribute.h>
 #include <HepMC3/Units.h>
