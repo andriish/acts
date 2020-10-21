@@ -7,7 +7,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "ActsExamples/Geant4HepMC/EventRecording.hpp"
+<<<<<<< HEAD
 #include "ActsExamples/Geant4HepMC/EventRecording.hpp"
+=======
+>>>>>>> Rejection added
 #include "ActsExamples/EventData/SimParticle.hpp"
 #include "ActsExamples/Framework/WhiteBoard.hpp"
 #include "ActsExamples/Geant4/GdmlDetectorConstruction.hpp"
