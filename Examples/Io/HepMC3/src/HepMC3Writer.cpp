@@ -28,6 +28,9 @@ ActsExamples::ProcessCode ActsExamples::HepMC3AsciiWriter::writeT(
   HepMC3::WriterAscii writer(path);
 
   for (const auto& event : events) {
+	  for(const auto vertex : event.vertices())
+		if(vertex->id() == -1)
+			std::cout << vertex->particles_in()[0] << std::endl;
     writer.write_event(event);
     if (writer.failed())
       return ActsExamples::ProcessCode::ABORT;

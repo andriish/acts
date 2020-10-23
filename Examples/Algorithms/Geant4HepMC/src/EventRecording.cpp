@@ -80,13 +80,16 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
       continue;
     }
 
+	// Set event start time
     HepMC3::GenEvent event = ActsExamples::EventAction::instance()->event();
     HepMC3::FourVector shift(0., 0., 0., part.time() / Acts::UnitConstants::mm);
     event.shift_position_by(shift);
     
+    // Set beam particle properties
     HepMC3::FourVector beamMom4(part.momentum4()[0], part.momentum4()[1], part.momentum4()[2], part.momentum4()[3]);
-    auto beamParticle = std::make_shared<HepMC3::GenParticle>(beamMom4, part.pdg(), 4);
-    event.add_beam_particle(beamParticle);
+    auto beamParticle = event.particles()[0];
+    beamParticle->set_momentum(beamMom4);
+    beamParticle->set_pid(part.pdg());
 
     // Set beam particle properties
     const Acts::Vector4D momentum4 =
