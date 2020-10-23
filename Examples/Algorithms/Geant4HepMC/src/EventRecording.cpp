@@ -19,6 +19,7 @@
 #include "RunAction.hpp"
 #include "SteppingAction.hpp"
 
+#include <HepMC3/GenEvent.h>
 #include <HepMC3/GenParticle.h>
 
 ActsExamples::EventRecording::~EventRecording() {
@@ -82,6 +83,10 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
     HepMC3::GenEvent event = ActsExamples::EventAction::instance()->event();
     HepMC3::FourVector shift(0., 0., 0., part.time() / Acts::UnitConstants::mm);
     event.shift_position_by(shift);
+    
+    HepMC3::FourVector beamMom4(part.momentum4()[0], part.momentum4()[1], part.momentum4()[2], part.momentum4()[3]);
+    auto beamParticle = std::make_shared<HepMC3::GenParticle>(beamMom4, part.pdg(), 4);
+    event.add_beam_particle(beamParticle);
 
     // Set beam particle properties
     const Acts::Vector4D momentum4 =
@@ -132,6 +137,19 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
         }
         events.push_back(std::move(event));
       }
+      // Store the result
+      if(storeEvent)
+      {
+		  			  // Remove vertices without outgoing particles
+			  for(auto it = event.vertices().crbegin(); it != event.vertices().crend(); it++)
+			  {
+				if((*it)->particles_out().empty())
+				{
+					event.remove_vertex(*it);
+				}
+				}
+		events.push_back(std::move(event));
+	}
     }
   }
 

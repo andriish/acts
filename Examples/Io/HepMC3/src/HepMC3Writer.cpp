@@ -9,6 +9,8 @@
 #include "ActsExamples/Io/HepMC3/HepMC3Writer.hpp"
 #include "ActsExamples/Utilities/Paths.hpp"
 
+#include <HepMC3/GenVertex.h>
+#include <HepMC3/PrintStreams.h>
 ActsExamples::HepMC3AsciiWriter::HepMC3AsciiWriter(const Config&& cfg,
                                                    Acts::Logging::Level lvl)
     : WriterT(cfg.inputEvents, "HepMC3EventWriter", lvl), m_cfg(cfg) {
