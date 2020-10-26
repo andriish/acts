@@ -12,10 +12,9 @@
 
 #include <iostream>
 
-const TFCS1DFunctionInt32Histogram::HistoContent_t TFCS1DFunctionInt32Histogram::s_MaxValue=UINT32_MAX;
-
-TFCS1DFunctionInt32Histogram::TFCS1DFunctionInt32Histogram(const TH1* hist) 
-{if(hist) Initialize(hist);}
+TFCS1DFunctionInt32Histogram::TFCS1DFunctionInt32Histogram(const TH1* hist, std::string name, Acts::Logging::Level lvl) : m_logger(Acts::getDefaultLogger(name, lvl))
+{  Initialize(hist);
+}
 
 void TFCS1DFunctionInt32Histogram::Initialize(const TH1* hist)
 {
@@ -36,7 +35,8 @@ void TFCS1DFunctionInt32Histogram::Initialize(const TH1* hist)
     float binval = hist->GetBinContent(iBin + 1);
     // Avoid negative bin values
     if(binval < 0) {
-      std::cout<<"WARNING: bin content is negative in histogram "<<hist->GetName()<<" : "<<hist->GetTitle()<<" binval="<<binval<<" "<<binval * invHistIntegral * 100<<"% of integral="<<histIntegral<<". Forcing bin to 0."<<std::endl;
+		ACTS_DEBUG("Bin content is negative in histogram "<<hist->GetName()<<" : "<<hist->GetTitle()<<" binval="<<binval
+			<<" "<<binval * invHistIntegral * 100<<"% of integral="<<histIntegral<<". Forcing bin to 0.");
       binval = 0.;
     }
     // Store the value
@@ -46,7 +46,7 @@ void TFCS1DFunctionInt32Histogram::Initialize(const TH1* hist)
   
   // Ensure that content is available
   if(integral == 0.) {
-    std::cout<<"ERROR: histogram "<<hist->GetName()<<" : "<<hist->GetTitle()<<" integral="<<integral<<" is <=0"<<std::endl;
+	  ACTS_DEBUG("Histogram "<<hist->GetName()<<" : "<<hist->GetTitle()<<" integral="<<integral<<" is 0");
     m_HistoBorders.clear();
     m_HistoContents.clear();
     return;
@@ -64,19 +64,20 @@ void TFCS1DFunctionInt32Histogram::Initialize(const TH1* hist)
   }
 }
 
-double TFCS1DFunctionInt32Histogram::rnd_to_fct(double rnd) const
+double TFCS1DFunctionInt32Histogram::rndToFunction(double rnd) const
 {
 	// Fast exit
   if(m_HistoContents.empty()) {
     return 0;
   }
   
+  // Find the bin
   const HistoContent_t int_rnd = s_MaxValue * rnd;
   const auto it = std::upper_bound(m_HistoContents.begin(), m_HistoContents.end(), int_rnd);
   size_t iBin = std::min((size_t) std::distance(m_HistoContents.begin(), it), m_HistoContents.size() - 1);
   
+  // Interpolate between neighbouring bins and return a diced intermediate value
   const HistoContent_t basecont = (iBin > 0 ? m_HistoContents[iBin - 1] : 0);
-  
   const HistoContent_t dcont = m_HistoContents[iBin] - basecont;  
   return m_HistoBorders[iBin] + (m_HistoBorders[iBin + 1] - m_HistoBorders[iBin]) * (dcont > 0 ? (int_rnd-basecont) / dcont : 0.5);
 }
