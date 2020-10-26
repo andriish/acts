@@ -7,7 +7,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "TFCS1DFunctionInt32Histogram.hpp"
-//~ #include <algorithm>
 #include "TMath.h"
 #include "TH1.h"
 
@@ -15,66 +14,69 @@
 
 const TFCS1DFunctionInt32Histogram::HistoContent_t TFCS1DFunctionInt32Histogram::s_MaxValue=UINT32_MAX;
 
-TFCS1DFunctionInt32Histogram::TFCS1DFunctionInt32Histogram(const TH1* hist=nullptr) 
+TFCS1DFunctionInt32Histogram::TFCS1DFunctionInt32Histogram(const TH1* hist) 
 {if(hist) Initialize(hist);}
 
 void TFCS1DFunctionInt32Histogram::Initialize(const TH1* hist)
 {
-  Int_t nbinsx = hist->GetNbinsX();
-  Int_t nbins  = nbinsx;
+	// Retrieve the number of bins & borders
+  const int nBins = hist->GetNbinsX();
+  m_HistoBorders.resize(nBins+1);
+  m_HistoContents.resize(nBins);
   
-  float integral=0;
-  m_HistoBorders.resize(nbinsx+1);
-  m_HistoContents.resize(nbins);
-  std::vector<double> temp_HistoContents(nbins);  
-  int ibin=0;
-  for (int ix=1; ix<=nbinsx; ix++){
-    float binval=hist->GetBinContent(ix);
-    if(binval<0) {
-      //Can't work if a bin is negative, forcing bins to 0 in this case
-      double fraction=binval/hist->Integral();
-      if(TMath::Abs(fraction)>1e-5) {
-        std::cout<<"WARNING: bin content is negative in histogram "<<hist->GetName()<<" : "<<hist->GetTitle()<<" binval="<<binval<<" "<<fraction*100<<"% of integral="<<hist->Integral()<<". Forcing bin to 0."<<std::endl;
-      }  
-      binval=0;
+  // The integral of the original histogram
+  const double histIntegral = hist->Integral();
+  const double invHistIntegral = 1. / histIntegral;
+  
+  // Fill the cumulative histogram
+  float integral = 0.;
+  std::vector<double> temp_HistoContents(nBins);  
+  int iBin;
+  for (iBin = 0; iBin < nBins; iBin++){
+    float binval = hist->GetBinContent(iBin + 1);
+    // Avoid negative bin values
+    if(binval < 0) {
+      std::cout<<"WARNING: bin content is negative in histogram "<<hist->GetName()<<" : "<<hist->GetTitle()<<" binval="<<binval<<" "<<binval * invHistIntegral * 100<<"% of integral="<<histIntegral<<". Forcing bin to 0."<<std::endl;
+      binval = 0.;
     }
-    integral+=binval;
-    temp_HistoContents[ibin]=integral;
-    ++ibin;
+    // Store the value
+    integral += binval;
+    temp_HistoContents[iBin] = integral;
   }
-  if(integral<=0) {
+  
+  // Ensure that content is available
+  if(integral == 0.) {
     std::cout<<"ERROR: histogram "<<hist->GetName()<<" : "<<hist->GetTitle()<<" integral="<<integral<<" is <=0"<<std::endl;
-    m_HistoBorders.resize(0);
-    m_HistoContents.resize(0);
+    m_HistoBorders.clear();
+    m_HistoContents.clear();
     return;
   }
 
-  for (int ix=1; ix<=nbinsx; ix++) m_HistoBorders[ix-1]=hist->GetXaxis()->GetBinLowEdge(ix);
-  m_HistoBorders[nbinsx]=hist->GetXaxis()->GetXmax();
+  // Set the bin borders
+  for (iBin = 1; iBin <= nBins; iBin++) 
+	m_HistoBorders[iBin - 1]=hist->GetXaxis()->GetBinLowEdge(iBin);
+  m_HistoBorders[nBins]=hist->GetXaxis()->GetXmax();
   
-  for(ibin=0;ibin<nbins;++ibin) {
-    m_HistoContents[ibin]=s_MaxValue*(temp_HistoContents[ibin]/integral);
+  // Set the bin content
+  const float invIntegral = 1. / integral;
+  for(iBin = 0; iBin < nBins; ++iBin) {
+    m_HistoContents[iBin] = s_MaxValue * (temp_HistoContents[iBin] * invIntegral);
   }
 }
 
 double TFCS1DFunctionInt32Histogram::rnd_to_fct(double rnd) const
 {
-  if(m_HistoContents.size()==0) {
+	// Fast exit
+  if(m_HistoContents.empty()) {
     return 0;
   }
-  HistoContent_t int_rnd=s_MaxValue*rnd;
-  auto it = std::upper_bound(m_HistoContents.begin(),m_HistoContents.end(),int_rnd);
-  int ibin=std::distance(m_HistoContents.begin(),it);
-  if(ibin>=(int)m_HistoContents.size()) ibin=m_HistoContents.size()-1;
-  Int_t binx = ibin;
   
-  HistoContent_t basecont=0;
-  if(ibin>0) basecont=m_HistoContents[ibin-1];
+  const HistoContent_t int_rnd = s_MaxValue * rnd;
+  const auto it = std::upper_bound(m_HistoContents.begin(), m_HistoContents.end(), int_rnd);
+  size_t iBin = std::min((size_t) std::distance(m_HistoContents.begin(), it), m_HistoContents.size() - 1);
   
-  HistoContent_t dcont=m_HistoContents[ibin]-basecont;
-  if(dcont>0) {
-    return m_HistoBorders[binx] + ((m_HistoBorders[binx+1]-m_HistoBorders[binx]) * (int_rnd-basecont)) / dcont;
-  } else {                             
-    return m_HistoBorders[binx] + (m_HistoBorders[binx+1]-m_HistoBorders[binx]) / 2;
-  }
+  const HistoContent_t basecont = (iBin > 0 ? m_HistoContents[iBin - 1] : 0);
+  
+  const HistoContent_t dcont = m_HistoContents[iBin] - basecont;  
+  return m_HistoBorders[iBin] + (m_HistoBorders[iBin + 1] - m_HistoBorders[iBin]) * (dcont > 0 ? (int_rnd-basecont) / dcont : 0.5);
 }
