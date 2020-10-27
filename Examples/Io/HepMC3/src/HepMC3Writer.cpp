@@ -9,8 +9,6 @@
 #include "ActsExamples/Io/HepMC3/HepMC3Writer.hpp"
 #include "ActsExamples/Utilities/Paths.hpp"
 
-#include <HepMC3/GenVertex.h>
-#include <HepMC3/PrintStreams.h>
 ActsExamples::HepMC3AsciiWriter::HepMC3AsciiWriter(const Config&& cfg,
                                                    Acts::Logging::Level lvl)
     : WriterT(cfg.inputEvents, "HepMC3EventWriter", lvl), m_cfg(cfg) {
@@ -28,9 +26,6 @@ ActsExamples::ProcessCode ActsExamples::HepMC3AsciiWriter::writeT(
   HepMC3::WriterAscii writer(path);
 
   for (const auto& event : events) {
-	  for(const auto vertex : event.vertices())
-		if(vertex->id() == -1)
-			std::cout << vertex->particles_in()[0] << std::endl;
     writer.write_event(event);
     if (writer.failed())
       return ActsExamples::ProcessCode::ABORT;
