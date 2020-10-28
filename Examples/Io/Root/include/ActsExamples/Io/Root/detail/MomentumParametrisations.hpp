@@ -122,7 +122,7 @@ buildMaps(const ProbabilityDistributions& histos);
 /// @return Pair storing all components
 template<unsigned int multiplicity_t>
 std::pair<EigenspaceComponents<multiplicity_t + 1>, std::vector<CumulativeDistribution>>
-buildParameters(const EventCollection& events, bool soft, unsigned int nBins)
+buildMomentumParameters(const EventCollection& events, bool soft, unsigned int nBins)
 {
 	// Strip off data
 	auto momenta = prepateMomenta(events, multiplicity_t, soft);
@@ -133,6 +133,32 @@ buildParameters(const EventCollection& events, bool soft, unsigned int nBins)
 	// Build normal distribution
 	auto momentaGaussian = convertEventToGaussian(histos, momenta);
 	auto meanAndCovariance = calculateMeanAndCovariance<multiplicity_t + 1>(momentaGaussian);
+	// Calculate the transformation into the eigenspace of the covariance matrix
+	EigenspaceComponents<multiplicity_t + 1> eigenspaceElements = calculateEigenspace<multiplicity_t + 1>(meanAndCovariance.first, meanAndCovariance.second);
+	// Calculate the the cumulative distributions
+	auto maps = buildMaps(histos);
+	
+	for(auto& h : histos)
+		delete(h);
+	return make_pair(eigenspaceElements, maps);
+}
+
+EventProperties
+prepateInvariantMasses(const EventCollection& events, unsigned int multiplicity, bool soft);
+
+template <unsigned int multiplicity_t>
+std::pair<EigenspaceComponents<multiplicity_t + 1>, std::vector<CumulativeDistribution>>
+buildInvariantMassParameters(const EventCollection& events, bool soft, unsigned int nBins)
+{
+	// Strip off data
+	auto invariantMasses = prepateInvariantMasses(events, multiplicity_t, soft);
+	
+	// Build histos
+	ProbabilityDistributions histos = buildMomPerMult(invariantMasses, nBins);
+
+	// Build normal distribution
+	auto invariantMassesGaussian = convertEventToGaussian(histos, invariantMasses);
+	auto meanAndCovariance = calculateMeanAndCovariance<multiplicity_t + 1>(invariantMassesGaussian);
 	// Calculate the transformation into the eigenspace of the covariance matrix
 	EigenspaceComponents<multiplicity_t + 1> eigenspaceElements = calculateEigenspace<multiplicity_t + 1>(meanAndCovariance.first, meanAndCovariance.second);
 	// Calculate the the cumulative distributions

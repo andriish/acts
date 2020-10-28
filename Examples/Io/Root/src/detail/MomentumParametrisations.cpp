@@ -88,110 +88,13 @@ buildMap(TH1F const* hist)
 }
 
 namespace {
-//~ MomentumParametrisations::EventProperties
-//~ prepateInvariantMasses(const MomentumParametrisations::EventCollection& events, unsigned int multiplicity, bool soft) // TODO: build enum instead of bool
-//~ {
-	//~ MomentumParametrisations::EventProperties result;
-	//~ // Loop over all events
-	//~ for(const ActsExamples::EventFraction& event : events)
-	//~ {
-		//~ // Test the multiplicity and type of the event
-		//~ if(event.multiplicity == multiplicity && event.soft == soft)
-		//~ {
-			//~ const float initialMomentum = event.initialParticle.absMomentum();
-			//~ float sum = 0.;
-			//~ std::vector<float> momenta;
-			//~ momenta.reserve(multiplicity);
-			//~ // Fill the vector with the scaled momenta
-			//~ for(const ActsExamples::SimParticle& p : event.finalParticles)
-			//~ {
-				//~ sum += p.absMomentum();
-				//~ momenta.push_back(p.absMomentum() / initialMomentum);
-			//~ }
-			//~ // Add the scaled sum of momenta
-			//~ momenta.push_back(sum / initialMomentum);
-			//~ result.push_back(std::move(momenta));
-		//~ }
-	//~ }
-	//~ return result;
-	
-	
-	
-	//~ for(const ActsExamples::EventFraction& event : events)
-	//~ {
-		//~ if(event.multiplicity == multiplicity && event.soft == soft)
-		//~ {
-			//~ auto fourVector1 = makeFourVector(e.pdg, e.mom, e.phi, e.theta);
-
-			//~ for(unsigned int i = 0; i < e.mult; i++)
-			//~ {
-				//~ Particle& p2 = e.particles[i];
-				//~ auto fourVector2 = makeFourVector(p2.pdg, p2.mom, p2.phi, p2.theta);
-				//~ p2.invMassToPrev = invariantMass(fourVector1, fourVector2);
-			//~ }
-		//~ }
-	//~ }
-//~ }
-
-//~ std::vector<TH1F*>
-//~ buildInvariantMasses(const MomentumParametrisations::EventCollection& events, unsigned int mult, bool soft)
-//~ {
-	//~ const unsigned int nHistos = mult;
-	//~ vector<double> min(nHistos, 1e10), max(nHistos, 0);
-	//~ for(Event& e : events)
-	//~ {
-		//~ if(e.soft == soft && e.mult == mult)
-		//~ {
-			//~ auto fourVector1 = makeFourVector(e.pdg, e.mom, e.phi, e.theta);
-
-			//~ for(unsigned int i = 0; i < e.mult; i++)
-			//~ {
-				//~ Particle& p2 = e.particles[i];
-				//~ auto fourVector2 = makeFourVector(p2.pdg, p2.mom, p2.phi, p2.theta);
-				//~ p2.invMassToPrev = invariantMass(fourVector1, fourVector2);
-				
-				//~ if(p2.invMassToPrev > max[i])
-					//~ max[i] = p2.invMassToPrev;
-				//~ if(p2.invMassToPrev < min[i])
-					//~ min[i] = p2.invMassToPrev; 
-			//~ }
-		//~ }
-	//~ }
-
-	//~ vector<TH1D*> masses;
-	//~ masses.resize(nHistos);
-	//~ for(unsigned int i = 0; i < nHistos; i++)
-	//~ {
-		//~ masses[i] = new TH1D("", "", momBins, min[i], max[i]);
-		//~ masses[i]->GetXaxis()->SetTitle("#sqrt{s}");
-		//~ masses[i]->SetLineColor(i + 1);
-	//~ }
-	//~ for(Event& e : events)
-		//~ if(e.soft == soft && e.mult == mult)
-		//~ {
-			//~ for(unsigned int i = 0; i < e.mult; i++)
-				//~ masses[i]->Fill(e.particles[i].invMassToPrev);
-		//~ }
-	//~ return masses;
-//~ }
-
-template <unsigned int multiplicity_t>
-//~ std::pair<EigenspaceComponents<multiplicity_t + 1>, std::vector<MomentumParametrisations::CumulativeDistribution>>
-void
-prepareSimulationInvariantMass(const MomentumParametrisations::EventCollection& events, bool soft)
+float
+invariantMass(const ActsExamples::SimParticle::Vector4& fourVector1, const ActsExamples::SimParticle::Vector4& fourVector2)
 {
-	//~ vector<TH1D*> invariantMassPlots = buildInvariantMasses(events, mult, soft);
-	//~ plotInvariantMasses(invariantMassPlots, mult, soft);
-
-	//~ auto gauss = convertEventToGaussian(invariantMassPlots, events, mult, soft);
-	//~ plotInGaussianInvariantMass(gauss, soft, "Data_");
-	//~ auto covariance = buildCov(gauss);
-	//~ Covariance cov(get<0>(covariance), get<1>(covariance));
-	
-	//~ vector<TFCS1DFunctionInt32Histogram> mapper;
-	//~ for(TH1D* th : invariantMassPlots)
-		//~ mapper.push_back(TFCS1DFunctionInt32Histogram(th));
-	//~ return make_pair(cov, mapper);
+	ActsExamples::SimParticle::Vector4 sum = fourVector1 + fourVector2;
+	const ActsExamples::SimParticle::Scalar energy = sum[Acts::eEnergy];
+	ActsExamples::SimParticle::Vector3 momentum = sum.template segment<3>(Acts::eMom0);
+	return std::sqrt(energy * energy - momentum.norm());
 }
 }
 
@@ -298,4 +201,29 @@ MomentumParametrisations::buildMaps(const MomentumParametrisations::ProbabilityD
 		maps.push_back(buildMap(h));
 	}
 	return maps;
+}
+
+MomentumParametrisations::EventProperties
+MomentumParametrisations::prepateInvariantMasses(const MomentumParametrisations::EventCollection& events, unsigned int multiplicity, bool soft)
+{	
+	MomentumParametrisations::EventProperties result;
+	// Loop over all events
+	for(const ActsExamples::EventFraction& event : events)
+	{
+		// Test the multiplicity and type of the event
+		if(event.multiplicity == multiplicity && event.soft == soft)
+		{
+			const auto initialFourVector = event.initialParticle.momentum4();
+			std::vector<float> invariantMasses;
+			invariantMasses.reserve(multiplicity);
+			// Fill the vector with the invariant masses
+			for(const ActsExamples::SimParticle& p : event.finalParticles)
+			{
+				const auto fourVector = p.momentum4();
+				invariantMasses.push_back(invariantMass(initialFourVector, fourVector));
+			}
+			result.push_back(invariantMasses);
+		}
+	}
+	return result;
 }
