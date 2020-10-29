@@ -19,7 +19,6 @@
 #include "RunAction.hpp"
 #include "SteppingAction.hpp"
 
-#include <HepMC3/GenEvent.h>
 #include <HepMC3/GenParticle.h>
 
 ActsExamples::EventRecording::~EventRecording() {
@@ -54,6 +53,54 @@ ActsExamples::EventRecording::EventRecording(
   m_runManager->Initialize();
 }
 
+std::pair<double, double>
+  ActsExamples::EventRecording::collectMaterialBackwards(HepMC3::ConstGenVertexPtr vertex) const
+  {
+	double x0 = 0.;
+	double l0 = 0.;
+	  
+	HepMC3::ConstGenParticlePtr currentParticle = vertex->particles_in()[0];
+	const int id = currentParticle->attribute<HepMC3::IntAttribute>("TrackID")->value();
+	
+	while(vertex && !vertex->particles_in().empty() && vertex->particles_in()[0]->attribute<HepMC3::IntAttribute>("TrackID")
+	 && vertex->particles_in()[0]->attribute<HepMC3::IntAttribute>("TrackID")->value() == id)
+	{
+		currentParticle = vertex->particles_in()[0];
+		const double stepLength = currentParticle->attribute<HepMC3::DoubleAttribute>("StepLength")->value();
+		x0 += stepLength / currentParticle->attribute<HepMC3::DoubleAttribute>("NextX0")->value();
+		l0 += stepLength / currentParticle->attribute<HepMC3::DoubleAttribute>("NextL0")->value();
+		vertex = currentParticle->production_vertex();
+	}
+	return std::make_pair(x0, l0);
+  }
+  
+std::pair<double, double>
+ActsExamples::EventRecording::collectMaterialForwards(HepMC3::ConstGenVertexPtr vertex) const
+{
+	double x0 = 0.;
+	double l0 = 0.;
+	
+	HepMC3::ConstGenParticlePtr currentParticle = vertex->particles_out()[0];
+	const int id = currentParticle->attribute<HepMC3::IntAttribute>("TrackID")->value();
+	
+	while(vertex && !vertex->particles_out().empty())
+	{
+		currentParticle = nullptr;
+		for(const auto& particleOut : vertex->particles_out())
+			if(particleOut->attribute<HepMC3::IntAttribute>("TrackID") && particleOut->attribute<HepMC3::IntAttribute>("TrackID")->value() == id)
+			{
+				currentParticle = particleOut;
+				break;
+			}
+		const double stepLength = currentParticle->attribute<HepMC3::DoubleAttribute>("StepLength")->value();
+		x0 += stepLength / currentParticle->attribute<HepMC3::DoubleAttribute>("NextX0")->value();
+		l0 += stepLength / currentParticle->attribute<HepMC3::DoubleAttribute>("NextL0")->value();
+		vertex = currentParticle->end_vertex();
+	}
+	
+	return std::make_pair(x0, l0);
+}
+  
 ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
     const ActsExamples::AlgorithmContext& context) const {
   // ensure exclusive access to the geant run manager
@@ -68,6 +115,9 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
   std::vector<HepMC3::GenEvent> events;
   events.reserve(initialParticles.size());
 
+  // Storage of interaction distances
+  std::vector<std::tuple<bool, double, double>> interactionDistances;
+  
   for (const auto& part : initialParticles) {
     // Prepare the particle gun
     ActsExamples::PrimaryGeneratorAction::instance()->prepareParticleGun(part);
@@ -152,6 +202,15 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
 				}
 				}
 		events.push_back(std::move(event));
+		
+	}
+	else
+	{
+		if(m_cfg.recordInteractionDistances)
+		{
+			auto material = storeEvent ? collectMaterialBackwards(processVertex) : collectMaterialForwards(event.vertices()[0]);
+			interactionDistances.push_back(std::make_tuple(storeEvent, material.first, material.second));
+		}
 	}
     }
   }
@@ -161,6 +220,8 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
 
   // Write the recorded material to the event store
   context.eventStore.add(m_cfg.outputHepMcTracks, std::move(events));
+  if(m_cfg.recordInteractionDistances)
+	context.eventStore.add(m_cfg.outputInteraction, std::move(interactionDistances));
 
   return ActsExamples::ProcessCode::SUCCESS;
 }

@@ -56,6 +56,13 @@ class EventRecording final : public ActsExamples::BareAlgorithm {
       const AlgorithmContext& context) const final override;
 
  private:
+ 
+  std::pair<double, double>
+  collectMaterialBackwards(HepMC3::ConstGenVertexPtr vertex) const;
+ 
+  std::pair<double, double>
+  collectMaterialForwards(HepMC3::ConstGenVertexPtr vertex) const;
+ 
   /// The config object
   Config m_cfg;
   /// G4 run manager
