@@ -53,54 +53,6 @@ ActsExamples::EventRecording::EventRecording(
   m_runManager->Initialize();
 }
 
-std::pair<double, double>
-  ActsExamples::EventRecording::collectMaterialBackwards(HepMC3::ConstGenVertexPtr vertex) const
-  {
-	double x0 = 0.;
-	double l0 = 0.;
-	  
-	HepMC3::ConstGenParticlePtr currentParticle = vertex->particles_in()[0];
-	const int id = currentParticle->attribute<HepMC3::IntAttribute>("TrackID")->value();
-	
-	while(vertex && !vertex->particles_in().empty() && vertex->particles_in()[0]->attribute<HepMC3::IntAttribute>("TrackID")
-	 && vertex->particles_in()[0]->attribute<HepMC3::IntAttribute>("TrackID")->value() == id)
-	{
-		currentParticle = vertex->particles_in()[0];
-		const double stepLength = currentParticle->attribute<HepMC3::DoubleAttribute>("StepLength")->value();
-		x0 += stepLength / currentParticle->attribute<HepMC3::DoubleAttribute>("NextX0")->value();
-		l0 += stepLength / currentParticle->attribute<HepMC3::DoubleAttribute>("NextL0")->value();
-		vertex = currentParticle->production_vertex();
-	}
-	return std::make_pair(x0, l0);
-  }
-  
-std::pair<double, double>
-ActsExamples::EventRecording::collectMaterialForwards(HepMC3::ConstGenVertexPtr vertex) const
-{
-	double x0 = 0.;
-	double l0 = 0.;
-	
-	HepMC3::ConstGenParticlePtr currentParticle = vertex->particles_out()[0];
-	const int id = currentParticle->attribute<HepMC3::IntAttribute>("TrackID")->value();
-	
-	while(vertex && !vertex->particles_out().empty())
-	{
-		currentParticle = nullptr;
-		for(const auto& particleOut : vertex->particles_out())
-			if(particleOut->attribute<HepMC3::IntAttribute>("TrackID") && particleOut->attribute<HepMC3::IntAttribute>("TrackID")->value() == id)
-			{
-				currentParticle = particleOut;
-				break;
-			}
-		const double stepLength = currentParticle->attribute<HepMC3::DoubleAttribute>("StepLength")->value();
-		x0 += stepLength / currentParticle->attribute<HepMC3::DoubleAttribute>("NextX0")->value();
-		l0 += stepLength / currentParticle->attribute<HepMC3::DoubleAttribute>("NextL0")->value();
-		vertex = currentParticle->end_vertex();
-	}
-	
-	return std::make_pair(x0, l0);
-}
-  
 ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
     const ActsExamples::AlgorithmContext& context) const {
   // ensure exclusive access to the geant run manager
@@ -115,9 +67,6 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
   std::vector<HepMC3::GenEvent> events;
   events.reserve(initialParticles.size());
 
-  // Storage of interaction distances
-  std::vector<std::tuple<bool, double, double>> interactionDistances;
-  
   for (const auto& part : initialParticles) {
     // Prepare the particle gun
     ActsExamples::PrimaryGeneratorAction::instance()->prepareParticleGun(part);
@@ -130,16 +79,10 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
       continue;
     }
 
-	// Set event start time
+    // Set event start time
     HepMC3::GenEvent event = ActsExamples::EventAction::instance()->event();
     HepMC3::FourVector shift(0., 0., 0., part.time() / Acts::UnitConstants::mm);
     event.shift_position_by(shift);
-    
-    // Set beam particle properties
-    HepMC3::FourVector beamMom4(part.momentum4()[0], part.momentum4()[1], part.momentum4()[2], part.momentum4()[3]);
-    auto beamParticle = event.particles()[0];
-    beamParticle->set_momentum(beamMom4);
-    beamParticle->set_pid(part.pdg());
 
     // Set beam particle properties
     const Acts::Vector4D momentum4 =
@@ -190,28 +133,6 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
         }
         events.push_back(std::move(event));
       }
-      // Store the result
-      if(storeEvent)
-      {
-		  			  // Remove vertices without outgoing particles
-			  for(auto it = event.vertices().crbegin(); it != event.vertices().crend(); it++)
-			  {
-				if((*it)->particles_out().empty())
-				{
-					event.remove_vertex(*it);
-				}
-				}
-		events.push_back(std::move(event));
-		
-	}
-	else
-	{
-		if(m_cfg.recordInteractionDistances)
-		{
-			auto material = storeEvent ? collectMaterialBackwards(processVertex) : collectMaterialForwards(event.vertices()[0]);
-			interactionDistances.push_back(std::make_tuple(storeEvent, material.first, material.second));
-		}
-	}
     }
   }
 
@@ -220,8 +141,6 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
 
   // Write the recorded material to the event store
   context.eventStore.add(m_cfg.outputHepMcTracks, std::move(events));
-  if(m_cfg.recordInteractionDistances)
-	context.eventStore.add(m_cfg.outputInteraction, std::move(interactionDistances));
 
   return ActsExamples::ProcessCode::SUCCESS;
 }
