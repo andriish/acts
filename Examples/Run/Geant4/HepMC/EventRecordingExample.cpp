@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
   erConfig.detectorConstruction = std::move(g4detector);
   erConfig.seed1 = vm["g4-rnd-seed1"].as<unsigned int>();
   erConfig.seed2 = vm["g4-rnd-seed2"].as<unsigned int>();
-  erConfig.eventSelectionProcess = {"Inelastic"};
+  erConfig.eventSelectionProcess = "Inelastic";
   erConfig.eventRejectionProcess = {"Decay"};
 
   // Create the writer
