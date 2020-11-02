@@ -20,18 +20,13 @@ class TH1F;
 
 namespace ActsExamples {
 
-/// @class RootNuclearInteractionParametersReader
-///
-/// @brief Reads in MaterialTrack information from a root file
-/// and fills it into a format to be understood by the MaterialMapping
-/// algorithm
+/// @brief This class reads data that is relevant for simulating nuclear interaction. Beside the plain reading, the data is transformed and stored for application in ActsFatras
 class RootNuclearInteractionParametersReader : public IReader {
  public:
   /// @brief The nested configuration struct
   struct Config {
-    std::string filePath = "";                 ///< path of the output file
     std::vector<std::string> fileList;         ///< The name of the input file
-    std::string outputParametrisationStem = "parameters";
+    std::string outputParametrisation = "parameters"; ///< The name of the stored parametrisation
 
     /// The default logger
     std::shared_ptr<const Acts::Logger> logger;
@@ -39,11 +34,12 @@ class RootNuclearInteractionParametersReader : public IReader {
     /// The name of the service
     std::string name;
 
+	/// Number of simulated events for normalising the nuclear interaction probability
 	unsigned int nSimulatedEvents = 100;
 	
     /// Constructor
     /// @param lname The name of the Material reader
-    /// @parqam lvl The log level for the logger
+    /// @param lvl The log level for the logger
     Config(const std::string& lname = "NuclearInteractionParameters",
            Acts::Logging::Level lvl = Acts::Logging::INFO)
         : logger(Acts::getDefaultLogger(lname, lvl)), name(lname) {}
@@ -66,7 +62,7 @@ class RootNuclearInteractionParametersReader : public IReader {
   ///
   /// @param context The algorithm context
   ProcessCode read(
-      const ActsExamples::AlgorithmContext& /*unused*/) final override;
+      const ActsExamples::AlgorithmContext& context) final override;
 
  private:
  /// @brief This method builds decomposed cumulative probability distributions
