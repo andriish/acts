@@ -39,6 +39,8 @@ class RootNuclearInteractionParametersReader : public IReader {
     /// The name of the service
     std::string name;
 
+	unsigned int nSimulatedEvents = 100;
+	
     /// Constructor
     /// @param lname The name of the Material reader
     /// @parqam lvl The log level for the logger

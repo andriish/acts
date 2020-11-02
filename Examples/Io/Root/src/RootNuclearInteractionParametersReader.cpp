@@ -277,6 +277,7 @@ ActsExamples::ProcessCode ActsExamples::RootNuclearInteractionParametersReader::
   if (context.eventNumber < 1) {
     // lock the mutex
     std::lock_guard<std::mutex> lock(m_read_mutex);
+	
     // now read
 	for(const std::string& file : m_cfg.fileList)
 	{
@@ -286,18 +287,29 @@ ActsExamples::ProcessCode ActsExamples::RootNuclearInteractionParametersReader::
 		auto elem = list->First();
 		while(elem)
 		{
+			ActsFatras::detail::Parameters parameters;
+			
 			char const* name = elem->GetName();
-			float mom = std::stof(name);
+			parameters.momentum = std::stof(name);
 			gDirectory->cd(name);
-			
+
 			TH1F* nuclearInteraction = (TH1F*) gDirectory->Get("NuclearInteraction");
+			parameters.nuclearInteractionProbability = buildMap(nuclearInteraction, m_cfg.nSimulatedEvents);
+
 			TVectorF* softInteraction = (TVectorF*) gDirectory->Get("SoftInteraction");
-			std::vector<int>* branchingPdgIds = (std::vector<int>*) gDirectory->Get("BranchingPdgIds");
-			std::vector<int>* targetPdgIds = (std::vector<int>*) gDirectory->Get("TargetPdgIds");
-			std::vector<float>* targetPdgProbability = (std::vector<float>*) gDirectory->Get("TargetPdgProbability");
-			
+			parameters.softInteractionProbability = (*softInteraction)[0];
+
+			std::vector<int> branchingPdgIds = *((std::vector<int>*) gDirectory->Get("BranchingPdgIds"));
+			std::vector<int> targetPdgIds = *((std::vector<int>*) gDirectory->Get("TargetPdgIds"));
+			std::vector<float> targetPdgProbability = *((std::vector<float>*) gDirectory->Get("TargetPdgProbability"));
+			for(unsigned int i = 0; i < branchingPdgIds.size(); i++)
+				parameters.pdgMap[branchingPdgIds[i]][targetPdgIds[i]] = targetPdgProbability[i];
+
+
 			gDirectory->cd("soft");
 			TH1F* softMultiplicity = (TH1F*) gDirectory->Get("Multiplicity");
+			parameters.softMultiplicity = buildMap(softMultiplicity);
+
 			auto softList = gDirectory->GetListOfKeys();
 			auto softElement = softList->First();
 			while(softElement)
@@ -307,14 +319,25 @@ ActsExamples::ProcessCode ActsExamples::RootNuclearInteractionParametersReader::
 					const char* distributionName = softElement->GetName();
 					unsigned int mult = std::stoi(distributionName);
 					gDirectory->cd(distributionName);
-					std::vector<TH1F*> momentumDistributions(mult + 1);
-					std::vector<TH1F*> invariantMassDistributions(mult);
+					std::vector<TH1F*> momentumDistributions;
+					momentumDistributions.reserve(mult + 1);
+					std::vector<TH1F*> invariantMassDistributions;
+					invariantMassDistributions.reserve(mult);
 					for(unsigned int i = 0; i < mult; i++)
 					{
 						momentumDistributions.push_back(std::move((TH1F*) gDirectory->Get(("MomentumDistribution_" + std::to_string(i)).c_str())));
 						invariantMassDistributions.push_back(std::move((TH1F*) gDirectory->Get(("InvariantMassDistribution_" + std::to_string(i)).c_str())));
 					}
 					momentumDistributions.push_back(std::move((TH1F*) gDirectory->Get(("MomentumDistribution_" + std::to_string(mult)).c_str())));
+					
+					if(mult >= parameters.softMomentumDistributions.size())
+						parameters.softMomentumDistributions.resize(mult + 1);
+					if(mult >= parameters.softInvariantMassDistributions.size())
+						parameters.softInvariantMassDistributions.resize(mult + 1);
+					
+					parameters.softMomentumDistributions[mult] = buildMaps(momentumDistributions);
+					parameters.softInvariantMassDistributions[mult] = buildMaps(invariantMassDistributions);
+
 					gDirectory->cd("..");
 				}
 				softElement = softList->After(softElement);
@@ -323,6 +346,8 @@ ActsExamples::ProcessCode ActsExamples::RootNuclearInteractionParametersReader::
 			
 			gDirectory->cd("../hard");
 			TH1F* hardMultiplicity = (TH1F*) gDirectory->Get("Multiplicity");
+			parameters.hardMultiplicity = buildMap(hardMultiplicity);
+
 			auto hardList = gDirectory->GetListOfKeys();
 			auto hardElement = hardList->First();
 			while(hardElement)
@@ -332,14 +357,25 @@ ActsExamples::ProcessCode ActsExamples::RootNuclearInteractionParametersReader::
 					const char* distributionName = hardElement->GetName();
 					unsigned int mult = std::stoi(distributionName);
 					gDirectory->cd(distributionName);
-					std::vector<TH1F*> momentumDistributions(mult + 1);
-					std::vector<TH1F*> invariantMassDistributions(mult);
+					std::vector<TH1F*> momentumDistributions;
+					momentumDistributions.reserve(mult + 1);
+					std::vector<TH1F*> invariantMassDistributions;
+					invariantMassDistributions.reserve(mult);
 					for(unsigned int i = 0; i < mult; i++)
 					{
 						momentumDistributions.push_back(std::move((TH1F*) gDirectory->Get(("MomentumDistribution_" + std::to_string(i)).c_str())));
 						invariantMassDistributions.push_back(std::move((TH1F*) gDirectory->Get(("InvariantMassDistribution_" + std::to_string(i)).c_str())));
 					}
 					momentumDistributions.push_back(std::move((TH1F*) gDirectory->Get(("MomentumDistribution_" + std::to_string(mult)).c_str())));
+					
+					if(mult >= parameters.hardMomentumDistributions.size())
+						parameters.hardMomentumDistributions.resize(mult + 1);
+					if(mult >= parameters.hardInvariantMassDistributions.size())
+						parameters.hardInvariantMassDistributions.resize(mult + 1);
+					
+					parameters.hardMomentumDistributions[mult] = buildMaps(momentumDistributions);
+					parameters.hardInvariantMassDistributions[mult] = buildMaps(invariantMassDistributions);
+
 					gDirectory->cd("..");
 				}
 				hardElement = softList->After(hardElement);
