@@ -36,9 +36,6 @@ class SteppingAction : public G4UserSteppingAction {
   /// Return the abort status
   bool eventAborted() { return m_eventAborted; }
 
-  /// Return the abort status
-  bool eventAborted() { return m_eventAborted; }
-
  private:
   /// Instance of the SteppingAction
   static SteppingAction* s_instance;
