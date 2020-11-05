@@ -255,13 +255,13 @@ cumulativePDGprobability(const EventCollection& events) {
   for (const auto& element : counter) {
     for (auto it1 = counter[element.first].begin();
          it1 != counter[element.first].end(); it1++) {
-		  // Add content to next bins
-		  for (auto it2 = std::next(it1, 1); it2 != counter[element.first].end();
-			   it2++) {
-			it2->second += it1->second;
-		  }
-		  // Normalise the entry
-		  it1->second /= totalSum[element.first];
+      // Add content to next bins
+      for (auto it2 = std::next(it1, 1); it2 != counter[element.first].end();
+           it2++) {
+        it2->second += it1->second;
+      }
+      // Normalise the entry
+      it1->second /= totalSum[element.first];
     }
   }
   return counter;
