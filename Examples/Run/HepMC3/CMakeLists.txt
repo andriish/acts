@@ -8,6 +8,17 @@ target_link_libraries(
     ActsExamplesFramework ActsExamplesIoHepMC3
     Boost::program_options)
 
+add_executable(
+  ActsExampleHepMC3Histogram
+  HepMC3HistogramExample.cpp)
+target_link_libraries(
+  ActsExampleHepMC3Histogram
+  PRIVATE
+    ActsCore ActsExamplesCommon
+    ActsExamplesFramework ActsExamplesIoHepMC3 ActsExamplesEventExtraction ActsExamplesIoRoot
+    Boost::program_options)
+    
 install(
-  TARGETS ActsExampleHepMC3
+  TARGETS ActsExampleHepMC3 ActsExampleHepMC3Histogram
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  
