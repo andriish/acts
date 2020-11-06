@@ -114,7 +114,67 @@ std::pair<std::vector<float>, std::vector<uint32_t>> buildMap(TH1F const* hist, 
   return std::make_pair(std::get<0>(map), normalisedHistoContents);
 }
 
+//~ TH1F* Optimize_weight_hist(TH1F* hist,float diff_weight=0.1,float diff_weigt_error=0.1,int verbose=0)
+//~ {
+  //~ unsigned int numBins = hist->GetNbinsX() + 1;
+  //~ std::vector<float> binEdge(numBins);
+  //~ std::vector<float> binContent(numBins);
+  //~ std::vector<int> c(numBins);
+  //~ binEdge[0]=hist->GetXaxis()->GetBinLowEdge(1);
+  //~ binContent[0]=0;
+  //~ c[0]=0;
+  //~ for(int ibin=1;ibin<=hist->GetNbinsX();++ibin) {
+    //~ binEdge[ibin]=hist->GetXaxis()->GetBinUpEdge(ibin);
+    //~ binContent[ibin]=hist->GetBinContent(ibin);
+    //~ c[ibin]=1;
+  //~ }
+
+  //~ float best_chi2=-1;
+  //~ int best_bin=-1;
+  //~ float best_aw=0;
+  //~ float best_ae=0;
+  //~ int best_c=0;
+      
+  //~ do {
+    //~ best_chi2=-1;
+    //~ for(unsigned int ibin=1;ibin<binEdge.size()-1;++ibin) {
+      //~ float w1=w[ibin];
+      //~ float w2=w[ibin+1];
+      //~ float dw=w1-w2;
+      //~ float aw=(c[ibin]*w1+c[ibin+1]*w2)/(c[ibin]+c[ibin+1]);
+      //~ if(aw!=0) dw/=aw;
+      
+      //~ float chi2=dw*dw/(diff_weight*diff_weight);
+      //~ if(best_chi2<0 || chi2<best_chi2) {
+        //~ best_chi2=chi2;
+        //~ best_bin=ibin;
+        //~ best_aw=aw;
+        //~ best_ae=ae;
+        //~ best_c=c[ibin]+c[ibin+1];
+      //~ }
+    //~ }
+
+    //~ if(best_chi2<1 && best_chi2>=0) {    
+      //~ binEdge.erase(binEdge.begin()+best_bin);
+      //~ w.erase(w.begin()+best_bin);
+      //~ c.erase(c.begin()+best_bin);
+      //~ w[best_bin]=best_aw;
+      //~ c[best_bin]=best_c;      
+    //~ }  
+  //~ } while(best_chi2<1 && best_chi2>=0);
+  
+  //~ TH1* newhist=new TH1F(Form("%s_rebin",hist->GetName()),hist->GetTitle(),binEdge.size()-1,&binEdge[0]);
+  //~ newhist->SetDirectory(0);
+  //~ newhist->Sumw2();
+  //~ for(int ibin=1;ibin<=newhist->GetNbinsX();++ibin) {
+    //~ newhist->SetBinContent(ibin,w[ibin]);
+  //~ }
+
+  //~ return newhist;
+//~ }
+
 }
+
 ActsExamples::RootNuclearInteractionParametersReader::RootNuclearInteractionParametersReader(
     const ActsExamples::RootNuclearInteractionParametersReader::Config& cfg)
     : ActsExamples::IReader(), m_cfg(cfg) {
