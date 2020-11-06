@@ -74,7 +74,7 @@ struct NuclearInteraction {
 			}
 			
 			// Build and return particles
-			return convertParametersToParticles(pdgIds, momenta, invariantMasses, particle); // TODO: Get the initial particle from this set and split the vector accordingly
+			return convertParametersToParticles(generator, pdgIds, momenta, invariantMasses, particle); // TODO: Get the initial particle from this set and split the vector accordingly
 		} else {
 			// Get the final state multiplicity
 			const unsigned int multiplicity = finalStateMultiplicity(uniformDistribution(generator), parameters.hardMultiplicity);
@@ -90,7 +90,7 @@ struct NuclearInteraction {
 			}
 			
 			// Build and return particles
-			return convertParametersToParticles(pdgIds, momenta, invariantMasses, particle);
+			return convertParametersToParticles(generator, pdgIds, momenta, invariantMasses, particle);
 		}
 	}
     // Generates no new particles
@@ -169,9 +169,9 @@ globalAngle(ActsFatras::Particle::Scalar phi1, ActsFatras::Particle::Scalar thet
     /// @param [in] invariantMass The invariant masses
     ///
     /// @return Vector containing the final state particles
-    template <unsigned int size>
-	std::vector<Particle> convertParametersToParticles(const std::vector<int>& pdgId, const Acts::ActsVectorF<size>& momentum, 
-							const Acts::ActsVectorF<size>& invariantMass, const Particle& initialParticle) const;
+    template <unsigned int size, typename generator_t>
+	std::vector<Particle> convertParametersToParticles(generator_t& generator, const std::vector<int>& pdgId, const Acts::ActsVectorF<size>& momenta, 
+							const Acts::ActsVectorF<size>& invariantMasses, const Particle& initialParticle) const;
 // TODO: the conversion should set the limit_l0	
     
     ///Function gets random number rnd in the range [0,1) as argument 
@@ -266,8 +266,8 @@ NuclearInteraction::match(const Acts::ActsVectorF<size>& momenta, const Acts::Ac
 		const float momentum = momenta[i];
 		const float invariantMass = invariantMasses[i];
 		
-		const double p1p2 = 2. * momentum * initialMomentum;
-		const double costheta = 1. - invariantMass * invariantMass / p1p2;
+		const float p1p2 = 2. * momentum * initialMomentum;
+		const float costheta = 1. - invariantMass * invariantMass / p1p2;
 
 		if(std::abs(costheta) > 1)
 		{
@@ -277,28 +277,35 @@ NuclearInteraction::match(const Acts::ActsVectorF<size>& momenta, const Acts::Ac
 	return true;
 }
 
-template <unsigned int size>
-std::vector<Particle> NuclearInteraction::convertParametersToParticles(const std::vector<int>& pdgId, const Acts::ActsVectorF<size>& momentum, 
-							const Acts::ActsVectorF<size>& invariantMass, const Particle& initialParticle) const {
+template <unsigned int size, typename generator_t>
+std::vector<Particle> NuclearInteraction::convertParametersToParticles(generator_t& generator, const std::vector<int>& pdgId, const Acts::ActsVectorF<size>& momenta, 
+							const Acts::ActsVectorF<size>& invariantMasses, const Particle& initialParticle) const {
+  std::uniform_real_distribution<double> uniformDistribution {0., 2. * M_PI};
   std::vector<Particle> result;	
 
   // TODO: this should become the particl immediately before the interaction occurs
+  const auto initialMomentum = initialParticle.absMomentum();
   const auto& initialDirection = initialParticle.unitDirection();
   const double phi = Acts::VectorHelpers::phi(initialDirection);
   const double theta = Acts::VectorHelpers::theta(initialDirection);
   for(unsigned int i = 0; i < size; i++)
   {
-	  //~ const auto phiTheta = globalAngle(phi, theta, 
-	  //~ const auto direction = makeDirectionUnitFromPhiTheta(phiTheta.first, phiTheta.second);
+		const float momentum = momenta[i];
+		const float invariantMass = invariantMasses[i];	
+		const float p1p2 = 2. * momentum * initialMomentum;
+		const float costheta = 1. - invariantMass * invariantMass / p1p2;
+		
+	  const auto phiTheta = globalAngle(phi, theta, std::acos(theta), uniformDistribution(generator));
+	  const auto direction = makeDirectionUnitFromPhiTheta(phiTheta.first, phiTheta.second);
 	  Particle p = Particle(Barcode(), pdgId[i]).setProcess(ProcessType::eNuclearInteraction).setPosition4(initialParticle.position4())
-		.absMomentum(momentum[i]);//.setDirection();
+		.setAbsMomentum(momentum).setDirection(direction);
+		
+	if(multiParticleParameterisation.find(p.pdg()) != multiParticleParameterisation.end())
+	{
+		const auto& distribution = multiParticleParameterisation.at(p.pdg()).at(p.absMomentum()).nuclearInteractionProbability;
+		p.setMaterialLimits(p.pathLimitX0(), sampleContinuousValues(uniformDistribution(generator), distribution));
+	}
   }
-
-  //~ Vector3 m_unitDirection = Vector3::UnitZ();
-
-
-  //~ Scalar m_limitX0 = std::numeric_limits<Scalar>::max();
-  //~ Scalar m_limitL0 = std::numeric_limits<Scalar>::max();
   					
   return result;
 }
