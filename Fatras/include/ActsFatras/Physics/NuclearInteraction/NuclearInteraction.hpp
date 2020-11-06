@@ -13,6 +13,8 @@
 #include "ActsFatras/Physics/NuclearInteraction/Parameters.hpp"
 #include "Acts/Utilities/Definitions.hpp"
 #include "ActsFatras/EventData/ProcessType.hpp"
+#include "Acts/Utilities/UnitVectors.hpp"
+#include "Acts/Utilities/Helpers.hpp"
 
 #include <vector>
 #include <random>
@@ -155,8 +157,8 @@ template<unsigned int size>
 bool
 match(const Acts::ActsVectorF<size>& momenta, const Acts::ActsVectorF<size>& invariantMasses, float initialMomentum) const;
 
-std::pair<float, float>
-globalAngle(float phi1, float theta1, float phi2, float theta2) const;
+std::pair<ActsFatras::Particle::Scalar, ActsFatras::Particle::Scalar>
+globalAngle(ActsFatras::Particle::Scalar phi1, ActsFatras::Particle::Scalar theta1, float phi2, float theta2) const;
   
     float pathLimitL0(double rnd, detail::Parameters::CumulativeDistribution& distribution) const;
     
@@ -171,6 +173,7 @@ globalAngle(float phi1, float theta1, float phi2, float theta2) const;
 	std::vector<Particle> convertParametersToParticles(const std::vector<int>& pdgId, const Acts::ActsVectorF<size>& momentum, 
 							const Acts::ActsVectorF<size>& invariantMass, const Particle& initialParticle) const;
 // TODO: the conversion should set the limit_l0	
+    
     ///Function gets random number rnd in the range [0,1) as argument 
     ///and returns function value according to a histogram distribution
     unsigned int sampleDiscreteValues(double rnd, const detail::Parameters::CumulativeDistribution& distribution) const; // TODO: this should be only used for multiplicity
@@ -279,9 +282,16 @@ std::vector<Particle> NuclearInteraction::convertParametersToParticles(const std
 							const Acts::ActsVectorF<size>& invariantMass, const Particle& initialParticle) const {
   std::vector<Particle> result;	
 
+  // TODO: this should become the particl immediately before the interaction occurs
+  const auto& initialDirection = initialParticle.unitDirection();
+  const double phi = Acts::VectorHelpers::phi(initialDirection);
+  const double theta = Acts::VectorHelpers::theta(initialDirection);
   for(unsigned int i = 0; i < size; i++)
   {
-	  Particle p = Particle(Barcode(), pdgId[i]).setProcess(ProcessType::eNuclearInteraction).setPosition4(initialParticle.position4()).absMomentum(momentum[i]);
+	  //~ const auto phiTheta = globalAngle(phi, theta, 
+	  //~ const auto direction = makeDirectionUnitFromPhiTheta(phiTheta.first, phiTheta.second);
+	  Particle p = Particle(Barcode(), pdgId[i]).setProcess(ProcessType::eNuclearInteraction).setPosition4(initialParticle.position4())
+		.absMomentum(momentum[i]);//.setDirection();
   }
 
   //~ Vector3 m_unitDirection = Vector3::UnitZ();

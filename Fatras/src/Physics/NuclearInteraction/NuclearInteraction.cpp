@@ -62,8 +62,8 @@ unsigned int NuclearInteraction::finalStateMultiplicity(double rnd, const detail
 	return sampleDiscreteValues(rnd, distribution);
 }
 
-std::pair<float, float>
-NuclearInteraction::globalAngle(float phi1, float theta1, float phi2, float theta2) const
+std::pair<Acts::Particle::Scalar, Acts::Particle::Scalar>
+NuclearInteraction::globalAngle(Acts::Particle::Scalar phi1, Acts::Particle::Scalar theta1, float phi2, float theta2) const
 {	
 	const Acts::Vector3F vector2(std::sin(theta2) * std::cos(phi2), std::sin(theta2) * std::sin(phi2), std::cos(theta2));
 	Acts::SymMatrix3F rotY = Acts::SymMatrix3F::Zero();
