@@ -179,7 +179,7 @@ globalAngle(ActsFatras::Particle::Scalar phi1, ActsFatras::Particle::Scalar thet
     unsigned int sampleDiscreteValues(double rnd, const detail::Parameters::CumulativeDistribution& distribution) const; // TODO: this should be only used for multiplicity
 	
 	
-	double sampleContinuousValues(double rnd, const detail::Parameters::CumulativeDistribution& distribution) const;
+	double sampleContinuousValues(double rnd, const detail::Parameters::CumulativeDistribution& distribution, bool interpolate = false) const;
 };
 
 	template <unsigned int size, typename generator_t>
