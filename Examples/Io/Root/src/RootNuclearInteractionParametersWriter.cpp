@@ -225,7 +225,7 @@ void recordKinematicParametrisation(
   gDirectory->mkdir(std::to_string(multiplicity).c_str());
   gDirectory->cd(std::to_string(multiplicity).c_str());
 
-  // Parametrise the momentum und invarian mass distributions
+  // Parametrise the momentum und invariant mass distributions
   const auto momentumParameters =
       NuclearInteractionParametrisation::buildMomentumParameters(
           eventFractionCollection, multiplicity, interactionType,

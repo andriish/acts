@@ -58,6 +58,7 @@ ActsExamples::ProcessCode ActsExamples::HepMC3AsciiReader::read(
 
   reader.read_event(event);
   while (!reader.failed()) {
+std::cout << "events size: " << events.size() << std::endl;
     events.push_back(std::move(event));
     event.clear();
     reader.read_event(event);
