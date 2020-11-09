@@ -111,7 +111,7 @@ void setupSimulationAlgorithms(
   using NeutralSelector =
       ActsFatras::CombineAnd<ActsFatras::NeutralSelector, MinP>;
   using NeutralSimulator = ActsFatras::ParticleSimulator<
-      NeutralPropagator, ActsFatras::PhysicsList<>, ActsFatras::NoSurface>;
+      NeutralPropagator, ActsFatras::NeutralPhysicsList, HitSurfaceSelector>;
   // full simulator type for charged and neutrals
   using Simulator = ActsFatras::Simulator<ChargedSelector, ChargedSimulator,
                                           NeutralSelector, NeutralSimulator>;

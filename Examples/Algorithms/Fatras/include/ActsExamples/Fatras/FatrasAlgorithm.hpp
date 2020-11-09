@@ -1,6 +1,6 @@
 // This file is part of the Acts project.
 //
-// Copyright (C) 2017 CERN for the benefit of the Acts project
+// Copyright (C) 2017-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -13,6 +13,8 @@
 #include "ActsExamples/Framework/BareAlgorithm.hpp"
 #include "ActsExamples/Framework/RandomNumbers.hpp"
 #include "ActsExamples/Framework/WhiteBoard.hpp"
+#include "ActsFatras/Physics/NuclearInteraction/NuclearInteraction.hpp"
+#include "ActsFatras/Physics/StandardPhysicsLists.hpp"
 
 #include <memory>
 #include <string>
@@ -34,6 +36,8 @@ class FatrasAlgorithm final : public BareAlgorithm {
     std::string outputParticlesFinal;
     /// The simulated hits output collection.
     std::string outputSimHits;
+    /// Parametrisation of nuclear interaction
+    std::string imputParametrisation = "parameters";
     /// The simulator kernel.
     simulator_t simulator;
     /// Random number service.
@@ -75,6 +79,14 @@ class FatrasAlgorithm final : public BareAlgorithm {
     particlesInitialUnordered.reserve(inputParticles.size());
     particlesFinalUnordered.reserve(inputParticles.size());
     simHitsUnordered.reserve(kMeanHitsPerParticle * inputParticles.size());
+
+	auto const* nuclearInteractionParametrisation = &ctx.eventStore.get<ActsFatras::detail::MultiParticleParametrisation>(m_cfg.imputParametrisation);
+    const_cast<ActsFatras::ChargedElectroMagneticPhysicsList*>
+		(&m_cfg.simulator.charged.physics)->get<ActsFatras::detail::ParametrisedNuclearInteraction>()
+		.physics.multiParticleParameterisation = nuclearInteractionParametrisation;
+    const_cast<ActsFatras::NeutralPhysicsList*>
+		(&m_cfg.simulator.neutral.physics)->get<ActsFatras::detail::ParametrisedNuclearInteraction>()
+		.physics.multiParticleParameterisation = nuclearInteractionParametrisation;
 
     // run the simulation w/ a local random generator
     auto rng = m_cfg.randomNumbers->spawnGenerator(ctx);

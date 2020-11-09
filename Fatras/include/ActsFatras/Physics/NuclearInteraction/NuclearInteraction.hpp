@@ -26,7 +26,7 @@ namespace ActsFatras {
 /// @brief This class provides a parametrised nuclear interaction. The thereby required parametrisation needs to be set and is not provided by default.
 struct NuclearInteraction {
 	/// The storage of the parameterisation
-  detail::MultiParticleParametrisation multiParticleParameterisation; // TODO: this should depend on the particle
+  detail::MultiParticleParametrisation const* multiParticleParameterisation = nullptr;
   
   /// @brief Main call operator
   ///
@@ -40,24 +40,38 @@ struct NuclearInteraction {
   std::vector<Particle> operator()(generator_t& generator,
                                      const Acts::MaterialSlab& slab,
                                      Particle& particle) const {
+	if(multiParticleParameterisation == nullptr)
+	{
+		return {};
+	}
+	
+	std::uniform_real_distribution<double> uniformDistribution {0., 1.};
+	if(particle.pathLimitL0() == std::numeric_limits<Particle::Scalar>::max())
+	{
+		std::cout << "Need a limit for " << particle.pdg() << std::endl;
+		if(multiParticleParameterisation->find(particle.pdg()) != multiParticleParameterisation->end())
+		{
+			const auto& distribution = multiParticleParameterisation->at(particle.pdg()).at(particle.absMomentum()).nuclearInteractionProbability;
+			particle.setMaterialLimits(particle.pathLimitX0(), sampleContinuousValues(uniformDistribution(generator), distribution));
+		}
+	}
+	
 	// Test whether enough material was passed for a nuclear interaction
     if(particle.pathInL0() >= particle.pathLimitL0())
     {
 		// Fast exit if there is no parametrisation
-		if(multiParticleParameterisation.empty())
+		if(multiParticleParameterisation->empty())
 			return {};
-		const auto parametrisationIterator = multiParticleParameterisation.find(particle.pdg());
-		if(parametrisationIterator == multiParticleParameterisation.end())
+		const auto parametrisationIterator = multiParticleParameterisation->find(particle.pdg());
+		if(parametrisationIterator == multiParticleParameterisation->end())
 			return {};
 		const detail::Parametrisation& parametrisation = *parametrisationIterator;
 		
-		std::uniform_real_distribution<double> uniformDistribution {0., 1.};
-		std::normal_distribution<double> normalDistribution {0., 1.};
-		
 		// Get the parameters
-		const detail::Parameters& parameters = findParameters(uniformDistribution(generator), particle);
+		const detail::Parameters& parameters = findParameters(uniformDistribution(generator), parametrisation, particle.absMomentum());
 
 		// Dice the interaction type
+		std::normal_distribution<double> normalDistribution {0., 1.};
 		if(softInteraction(normalDistribution(generator), parameters.softInteractionProbability))
 		{
 			// Get the final state multiplicity
@@ -300,9 +314,9 @@ std::vector<Particle> NuclearInteraction::convertParametersToParticles(generator
 	  Particle p = Particle(Barcode(), pdgId[i]).setProcess(ProcessType::eNuclearInteraction).setPosition4(initialParticle.position4())
 		.setAbsMomentum(momentum).setDirection(direction);
 		
-	if(multiParticleParameterisation.find(p.pdg()) != multiParticleParameterisation.end())
+	if(multiParticleParameterisation->find(p.pdg()) != multiParticleParameterisation->end())
 	{
-		const auto& distribution = multiParticleParameterisation.at(p.pdg()).at(p.absMomentum()).nuclearInteractionProbability;
+		const auto& distribution = multiParticleParameterisation->at(p.pdg()).at(p.absMomentum()).nuclearInteractionProbability;
 		p.setMaterialLimits(p.pathLimitX0(), sampleContinuousValues(uniformDistribution(generator), distribution));
 	}
   }

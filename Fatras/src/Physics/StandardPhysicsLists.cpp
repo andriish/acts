@@ -15,5 +15,13 @@ ActsFatras::makeChargedElectroMagneticPhysicsList(double minimumAbsMomentum) {
       minimumAbsMomentum;
   pl.get<detail::StandardBetheHeitler>().selectOutputParticle.valMin =
       minimumAbsMomentum;
+  pl.get<detail::ParametrisedNuclearInteraction>().selectInput.valMin = minimumAbsMomentum;
+  return pl;
+}
+
+ActsFatras::NeutralPhysicsList
+ActsFatras::makeNeutralPhysicsList(double minimumAbsMomentum) {
+  NeutralPhysicsList pl;
+  pl.get<detail::ParametrisedNuclearInteraction>().selectInput.valMin = minimumAbsMomentum;
   return pl;
 }

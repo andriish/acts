@@ -13,6 +13,7 @@
 #include "ActsFatras/Physics/EnergyLoss/BetheBloch.hpp"
 #include "ActsFatras/Physics/EnergyLoss/BetheHeitler.hpp"
 #include "ActsFatras/Physics/Scattering/Highland.hpp"
+#include "ActsFatras/Physics/NuclearInteraction/NuclearInteraction.hpp"
 #include "ActsFatras/Selectors/KinematicCasts.hpp"
 #include "ActsFatras/Selectors/PdgSelectors.hpp"
 #include "ActsFatras/Selectors/SelectorHelpers.hpp"
@@ -39,6 +40,9 @@ using StandardBetheBloch =
 using StandardBetheHeitler =
     Process<BetheHeitler, AsInputSelector<SelectElectronLike>, SelectPMin,
             EveryParticle>;
+/// Parametrised nuclear interaction that applies to hadrons.
+using ParametrisedNuclearInteraction =
+    Process<NuclearInteraction, AsInputSelector<SelectPMin>, SelectPMin, EveryParticle>;
 }  // namespace detail
 
 /// Electro-magnetic interactions for charged particles.
@@ -55,12 +59,17 @@ using StandardBetheHeitler =
 ///       input energy.
 using ChargedElectroMagneticPhysicsList =
     PhysicsList<detail::StandardScattering, detail::StandardBetheBloch,
-                detail::StandardBetheHeitler>;
+                detail::StandardBetheHeitler, detail::ParametrisedNuclearInteraction>;
+                
+using NeutralPhysicsList =
+    PhysicsList<detail::StandardScattering, detail::ParametrisedNuclearInteraction>;
 
 /// Construct the standard electro-magnetic physics list for charged particles.
 ///
 /// @param minimumAbsMomentum lower p cut on output particles
 ChargedElectroMagneticPhysicsList makeChargedElectroMagneticPhysicsList(
     double minimumAbsMomentum);
+    
+NeutralPhysicsList makeNeutralPhysicsList(double minimumAbsMomentum);
 
 }  // namespace ActsFatras

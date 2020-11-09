@@ -83,7 +83,7 @@ int runFatras(int argc, char* argv[],
   }
   // setup other modules
   setupInput(vars, sequencer, randomNumbers);
-  setupSimulation(vars, sequencer, randomNumbers, trackingGeometry);
+  setupSimulation(vars, sequencer, randomNumbers, trackingGeometry); // TODO: make the parametrisation configurable in there
   setupDigitization(vars, sequencer, randomNumbers, trackingGeometry);
 
   ActsExamples::RootNuclearInteractionParametersReader::Config rniprCfg;
