@@ -140,6 +140,7 @@ std::pair<std::vector<float>, std::vector<uint32_t>> buildMap(TH1F const* hist, 
 ActsExamples::RootNuclearInteractionParametersReader::RootNuclearInteractionParametersReader(
     const ActsExamples::RootNuclearInteractionParametersReader::Config& cfg)
     : ActsExamples::IReader(), m_cfg(cfg) {
+std::cout << "Constructor" << std::endl;
   if (m_cfg.fileList.empty()) {
     throw std::invalid_argument("Missing input files");
   }
@@ -171,7 +172,7 @@ std::vector<std::pair<std::vector<float>, std::vector<uint32_t>>> ActsExamples::
 
 ActsExamples::ProcessCode ActsExamples::RootNuclearInteractionParametersReader::read(
     const ActsExamples::AlgorithmContext& context) {
-	
+std::cout << "Read call " << std::endl;	
 	ACTS_DEBUG("Trying to read nulcear interaction parametrisations.");
 	
   // Read and prepare the parametrisation
@@ -320,6 +321,8 @@ ActsExamples::ProcessCode ActsExamples::RootNuclearInteractionParametersReader::
 		}
 		tf.Close();
 	}
+	ACTS_DEBUG("Nuclear interaction parametrisation loaded");
+	
 	// Write to the collection to the EventStore
     context.eventStore.add(m_cfg.outputParametrisation, std::move(parametrisation));
   }
