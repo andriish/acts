@@ -8,6 +8,8 @@ add_library(
   src/Kernel/SimulatorError.cpp
   src/Physics/StandardPhysicsLists.cpp
   src/Physics/NuclearInteraction/NuclearInteraction.cpp
+  src/Physics/Decay/Decay.cpp
+  src/Physics/Decay/PDGtoG4Converter.cpp
   src/Utilities/LandauDistribution.cpp
   src/Utilities/ParticleData.cpp)
 target_compile_features(
