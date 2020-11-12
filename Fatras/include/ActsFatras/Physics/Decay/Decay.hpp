@@ -21,7 +21,6 @@
 #include "ActsFatras/Physics/Decay/PDGtoG4Converter.hpp"
 #include "G4ParticleDefinition.hh"
 
-
 class G4RunManager;
 
 namespace ActsFatras {
@@ -44,9 +43,9 @@ std::vector<Particle> decayParticle(const Particle& parent) const;
 
    private:
 /** initialize G4RunManager on first call if not done by then */
-G4RunManager* initG4RunManager();
+G4RunManager* initG4RunManager() const;
 
-      mutable G4RunManager*                m_g4runManager;         //!< for dummy G4 initialization               
+      mutable G4RunManager*                m_g4RunManager;         //!< for dummy G4 initialization               
                       
       PDGtoG4Converter         m_pdgToG4Conv;           //!< Handle for the  PDGToG4Particle converter tool
 
@@ -62,9 +61,9 @@ ActsFatras::Decay::freeLifeTime(generator_t& generator, const ActsFatras::Partic
   
   if(std::abs(pdgCode) == 13) return -1.;
   
-  G4ParticleDefinition* pDef = m_pdgToG4Conv->getParticleDefinition(pdgCode);
+  G4ParticleDefinition* pDef = m_pdgToG4Conv.getParticleDefinition(pdgCode);
   
-  if(!pDef || pDef->pDef->GetPDGStable()) {
+  if(!pDef || pDef->GetPDGStable()) {
     return -1.;
   }
     
@@ -72,7 +71,7 @@ ActsFatras::Decay::freeLifeTime(generator_t& generator, const ActsFatras::Partic
   Particle::Vector4 particleMom = isp.momentum4();
 
   // get average lifetime
-  constexpr double convertTime = Acts::UnitConstant::mm / CLHEP::s;
+  constexpr double convertTime = Acts::UnitConstants::mm / CLHEP::s;
   const double tau = pDef->GetPDGLifeTime() * convertTime;
   // sample the lifetime
   std::uniform_real_distribution<double> uniformDistribution {0., 1.};
@@ -82,14 +81,14 @@ ActsFatras::Decay::freeLifeTime(generator_t& generator, const ActsFatras::Partic
 }
 
 template <typename generator_t>
-std::vector<Particle> 
+std::vector<ActsFatras::Particle> 
 ActsFatras::Decay::operator()(generator_t& generator, const Acts::MaterialSlab& /*slab*/, const ActsFatras::Particle& isp) const{
 
   // perform the decay 
-  const std::vector<Particle> decayProducts = decayParticle(particleToDecay,vertex,momentum,timeStamp);
+  const std::vector<Particle> decayProducts = decayParticle(isp);
   
 	// TODO: free path must be set for decay products
 	// TODO: initial particle must die
 	
-	return;
+	return decayProducts;
 }

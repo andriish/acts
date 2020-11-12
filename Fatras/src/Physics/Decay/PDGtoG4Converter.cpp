@@ -9,7 +9,7 @@
 #include "ActsFatras/Physics/Decay/PDGtoG4Converter.hpp"
 
 #include "G4ParticleDefinition.hh"
-//~ #include "G4ParticleTypes.hh"
+#include "G4ParticleTypes.hh"
 //~ #include "G4DecayTable.hh"
 
 ActsFatras::PDGtoG4Converter::PDGtoG4Converter() : m_pdgG4ParticleMap()
@@ -24,8 +24,7 @@ ActsFatras::PDGtoG4Converter::PDGtoG4Converter() : m_pdgG4ParticleMap()
 G4ParticleDefinition* 
 ActsFatras::PDGtoG4Converter::getParticleDefinition( int pdgCode) const {
 		  
-  std::map<int,G4ParticleDefinition*>::const_iterator it =
-      m_pdgG4ParticleMap.find( pdgCode);
+  std::unordered_map<int,G4ParticleDefinition*>::const_iterator it = m_pdgG4ParticleMap.find( pdgCode);
   
   if( it != m_pdgG4ParticleMap.end())
 	return it->second;

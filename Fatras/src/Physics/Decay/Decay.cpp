@@ -19,6 +19,8 @@
 #include "G4DecayProducts.hh"
 #include "Acts/Utilities/Definitions.hpp"
 #include "ActsFatras/EventData/ProcessType.hpp"
+#include "QGSP_BERT.hh"
+#include "ActsFatras/Physics/Decay/G4DetectorConstruction.hpp"
 
 /**AlgTool constructor for ParticleDecayHelper*/
 ActsFatras::Decay::Decay() : m_g4RunManager(initG4RunManager()) {}
@@ -29,14 +31,9 @@ ActsFatras::Decay::decayParticle(const ActsFatras::Particle& parent) const {
   // return vector for children
   std::vector<Particle> children;
 
-  // initialize G4RunManager if not done already
-  if(m_g4runManager == nullptr) {
-    initG4RunManager();
-  }
-
   int pdgCode = parent.pdg();
     
-  G4ParticleDefinition* pDef = m_pdgToG4Conv->getParticleDefinition(pdgCode);
+  G4ParticleDefinition* pDef = m_pdgToG4Conv.getParticleDefinition(pdgCode);
   if(!pDef)
   {
     return children;
@@ -61,9 +58,9 @@ ActsFatras::Decay::decayParticle(const ActsFatras::Particle& parent) const {
   }
 
   const Particle::Vector4 mom4 = parent.momentum4();
-  products->Boost( mom4[eMom0] / mom4[eEnergy],
-                   mom4[eMom1] / mom4[eEnergy],
-                   mom4[eMom2] / mom4[eEnergy]);
+  products->Boost( mom4[Acts::eMom0] / mom4[Acts::eEnergy],
+                   mom4[Acts::eMom1] / mom4[Acts::eEnergy],
+                   mom4[Acts::eMom2] / mom4[Acts::eEnergy]);
 
   G4int nProducts = products->entries();
   for(G4int i = 0; i < nProducts; i++)
@@ -80,8 +77,9 @@ ActsFatras::Decay::decayParticle(const ActsFatras::Particle& parent) const {
     Acts::Vector3D amgMom( mom.x(), mom.y(), mom.z() );
 	amgMom *= convertEnergy;
 
-	Particle childParticle(Barcode(), prod->GetPDGcode());
-	childParticle.setPosition4(parent.position4()).setAbsMomentum(amgMom.norm()).setDirection(amgMom).setProcess(eDecay);
+	int32_t pdg = prod->GetPDGcode();
+	Particle childParticle(Barcode(), static_cast<Acts::PdgParticle>(pdg));
+	childParticle.setPosition4(parent.position4()).setAbsMomentum(amgMom.norm()).setDirection(amgMom).setProcess(ProcessType::eDecay);
 
     children.push_back(std::move(childParticle));
   }
@@ -93,16 +91,18 @@ G4RunManager*
 ActsFatras::Decay::initG4RunManager() const {
   if(G4RunManager::GetRunManager() == nullptr)
   {
-	  m_g4runManager = new G4RunManager;
+	  G4RunManager* runManager = new G4RunManager;
 	
 	  // initialize here
 	  G4VUserPhysicsList *thePL = new QGSP_BERT;
 
-	  m_g4runManager->SetUserInitialization(thePL);
-	  m_g4runManager->SetUserInitialization(new G4DetectorConstruction());
+	  runManager->SetUserInitialization(thePL);
+	  runManager->SetUserInitialization(new G4DetectorConstruction());
 
 	  // initialize Geant4
-	  m_g4runManager->Initialize();
+	  runManager->Initialize();
+	  return runManager;
   } else {
 	  return G4RunManager::GetRunManager();
+  }
 }
