@@ -43,7 +43,8 @@ struct Interactor {
     template <typename propagator_state_t, typename stepper_t>
     constexpr bool operator()(propagator_state_t &, const stepper_t &,
                               const result_type &result) const {
-      return not result.isAlive;
+	  return (result.pathInL0 >= result.particle.pathLimitX0()) || (result.pathInL0 >= result.particle.pathLimitL0())
+		|| (result.particle.time() >= result.particle.pathLimitTime()) || (not result.isAlive);
     }
   };
 

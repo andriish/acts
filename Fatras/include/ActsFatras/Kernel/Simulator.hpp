@@ -32,13 +32,35 @@
 
 namespace ActsFatras {
 
+//~ // Actor
+//~ struct StepSizeAdjustment {
+	
+//~ using result_type
+	
+	//~ template <typename propagator_state_t, typename stepper_t>
+    //~ void operator()(propagator_state_t& state, const stepper_t& stepper,
+                    //~ result_type& result) const {
+	//~ }
+//~ };
+
+struct VoidDecayModule {
+	
+	// TODO: This should be Decay.hpp
+	
+	//~ template <typename generator_t>
+//~ std::vector<Particle> operator()(generator_t& generator, const Acts::MaterialSlab& /*slab*/, Particle& isp) const;
+	
+	
+	
+};
+
 /// Single particle simulator with a fixed propagator and physics list.
 ///
 /// @tparam propagator_t is the type of the underlying propagator
 /// @tparam physics_list_t is the type of the simulated physics list
 /// @tparam hit_surface_selector_t is the type that selects hit surfaces
 template <typename propagator_t, typename physics_list_t,
-          typename hit_surface_selector_t>
+          typename hit_surface_selector_t, typename decay_module_t = VoidDecayModule>
 struct ParticleSimulator {
   /// How and within which geometry to propagate the particle.
   propagator_t propagator;
