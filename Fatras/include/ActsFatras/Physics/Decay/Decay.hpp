@@ -36,7 +36,7 @@ double freeLifeTime(generator_t& generator, const Particle& isp) const;
 
 /** decay handling secondaries */
 template <typename generator_t>
-std::vector<Particle> operator()(generator_t& generator, const Acts::MaterialSlab& /*slab*/, const Particle& isp) const;
+std::vector<Particle> operator()(generator_t& generator, const Acts::MaterialSlab& /*slab*/, Particle& isp) const;
 
 /** decay */
 std::vector<Particle> decayParticle(const Particle& parent) const;
@@ -82,13 +82,17 @@ ActsFatras::Decay::freeLifeTime(generator_t& generator, const ActsFatras::Partic
 
 template <typename generator_t>
 std::vector<ActsFatras::Particle> 
-ActsFatras::Decay::operator()(generator_t& generator, const Acts::MaterialSlab& /*slab*/, const ActsFatras::Particle& isp) const{
+ActsFatras::Decay::operator()(generator_t& generator, const Acts::MaterialSlab& /*slab*/, ActsFatras::Particle& isp) const{
 
   // perform the decay 
-  const std::vector<Particle> decayProducts = decayParticle(isp);
+  std::vector<Particle> decayProducts = decayParticle(isp);
+  for(Particle& decayProduct : decayProducts)
+  {
+	  	// TODO: free path must be set for decay products
+
+  }
   
-	// TODO: free path must be set for decay products
-	// TODO: initial particle must die
-	
+  isp.setAbsMomentum(Particle::Scalar(0));
+  
 	return decayProducts;
 }

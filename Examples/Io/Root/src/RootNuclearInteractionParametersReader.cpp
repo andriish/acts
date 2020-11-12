@@ -198,9 +198,11 @@ std::cout << "Reading file " << file << std::endl;
 			char const* name = elem->GetName();
 			parameters.momentum = std::stof(name);
 			gDirectory->cd(name);
-std::cout << "Momentum found: "<< parameters.momentum << std::endl;
+std::cout << "Momentum found: "<< parameters.momentum << " " << name << std::endl;
+gDirectory->ls();
 			// Get the nuclear interaction probability
 			TH1F* nuclearInteraction = (TH1F*) gDirectory->Get("NuclearInteraction");
+std::cout << "NuclearInteraction retrieved: " << nuclearInteraction << std::endl;
 			parameters.nuclearInteractionProbability = buildMap(nuclearInteraction, m_cfg.nSimulatedEvents);
 std::cout << "Nuclear interaction" << std::endl;
 			// Get the soft interaction probability

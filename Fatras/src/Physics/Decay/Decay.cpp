@@ -22,10 +22,8 @@
 #include "QGSP_BERT.hh"
 #include "ActsFatras/Physics/Decay/G4DetectorConstruction.hpp"
 
-/**AlgTool constructor for ParticleDecayHelper*/
 ActsFatras::Decay::Decay() : m_g4RunManager(initG4RunManager()) {}
       
-/** decay */
 std::vector<ActsFatras::Particle> 
 ActsFatras::Decay::decayParticle(const ActsFatras::Particle& parent) const {
   // return vector for children
@@ -86,7 +84,6 @@ ActsFatras::Decay::decayParticle(const ActsFatras::Particle& parent) const {
   return children;
 }
 
-/** initialize G4RunManager on first call if not done by then */
 G4RunManager* 
 ActsFatras::Decay::initG4RunManager() const {
   if(G4RunManager::GetRunManager() == nullptr)
