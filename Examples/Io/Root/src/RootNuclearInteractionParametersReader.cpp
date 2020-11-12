@@ -65,10 +65,9 @@ void reduceMap(std::vector<float>& histoBorders, std::vector<uint32_t>& histoCon
 {
 	for(auto cit = histoContents.cbegin(); cit != histoContents.cend(); cit++)
 	{
-		// Test if neighbouring bins have the same value
-		if(*cit == *std::prev(cit, 1))
+		while(std::next(cit, 1) != histoContents.end() && *cit == *std::next(cit, 1))
 		{
-			const auto distance = std::distance(histoContents.cbegin(), std::prev(cit, 1));
+			const auto distance = std::distance(histoContents.cbegin(), std::next(cit, 1));
 			// Remove the bin
 			histoBorders.erase(histoBorders.begin() + distance);
 			histoContents.erase(histoContents.begin() + distance);
@@ -118,9 +117,10 @@ std::pair<std::vector<float>, std::vector<uint32_t>> buildMap(TH1F const* hist) 
 std::pair<std::vector<float>, std::vector<uint32_t>> buildMap(TH1F const* hist, double integral) {
   // Build the components
   std::tuple<std::vector<float>, std::vector<double>, double> map = buildNotNormalisedMap(hist);
+
   const int nBins = hist->GetNbinsX();
   std::vector<double>& histoContents = std::get<1>(map);
-  
+
   // Fast exit if the histogram is empty
   if(histoContents.empty())
 	return std::make_pair(std::get<0>(map), std::vector<uint32_t>());
@@ -134,13 +134,13 @@ std::pair<std::vector<float>, std::vector<uint32_t>> buildMap(TH1F const* hist, 
 
   std::vector<float> histoBorders = std::get<0>(map);
   reduceMap(histoBorders, normalisedHistoContents);
+
   return std::make_pair(histoBorders, normalisedHistoContents);}
 }
 
 ActsExamples::RootNuclearInteractionParametersReader::RootNuclearInteractionParametersReader(
     const ActsExamples::RootNuclearInteractionParametersReader::Config& cfg)
     : ActsExamples::IReader(), m_cfg(cfg) {
-std::cout << "Constructor" << std::endl;
   if (m_cfg.fileList.empty()) {
     throw std::invalid_argument("Missing input files");
   }
@@ -199,7 +199,6 @@ std::cout << "Reading file " << file << std::endl;
 			parameters.momentum = std::stof(name);
 			gDirectory->cd(name);
 std::cout << "Momentum found: "<< parameters.momentum << " " << name << std::endl;
-gDirectory->ls();
 			// Get the nuclear interaction probability
 			TH1F* nuclearInteraction = (TH1F*) gDirectory->Get("NuclearInteraction");
 std::cout << "NuclearInteraction retrieved: " << nuclearInteraction << std::endl;
@@ -222,105 +221,105 @@ std::cout << "pdg probability" << std::endl;
 			TH1F* softMultiplicity = (TH1F*) gDirectory->Get("Multiplicity");
 			parameters.softMultiplicity = buildMap(softMultiplicity);
 std::cout << "multiplicity" << std::endl;
-			// Get the distributions for each final state multiplicity
-			//~ auto softList = gDirectory->GetListOfKeys();
-			//~ auto softElement = softList->First();
-			//~ while(softElement)
-			//~ {
-				//~ if(softElement->IsFolder())
-				//~ {
-					//~ // Find the momentum and invariant mass distributions
-					//~ const char* distributionName = softElement->GetName();
-					//~ unsigned int mult = std::stoi(distributionName);
-					//~ gDirectory->cd(distributionName);
-					//~ std::vector<TH1F*> momentumDistributions;
-					//~ momentumDistributions.reserve(mult + 1);
-					//~ std::vector<TH1F*> invariantMassDistributions;
-					//~ invariantMassDistributions.reserve(mult);
-					//~ for(unsigned int i = 0; i < mult; i++)
-					//~ {
-						//~ momentumDistributions.push_back(std::move((TH1F*) gDirectory->Get(("MomentumDistribution_" + std::to_string(i)).c_str())));
-						//~ invariantMassDistributions.push_back(std::move((TH1F*) gDirectory->Get(("InvariantMassDistribution_" + std::to_string(i)).c_str())));
-					//~ }
-					//~ momentumDistributions.push_back(std::move((TH1F*) gDirectory->Get(("MomentumDistribution_" + std::to_string(mult)).c_str())));
-
-					//~ // Get the eigenspace components for the kinematic parameters
-					//~ std::vector<float> momentumEigenvalues = *((std::vector<float>*) gDirectory->Get("MomentumEigenvalues"));
-					//~ std::vector<float> momentumEigenvectors = *((std::vector<float>*) gDirectory->Get("MomentumEigenvectors"));
-					//~ std::vector<float> momentumMean = *((std::vector<float>*) gDirectory->Get("MomentumMean"));
-					//~ std::vector<float> invariantMassEigenvalues = *((std::vector<float>*) gDirectory->Get("InvariantMassEigenvalues"));
-					//~ std::vector<float> invariantMassEigenvectors = *((std::vector<float>*) gDirectory->Get("InvariantMassEigenvectors"));
-					//~ std::vector<float> invariantMassMean = *((std::vector<float>*) gDirectory->Get("InvariantMassMean"));
-					
-					//~ // Prepare the storage
-					//~ if(mult >= parameters.softKinematicParameters.size())
-						//~ parameters.softKinematicParameters.resize(mult + 1);
-					//~ // Prepare and store the kinematic parameters
-					//~ if(mult == 5)
-					//~ {
-						//~ ActsFatras::detail::Parameters::ParametersWithFixedMultiplicity<5> kinematicParameters(buildMaps(momentumDistributions), 
-						//~ momentumEigenvalues, momentumEigenvectors, momentumMean,
-						//~ buildMaps(invariantMassDistributions),
-						//~ invariantMassEigenvalues, invariantMassEigenvectors, invariantMassMean);
-						//~ parameters.softKinematicParameters[mult] = kinematicParameters;
-					//~ }
-					//~ gDirectory->cd("..");
-				//~ }
-				//~ softElement = softList->After(softElement);
-			//~ }
-			//~ // Get the hard distributions
-			//~ gDirectory->cd("../hard");
-			//~ // Get the multiplicity distribution
-			//~ TH1F* hardMultiplicity = (TH1F*) gDirectory->Get("Multiplicity");
-			//~ parameters.hardMultiplicity = buildMap(hardMultiplicity);
-
 			//~ // Get the distributions for each final state multiplicity
-			//~ auto hardList = gDirectory->GetListOfKeys();
-			//~ auto hardElement = hardList->First();
-			//~ while(hardElement)
-			//~ {
-				//~ if(hardElement->IsFolder())
-				//~ {
-					//~ // Find the momentum and invariant mass distributions
-					//~ const char* distributionName = hardElement->GetName();
-					//~ unsigned int mult = std::stoi(distributionName);
-					//~ gDirectory->cd(distributionName);
-					//~ std::vector<TH1F*> momentumDistributions;
-					//~ momentumDistributions.reserve(mult + 1);
-					//~ std::vector<TH1F*> invariantMassDistributions;
-					//~ invariantMassDistributions.reserve(mult);
-					//~ for(unsigned int i = 0; i < mult; i++)
-					//~ {
-						//~ momentumDistributions.push_back(std::move((TH1F*) gDirectory->Get(("MomentumDistribution_" + std::to_string(i)).c_str())));
-						//~ invariantMassDistributions.push_back(std::move((TH1F*) gDirectory->Get(("InvariantMassDistribution_" + std::to_string(i)).c_str())));
-					//~ }
-					//~ momentumDistributions.push_back(std::move((TH1F*) gDirectory->Get(("MomentumDistribution_" + std::to_string(mult)).c_str())));
-	
-					//~ // Get the eigenspace components for the kinematic parameters
-					//~ std::vector<float> momentumEigenvalues = *((std::vector<float>*) gDirectory->Get("MomentumEigenvalues"));
-					//~ std::vector<float> momentumEigenvectors = *((std::vector<float>*) gDirectory->Get("MomentumEigenvectors"));
-					//~ std::vector<float> momentumMean = *((std::vector<float>*) gDirectory->Get("MomentumMean"));
-					//~ std::vector<float> invariantMassEigenvalues = *((std::vector<float>*) gDirectory->Get("InvariantMassEigenvalues"));
-					//~ std::vector<float> invariantMassEigenvectors = *((std::vector<float>*) gDirectory->Get("InvariantMassEigenvectors"));
-					//~ std::vector<float> invariantMassMean = *((std::vector<float>*) gDirectory->Get("InvariantMassMean"));
-						
-					//~ // Prepare the storage			
-					//~ if(mult >= parameters.hardKinematicParameters.size())
-						//~ parameters.hardKinematicParameters.resize(mult + 1);
-					//~ // Prepare and store the kinematic parameters
-					//~ if(mult == 5)
-					//~ {					
-						//~ ActsFatras::detail::Parameters::ParametersWithFixedMultiplicity<5> kinematicParameters(buildMaps(momentumDistributions), 
-						//~ momentumEigenvalues, momentumEigenvectors, momentumMean,
-						//~ buildMaps(invariantMassDistributions),
-						//~ invariantMassEigenvalues, invariantMassEigenvectors, invariantMassMean);
-						//~ parameters.hardKinematicParameters[mult] = kinematicParameters;
-					//~ }
+			auto softList = gDirectory->GetListOfKeys();
+			auto softElement = softList->First();
+			while(softElement)
+			{
+				if(softElement->IsFolder())
+				{
+					// Find the momentum and invariant mass distributions
+					const char* distributionName = softElement->GetName();
+					unsigned int mult = std::stoi(distributionName);
+					gDirectory->cd(distributionName);
+					std::vector<TH1F*> momentumDistributions;
+					momentumDistributions.reserve(mult + 1);
+					std::vector<TH1F*> invariantMassDistributions;
+					invariantMassDistributions.reserve(mult);
+					for(unsigned int i = 0; i < mult; i++)
+					{
+						momentumDistributions.push_back(std::move((TH1F*) gDirectory->Get(("MomentumDistribution_" + std::to_string(i)).c_str())));
+						invariantMassDistributions.push_back(std::move((TH1F*) gDirectory->Get(("InvariantMassDistribution_" + std::to_string(i)).c_str())));
+					}
+					momentumDistributions.push_back(std::move((TH1F*) gDirectory->Get(("MomentumDistribution_" + std::to_string(mult)).c_str())));
 
-					//~ gDirectory->cd("..");
-				//~ }
-				//~ hardElement = softList->After(hardElement);
-			//~ }
+					// Get the eigenspace components for the kinematic parameters
+					std::vector<float> momentumEigenvalues = *((std::vector<float>*) gDirectory->Get("MomentumEigenvalues"));
+					std::vector<float> momentumEigenvectors = *((std::vector<float>*) gDirectory->Get("MomentumEigenvectors"));
+					std::vector<float> momentumMean = *((std::vector<float>*) gDirectory->Get("MomentumMean"));
+					std::vector<float> invariantMassEigenvalues = *((std::vector<float>*) gDirectory->Get("InvariantMassEigenvalues"));
+					std::vector<float> invariantMassEigenvectors = *((std::vector<float>*) gDirectory->Get("InvariantMassEigenvectors"));
+					std::vector<float> invariantMassMean = *((std::vector<float>*) gDirectory->Get("InvariantMassMean"));
+					
+					// Prepare the storage
+					if(mult >= parameters.softKinematicParameters.size())
+						parameters.softKinematicParameters.resize(mult + 1);
+					// Prepare and store the kinematic parameters
+					if(mult == 5)
+					{
+						ActsFatras::detail::Parameters::ParametersWithFixedMultiplicity<5> kinematicParameters(buildMaps(momentumDistributions), 
+						momentumEigenvalues, momentumEigenvectors, momentumMean,
+						buildMaps(invariantMassDistributions),
+						invariantMassEigenvalues, invariantMassEigenvectors, invariantMassMean);
+						parameters.softKinematicParameters[mult] = kinematicParameters;
+					}
+					gDirectory->cd("..");
+				}
+				softElement = softList->After(softElement);
+			}
+			// Get the hard distributions
+			gDirectory->cd("../hard");
+			// Get the multiplicity distribution
+			TH1F* hardMultiplicity = (TH1F*) gDirectory->Get("Multiplicity");
+			parameters.hardMultiplicity = buildMap(hardMultiplicity);
+
+			// Get the distributions for each final state multiplicity
+			auto hardList = gDirectory->GetListOfKeys();
+			auto hardElement = hardList->First();
+			while(hardElement)
+			{
+				if(hardElement->IsFolder())
+				{
+					// Find the momentum and invariant mass distributions
+					const char* distributionName = hardElement->GetName();
+					unsigned int mult = std::stoi(distributionName);
+					gDirectory->cd(distributionName);
+					std::vector<TH1F*> momentumDistributions;
+					momentumDistributions.reserve(mult + 1);
+					std::vector<TH1F*> invariantMassDistributions;
+					invariantMassDistributions.reserve(mult);
+					for(unsigned int i = 0; i < mult; i++)
+					{
+						momentumDistributions.push_back(std::move((TH1F*) gDirectory->Get(("MomentumDistribution_" + std::to_string(i)).c_str())));
+						invariantMassDistributions.push_back(std::move((TH1F*) gDirectory->Get(("InvariantMassDistribution_" + std::to_string(i)).c_str())));
+					}
+					momentumDistributions.push_back(std::move((TH1F*) gDirectory->Get(("MomentumDistribution_" + std::to_string(mult)).c_str())));
+	
+					// Get the eigenspace components for the kinematic parameters
+					std::vector<float> momentumEigenvalues = *((std::vector<float>*) gDirectory->Get("MomentumEigenvalues"));
+					std::vector<float> momentumEigenvectors = *((std::vector<float>*) gDirectory->Get("MomentumEigenvectors"));
+					std::vector<float> momentumMean = *((std::vector<float>*) gDirectory->Get("MomentumMean"));
+					std::vector<float> invariantMassEigenvalues = *((std::vector<float>*) gDirectory->Get("InvariantMassEigenvalues"));
+					std::vector<float> invariantMassEigenvectors = *((std::vector<float>*) gDirectory->Get("InvariantMassEigenvectors"));
+					std::vector<float> invariantMassMean = *((std::vector<float>*) gDirectory->Get("InvariantMassMean"));
+						
+					// Prepare the storage			
+					if(mult >= parameters.hardKinematicParameters.size())
+						parameters.hardKinematicParameters.resize(mult + 1);
+					// Prepare and store the kinematic parameters
+					if(mult == 5)
+					{					
+						ActsFatras::detail::Parameters::ParametersWithFixedMultiplicity<5> kinematicParameters(buildMaps(momentumDistributions), 
+						momentumEigenvalues, momentumEigenvectors, momentumMean,
+						buildMaps(invariantMassDistributions),
+						invariantMassEigenvalues, invariantMassEigenvectors, invariantMassMean);
+						parameters.hardKinematicParameters[mult] = kinematicParameters;
+					}
+
+					gDirectory->cd("..");
+				}
+				hardElement = softList->After(hardElement);
+			}
 			elem = list->After(elem); // TODO: this might be not needed
 			// Store the parametrisation
 			parametrisation[parameters.momentum] = parameters;
@@ -330,7 +329,9 @@ std::cout << "multiplicity" << std::endl;
 	ACTS_DEBUG("Nuclear interaction parametrisation loaded");
 	
 	// Write to the collection to the EventStore
-    context.eventStore.add(m_cfg.outputParametrisation, std::move(parametrisation));
+	ActsFatras::detail::MultiParticleParametrisation mpp;
+	mpp[211] = parametrisation;
+    context.eventStore.add(m_cfg.outputParametrisation, std::move(mpp));
   }
   
   // Return success flag
