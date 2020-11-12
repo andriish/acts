@@ -8,22 +8,24 @@
 
 #pragma once
 
-//~ class G4Material;
+#include "G4VUserDetectorConstruction.hh"
+
 class G4LogicalVolume;
 class G4VPhysicalVolume;
 
-// Geant4
-#include "G4VUserDetectorConstruction.hh"
-
 namespace ActsFatras {
+/// @brief This class produces a dummy Geant4 detector
 class G4DetectorConstruction : public G4VUserDetectorConstruction
 {
 public:
+/// Destructor
   ~G4DetectorConstruction();
 
+/// @brief Interface method for Geant4
   G4VPhysicalVolume* Construct();
 
 private:
+/// @brief This method builds a dummy Geant4 detector
   void dummyDetector();
 
   // Logical volume

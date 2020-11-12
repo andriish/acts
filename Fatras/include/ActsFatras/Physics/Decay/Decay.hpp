@@ -8,10 +8,6 @@
 
 #pragma once
 
-//~ // CLHEP
-//~ #include "CLHEP/Units/SystemOfUnits.h"
-//~ #include "CLHEP/Units/PhysicalConstants.h"
-
 #include <vector>
 #include <cmath>
 #include <random>
@@ -25,73 +21,97 @@ class G4RunManager;
 
 namespace ActsFatras {
 
+/// @brief This class handles the decay of a particle using the Geant4 classes and provides the decay products. Additionally this class assigns a lifetime to a particle. This lifetime is used to trigger the decay.
   class Decay {
     public:
-      
+      /// Constructor
       Decay();
       
-/** free path estimator (-1 for stable particle) */
+/// @brief This method assigns a randomised lifetime to a particle based on its type.
+///
+/// @tparam generator_t Type of the random number generator
+/// @param [in, out] generator The random number generator
+/// @param [in, out] isp The particle that gets a lifetime assigned
 template <typename generator_t>
-double freeLifeTime(generator_t& generator, const Particle& isp) const;
+void lifeTime(generator_t& generator, Particle& isp) const;
 
-/** decay handling secondaries */
+/// @brief This function tests if a decay should occur, triggers it whenever necessary and evaluates the decay products.
+///
+/// @tparam generator_t Type of the random number generator
+/// @param [in, out] generator The random number generator
+/// @param [in] slab The material slab
+/// @param [in, out] isp The particle that may decay
+///
+/// @return Vector containing decay products
 template <typename generator_t>
 std::vector<Particle> operator()(generator_t& generator, const Acts::MaterialSlab& /*slab*/, Particle& isp) const;
 
-/** decay */
+/// @brief This function evaluates the decay products of a given particle
+///
+/// @param [in] parent The decaying particle
+///
+/// @return Vector containing the decay products
 std::vector<Particle> decayParticle(const Particle& parent) const;
 
    private:
-/** initialize G4RunManager on first call if not done by then */
+/// @brief Convenience method assuring the existance of a G4RunManager
+///
+/// @return Pointer to the run manager
 G4RunManager* initG4RunManager() const;
 
-      mutable G4RunManager*                m_g4RunManager;         //!< for dummy G4 initialization               
+      mutable G4RunManager*                m_g4RunManager;         ///< for dummy G4 initialization               
                       
-      PDGtoG4Converter         m_pdgToG4Conv;           //!< Handle for the  PDGToG4Particle converter tool
+      PDGtoG4Converter         m_pdgToG4Conv;           ///< Handle for converting a PDG ID into a Geant4 particle
 
    };               
                     
 }
 
 template <typename generator_t>
-double 
-ActsFatras::Decay::freeLifeTime(generator_t& generator, const ActsFatras::Particle& isp) const {
-  // get the particle properties    
+void 
+ActsFatras::Decay::lifeTime(generator_t& generator, ActsFatras::Particle& isp) const {
+  // Get the particle properties    
   const int pdgCode =  isp.pdg();
+  // Keep muons stable
+  if(std::abs(pdgCode) == 13) return;
   
-  if(std::abs(pdgCode) == 13) return -1.;
-  
+  // Get the Geant4 particle
   G4ParticleDefinition* pDef = m_pdgToG4Conv.getParticleDefinition(pdgCode);
   
+  // Fast exit if the particle is stable
   if(!pDef || pDef->GetPDGStable()) {
-    return -1.;
+    return;
   }
-    
-  // take momentum from ParticleState rather than associated truth
-  Particle::Vector4 particleMom = isp.momentum4();
 
-  // get average lifetime
+  // Get average lifetime
   constexpr double convertTime = Acts::UnitConstants::mm / CLHEP::s;
   const double tau = pDef->GetPDGLifeTime() * convertTime;
-  // sample the lifetime
+  // Sample the lifetime
   std::uniform_real_distribution<double> uniformDistribution {0., 1.};
   const double lifeTime = -tau * log(uniformDistribution(generator));
   
-  return lifeTime;
+  // Assign the lifetime
+  isp.setLifetimeLimit(lifeTime);
 }
 
 template <typename generator_t>
 std::vector<ActsFatras::Particle> 
 ActsFatras::Decay::operator()(generator_t& generator, const Acts::MaterialSlab& /*slab*/, ActsFatras::Particle& isp) const{
+	
+  // Test if decay condition is fulfilled
+  if(isp.pathLimitTime() < isp.time())
+	return {};
 
   // perform the decay 
   std::vector<Particle> decayProducts = decayParticle(isp);
+  
+  // Assign a lifetime to decay products
   for(Particle& decayProduct : decayProducts)
   {
-	  	// TODO: free path must be set for decay products
-
+	  lifeTime(generator, decayProduct);
   }
   
+  // Kill the particle
   isp.setAbsMomentum(Particle::Scalar(0));
   
 	return decayProducts;

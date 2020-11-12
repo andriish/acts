@@ -14,26 +14,30 @@ class G4ParticleDefinition;
 
 namespace ActsFatras
 {
+	/// @brief This class converts a PDG ID into a corresponding Geant4 particle.
   class PDGtoG4Converter
   {
   public:
-    /** Default constructor */
+    /// Constructor
     PDGtoG4Converter();
-    
-/**
-   Returns the G4ParticleDefinition of particle with PDG ID pdgCode,
-   0 otherwise.
-*/
+
+/// @brief Converts a PDG ID into the corresponding Geant4 particle
+///
+/// @param [in] pdgCode The PDG ID
+///
+/// @return Pointer to the Geant4 particle
 G4ParticleDefinition* getParticleDefinition( int pdgCode) const;
 
   private:
-    /** fills default particles in map of predefined particles */
+    /// @brief This method fills the internal storage with Geant4 particles and their PDG IDs for later lookup
     void fillPredefinedParticles();
     
-/** add a G4 particle to the map of predefined particles */
+/// @brief This method adds a certain Particle to the internal storage
+///
+/// @param [in] pDef The Geant4 particle that will be added
 void addParticle( G4ParticleDefinition* pDef);
     
-    /** map from pdg codes to defined Geant4 particles */
+    /// The internal storage consisting of PDG ID and the Geant4 particle
     std::unordered_map<int,G4ParticleDefinition*> m_pdgG4ParticleMap;
   };
 }

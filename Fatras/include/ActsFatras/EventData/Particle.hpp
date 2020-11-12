@@ -179,6 +179,10 @@ class Particle {
     m_limitL0 = limitL0;
     return *this;
   }
+  constexpr Particle& setLifetimeLimit(Scalar limitTime) {
+	  m_limitTime = limitTime;
+	  return *this;
+  }
   /// The passed material measured in radiation lengths.
   constexpr Scalar pathInX0() const { return m_pathX0; }
   /// The passed material measured in interaction lengths.
@@ -187,6 +191,8 @@ class Particle {
   constexpr Scalar pathLimitX0() const { return m_limitX0; }
   /// The maximum interaction length the particle is allowed to pass.
   constexpr Scalar pathLimitL0() const { return m_limitL0; }
+  /// The maximum lifetime of a particle
+  constexpr Scalar pathLimitTime() const { return m_limitTime; }
 
  private:
   // identity, i.e. things that do not change over the particle lifetime.
@@ -215,6 +221,8 @@ class Particle {
   Scalar m_pathL0 = Scalar(0);
   Scalar m_limitX0 = std::numeric_limits<Scalar>::max();
   Scalar m_limitL0 = std::numeric_limits<Scalar>::max();
+  // The maximum lifetime (similar to X_0 and L_0)
+  Scalar m_limitTime = std::numeric_limits<Scalar>::max();
 };
 
 std::ostream &operator<<(std::ostream &os, const Particle &particle);

@@ -10,33 +10,31 @@
 
 #include "G4ParticleDefinition.hh"
 #include "G4ParticleTypes.hh"
-//~ #include "G4DecayTable.hh"
 
 ActsFatras::PDGtoG4Converter::PDGtoG4Converter() : m_pdgG4ParticleMap()
 {
+	/// Fill the storage
   fillPredefinedParticles();            
 }
-    
-/**
-   Returns the G4ParticleDefinition of particle with PDG ID pdgCode,
-   0 otherwise.
-*/
+
 G4ParticleDefinition* 
 ActsFatras::PDGtoG4Converter::getParticleDefinition( int pdgCode) const {
 		  
   std::unordered_map<int,G4ParticleDefinition*>::const_iterator it = m_pdgG4ParticleMap.find( pdgCode);
   
+  // Find the corresponding particle and return it  
   if( it != m_pdgG4ParticleMap.end())
 	return it->second;
   else
   {
+	  // Rescue mechanism: If the particle is neutral and its anti-particle is stored then return that one instead
     it = m_pdgG4ParticleMap.find( std::abs( pdgCode));
     if( it != m_pdgG4ParticleMap.end() && std::abs( it->second->GetPDGCharge()) < 0.1)
     {
        return it->second;
     }
   }
-  
+  // No particle found
   return nullptr;
 }
 
