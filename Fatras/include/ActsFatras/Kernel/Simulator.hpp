@@ -32,26 +32,21 @@
 
 namespace ActsFatras {
 
-//~ // Actor
-//~ struct StepSizeAdjustment {
+// Actor
+struct StepSizeAdjustment {
 	
-//~ using result_type
-	
-	//~ template <typename propagator_state_t, typename stepper_t>
-    //~ void operator()(propagator_state_t& state, const stepper_t& stepper,
-                    //~ result_type& result) const {
-	//~ }
-//~ };
+	template <typename propagator_state_t, typename stepper_t>
+    void operator()(propagator_state_t& state, const stepper_t& stepper) const {
+		
+		// TODO: This should evaluate and set the step size based on (limitTime - currentTime) / dtds
+		
+	}
+};
 
 struct VoidDecayModule {
-	
-	// TODO: This should be Decay.hpp
-	
-	//~ template <typename generator_t>
-//~ std::vector<Particle> operator()(generator_t& generator, const Acts::MaterialSlab& /*slab*/, Particle& isp) const;
-	
-	
-	
+	template <typename generator_t>
+	void operator()(generator_t& /*generator*/, SimulationResult& /*result*/) const { 
+	 }
 };
 
 /// Single particle simulator with a fixed propagator and physics list.
@@ -60,7 +55,7 @@ struct VoidDecayModule {
 /// @tparam physics_list_t is the type of the simulated physics list
 /// @tparam hit_surface_selector_t is the type that selects hit surfaces
 template <typename propagator_t, typename physics_list_t,
-          typename hit_surface_selector_t, typename decay_module_t = VoidDecayModule>
+          typename hit_surface_selector_t, typename decayModule_t = VoidDecayModule>
 struct ParticleSimulator {
   /// How and within which geometry to propagate the particle.
   propagator_t propagator;
@@ -70,6 +65,8 @@ struct ParticleSimulator {
   hit_surface_selector_t selectHitSurface;
   /// Local logger for debug output.
   std::shared_ptr<const Acts::Logger> localLogger = nullptr;
+
+  decayModule_t decayModule;
 
   /// Construct the simulator with the underlying propagator.
   ParticleSimulator(propagator_t &&propagator_, Acts::Logging::Level lvl)
@@ -121,7 +118,9 @@ struct ParticleSimulator {
         particle.charge());
     auto result = propagator.propagate(start, options);
     if (result.ok()) {
-      return result.value().template get<InteractorResult>();
+	  auto& interactorResult = result.value().template get<InteractorResult>();
+	  decayModule(generator, interactorResult);
+      return interactorResult;
     } else {
       return result.error();
     }
