@@ -92,4 +92,24 @@ NuclearInteraction::globalAngle(ActsFatras::Particle::Scalar phi1, ActsFatras::P
 
 	return std::make_pair(phi, theta);
 }
+
+bool
+NuclearInteraction::match(const Acts::ActsVectorXf& momenta, const Acts::ActsVectorXf& invariantMasses, float initialMomentum) const
+{
+	const unsigned int size = momenta.size();
+	for(unsigned int i = 0; i < size; i++)
+	{
+		const float momentum = momenta[i];
+		const float invariantMass = invariantMasses[i];
+		
+		const float p1p2 = 2. * momentum * initialMomentum;
+		const float costheta = 1. - invariantMass * invariantMass / p1p2;
+
+		if(std::abs(costheta) > 1)
+		{
+			return false;
+		}
+	}
+	return true;
+}
 }  // namespace ActsFatras

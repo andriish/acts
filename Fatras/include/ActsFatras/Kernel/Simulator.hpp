@@ -43,7 +43,7 @@ struct StepSizeAdjustment {
 	}
 };
 
-struct VoidDecayModule {
+struct VoidPostPropagationInteraction {
 	template <typename generator_t>
 	void operator()(generator_t& /*generator*/, SimulationResult& /*result*/) const { 
 	 }
@@ -55,7 +55,7 @@ struct VoidDecayModule {
 /// @tparam physics_list_t is the type of the simulated physics list
 /// @tparam hit_surface_selector_t is the type that selects hit surfaces
 template <typename propagator_t, typename physics_list_t,
-          typename hit_surface_selector_t, typename decayModule_t = VoidDecayModule>
+          typename hit_surface_selector_t, typename post_propagation_interaction_t = VoidPostPropagationInteraction>
 struct ParticleSimulator {
   /// How and within which geometry to propagate the particle.
   propagator_t propagator;
@@ -66,7 +66,7 @@ struct ParticleSimulator {
   /// Local logger for debug output.
   std::shared_ptr<const Acts::Logger> localLogger = nullptr;
 
-  decayModule_t decayModule;
+  post_propagation_interaction_t postPropagationInteraction;
 
   /// Construct the simulator with the underlying propagator.
   ParticleSimulator(propagator_t &&propagator_, Acts::Logging::Level lvl)
@@ -119,7 +119,7 @@ struct ParticleSimulator {
     auto result = propagator.propagate(start, options);
     if (result.ok()) {
 	  auto& interactorResult = result.value().template get<InteractorResult>();
-	  decayModule(generator, interactorResult);
+	  postPropagationInteraction(generator, interactorResult);
       return interactorResult;
     } else {
       return result.error();

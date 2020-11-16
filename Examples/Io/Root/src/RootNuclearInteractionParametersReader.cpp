@@ -15,7 +15,7 @@
 #include <ActsFatras/Physics/NuclearInteraction/Parameters.hpp>
 
 namespace {
-	
+// TODO: some functions were moved to the writer and can be removed
 /// @brief This method builds components for transforming a probability distribution into components that represent the cumulative probability distribution
 ///
 /// @param [in] hist The probability distribution
@@ -212,8 +212,21 @@ std::cout << "Soft Interaction" << std::endl;
 			std::vector<int> branchingPdgIds = *((std::vector<int>*) gDirectory->Get("BranchingPdgIds"));
 			std::vector<int> targetPdgIds = *((std::vector<int>*) gDirectory->Get("TargetPdgIds"));
 			std::vector<float> targetPdgProbability = *((std::vector<float>*) gDirectory->Get("TargetPdgProbability"));
+			parameters.pdgMap.reserve(branchingPdgIds.size());
 			for(unsigned int i = 0; i < branchingPdgIds.size(); i++)
-				parameters.pdgMap[branchingPdgIds[i]][targetPdgIds[i]] = targetPdgProbability[i];
+			{
+				auto it = parameters.pdgMap.begin();
+				while(it->first != branchingPdgIds[i] && it != parameters.pdgMap.end())
+					it++;
+				
+				const auto target = std::make_pair(targetPdgIds[i], targetPdgProbability[i]);
+				if(it != parameters.pdgMap.end())
+				{
+					it->second.push_back(target);
+				} else {
+					parameters.pdgMap.push_back(std::make_pair(branchingPdgIds[i], std::vector<std::pair<int, float>>{target}));
+				}
+			}
 std::cout << "pdg probability" << std::endl;
 			// Get the soft distributions
 			gDirectory->cd("soft");
@@ -255,14 +268,12 @@ std::cout << "multiplicity" << std::endl;
 					if(mult >= parameters.softKinematicParameters.size())
 						parameters.softKinematicParameters.resize(mult + 1);
 					// Prepare and store the kinematic parameters
-					if(mult == 5)
-					{
-						ActsFatras::detail::Parameters::ParametersWithFixedMultiplicity<5> kinematicParameters(buildMaps(momentumDistributions), 
-						momentumEigenvalues, momentumEigenvectors, momentumMean,
-						buildMaps(invariantMassDistributions),
-						invariantMassEigenvalues, invariantMassEigenvectors, invariantMassMean);
-						parameters.softKinematicParameters[mult] = kinematicParameters;
-					}
+					ActsFatras::detail::Parameters::ParametersWithFixedMultiplicity kinematicParameters(buildMaps(momentumDistributions), 
+					momentumEigenvalues, momentumEigenvectors, momentumMean,
+					buildMaps(invariantMassDistributions),
+					invariantMassEigenvalues, invariantMassEigenvectors, invariantMassMean);
+					parameters.softKinematicParameters[mult] = kinematicParameters;
+					
 					gDirectory->cd("..");
 				}
 				softElement = softList->After(softElement);
@@ -307,14 +318,11 @@ std::cout << "multiplicity" << std::endl;
 					if(mult >= parameters.hardKinematicParameters.size())
 						parameters.hardKinematicParameters.resize(mult + 1);
 					// Prepare and store the kinematic parameters
-					if(mult == 5)
-					{					
-						ActsFatras::detail::Parameters::ParametersWithFixedMultiplicity<5> kinematicParameters(buildMaps(momentumDistributions), 
-						momentumEigenvalues, momentumEigenvectors, momentumMean,
-						buildMaps(invariantMassDistributions),
-						invariantMassEigenvalues, invariantMassEigenvectors, invariantMassMean);
-						parameters.hardKinematicParameters[mult] = kinematicParameters;
-					}
+					ActsFatras::detail::Parameters::ParametersWithFixedMultiplicity kinematicParameters(buildMaps(momentumDistributions), 
+					momentumEigenvalues, momentumEigenvectors, momentumMean,
+					buildMaps(invariantMassDistributions),
+					invariantMassEigenvalues, invariantMassEigenvectors, invariantMassMean);
+					parameters.hardKinematicParameters[mult] = kinematicParameters;
 
 					gDirectory->cd("..");
 				}
@@ -322,7 +330,7 @@ std::cout << "multiplicity" << std::endl;
 			}
 			elem = list->After(elem); // TODO: this might be not needed
 			// Store the parametrisation
-			parametrisation[parameters.momentum] = parameters;
+			parametrisation.push_back(std::make_pair(parameters.momentum, parameters));
 		}
 		tf.Close();
 	}
@@ -330,7 +338,7 @@ std::cout << "multiplicity" << std::endl;
 	
 	// Write to the collection to the EventStore
 	ActsFatras::detail::MultiParticleParametrisation mpp;
-	mpp[211] = parametrisation;
+	mpp.push_back(std::make_pair(211, parametrisation));
     context.eventStore.add(m_cfg.outputParametrisation, std::move(mpp));
   }
   
