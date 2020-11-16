@@ -23,7 +23,6 @@
 #include "ActsFatras/Kernel/SimulationResult.hpp"
 #include "ActsFatras/Kernel/detail/Interactor.hpp"
 #include "ActsFatras/Kernel/detail/SimulatorError.hpp"
-#include "ActsFatras/Kernel/detail/VoidPostPropagationInteractor.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -40,7 +39,7 @@ namespace ActsFatras {
 /// @tparam hit_surface_selector_t is the type that selects hit surfaces
 /// @tparam post_propagation_interactor_t Type that allows to stop the propagation and manipulate the result after the propagation
 template <typename propagator_t, typename physics_list_t,
-          typename hit_surface_selector_t, typename post_propagation_interactor_t = VoidPostPropagationInteractor>
+          typename hit_surface_selector_t, typename post_propagation_interactor_t>
 struct ParticleSimulator {
   /// How and within which geometry to propagate the particle.
   propagator_t propagator;
