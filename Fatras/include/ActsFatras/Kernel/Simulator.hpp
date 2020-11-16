@@ -23,6 +23,7 @@
 #include "ActsFatras/Kernel/SimulationResult.hpp"
 #include "ActsFatras/Kernel/detail/Interactor.hpp"
 #include "ActsFatras/Kernel/detail/SimulatorError.hpp"
+#include "ActsFatras/Kernel/detail/VoidPostPropagationInteractor.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -32,30 +33,14 @@
 
 namespace ActsFatras {
 
-// Actor
-struct StepSizeAdjustment {
-	
-	template <typename propagator_state_t, typename stepper_t>
-    void operator()(propagator_state_t& state, const stepper_t& stepper) const {
-		
-		// TODO: This should evaluate and set the step size based on (limitTime - currentTime) / dtds
-		
-	}
-};
-
-struct VoidPostPropagationInteraction {
-	template <typename generator_t>
-	void operator()(generator_t& /*generator*/, SimulationResult& /*result*/) const { 
-	 }
-};
-
 /// Single particle simulator with a fixed propagator and physics list.
 ///
 /// @tparam propagator_t is the type of the underlying propagator
 /// @tparam physics_list_t is the type of the simulated physics list
 /// @tparam hit_surface_selector_t is the type that selects hit surfaces
+/// @tparam post_propagation_interactor_t Type that allows to stop the propagation and manipulate the result after the propagation
 template <typename propagator_t, typename physics_list_t,
-          typename hit_surface_selector_t, typename post_propagation_interaction_t = VoidPostPropagationInteraction>
+          typename hit_surface_selector_t, typename post_propagation_interactor_t = VoidPostPropagationInteractor>
 struct ParticleSimulator {
   /// How and within which geometry to propagate the particle.
   propagator_t propagator;
@@ -65,8 +50,6 @@ struct ParticleSimulator {
   hit_surface_selector_t selectHitSurface;
   /// Local logger for debug output.
   std::shared_ptr<const Acts::Logger> localLogger = nullptr;
-
-  post_propagation_interaction_t postPropagationInteraction;
 
   /// Construct the simulator with the underlying propagator.
   ParticleSimulator(propagator_t &&propagator_, Acts::Logging::Level lvl)
@@ -98,7 +81,7 @@ struct ParticleSimulator {
     using InteractorResult = typename Interactor::result_type;
     using Actions = Acts::ActionList<Interactor>;
     using Abort = Acts::AbortList<typename Interactor::ParticleNotAlive,
-                                  Acts::EndOfWorldReached>;
+                                  Acts::EndOfWorldReached, post_propagation_interactor_t>;
     using PropagatorOptions = Acts::PropagatorOptions<Actions, Abort>;
 
     // Construct per-call options.
@@ -112,6 +95,8 @@ struct ParticleSimulator {
     interactor.physics = physics;
     interactor.selectHitSurface = selectHitSurface;
     interactor.particle = particle;
+    auto& postPropagationInteraction = options.abortList.template get<post_propagation_interactor_t>();
+    postPropagationInteraction.setAbortConditions(generator, particle);
     // use AnyCharge to be able to handle neutral and charged parameters
     Acts::SingleCurvilinearTrackParameters<Acts::AnyCharge> start(
         particle.position4(), particle.unitDirection(), particle.absMomentum(),
