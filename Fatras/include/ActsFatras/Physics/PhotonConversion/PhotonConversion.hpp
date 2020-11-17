@@ -17,9 +17,7 @@
 #include "TrkEventPrimitives/PropDirection.h"
 #include "TrkEventPrimitives/ParticleHypothesis.h"
 #include "TrkExUtils/MaterialUpdateMode.h"
-#include "TrkDetDescrUtils/GeometrySignature.h" 
-// ISF
-#include "ISF_Event/ITruthIncident.h"
+#include "TrkDetDescrUtils/GeometrySignature.h"
 // Fatras
 #include "ISF_FatrasInterfaces/IPhotonConversionTool.h"
 // Barcode
@@ -38,16 +36,7 @@ namespace Trk {
   class ITrackingGeometrySvc;
 }
 
-namespace ActsFatras {
-
-  
-  /** @class PhotonConversionTool
-      
-     The photon conversion tool, to be called by the MaterialUpdator.
-  
-     @author Sarka.Todorova@cern.ch
-  */
-   
+namespace ActsFatras {   
   class PhotonConversionTool {
   public:          
       /** interface for processing of the pair production */
