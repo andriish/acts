@@ -16,18 +16,11 @@
 #include "ActsExamples/EventData/SimParticle.hpp"
 #include "ActsExamples/Framework/BareAlgorithm.hpp"
 #include "ActsExamples/Framework/ProcessCode.hpp"
+#include "ActsExamples/Utilities/detail/ExtractedSimulationProcess.hpp"
 
 class G4RunManager;
 
 namespace ActsExamples {
-
-/// Stores the initial properties of a particle, the properties before the
-/// interaction and the particle properties after the interaction
-struct ExtractedSimulationProcess {
-  SimParticle initial;
-  SimParticle before;
-  std::vector<SimParticle> after;
-};
 
 /// @brief This class extracts a certain process from a HepMC event record.
 class HepMCProcessExtractor final : public ActsExamples::BareAlgorithm {
