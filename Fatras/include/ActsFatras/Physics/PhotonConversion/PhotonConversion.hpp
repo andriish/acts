@@ -145,81 +145,6 @@ inline double PhotonConversionTool::phi2(double delta) const {
 // statics doubles 
 Trk::PdgToParticleHypothesis  ActsFatras::PhotonConversionTool::s_pdgToHypo;
 
-
-// ----------------- private helper methods ----------------------------------------------------
-template <typename generator_t>
-void ActsFatras::PhotonConversionTool::recordChilds(generator_t& generator, ActsFatras::Particle& photon,
-                                                double childEnergy,
-                                                const Acts::Vector3D& childDirection,
-                                                Acts::PdgParticle pdgProduced) const
-{
-    // Calculate the child momentum
-    const double massChild = findMass(pdgProduced);
-    const double momentum1 = sqrt(childEnergy * childEnergy - massChild * massChild);    
-
-    // now properly : energy-momentum conservation
-    const Particle::Vector3 vtmp = photom.momentum4().template segment<3>(Acts::eDir0) - momentum1 * childDirection;
-    const double momentum2 = vtmp.norm();
-
-    // charge sampling
-    std::uniform_real_distribution<double> uniformDistribution {0., 1.};
-    Particle::Scalar charge1;
-    Particle::Scalar charge2;
-    charge1 = charge2 = 0.;
-    if (CLHEP::RandFlat::shoot(m_randomEngine)>0.5) {
-      charge1 = -1.;
-      charge2 =  1.;
-    }
-    else {
-      charge1 =  1.;
-      charge2 = -1.;
-    }
-
-    // add the new secondary states to the ISF particle stack
-    int    pdg1  = s_pdgToHypo.convert(childType, charge1, false);
-    int    pdg2  = s_pdgToHypo.convert(childType, charge2, false);
-
-    // remove soft children
-    int nchild = 0;
-    if ( p1 > m_minChildEnergy ) nchild++;
-    if ( p2 > m_minChildEnergy ) nchild++;
-
-    ISF::ISFParticleVector children(nchild);
-
-    int ichild = 0;
-    if (  p1 > m_minChildEnergy ) {
-      ISF::ISFParticle* ch1 = new ISF::ISFParticle( vertex,
-                                               p1*childDirection,
-                                               mass,
-                                               charge1,
-                                               pdg1,
-                                               time,
-                                               *parent );
-      children[ichild] = ch1;
-      ichild++;
-    }
-
-    if (  p2 > m_minChildEnergy ) {
-      ISF::ISFParticle* ch2  = new ISF::ISFParticle( vertex,
-                                               p2*childDirection,
-                                               mass,
-                                               charge2,
-                                               pdg2,
-                                               time,
-                                               *parent );
-      children[ichild] = ch2;
-    }
-
-    // register TruthIncident
-    ISF::ISFTruthIncident truth( const_cast<ISF::ISFParticle&>(*parent),
-                                 children,
-                                 m_processCode,
-                                 parent->nextGeoID(),
-                                 ISF::fKillsPrimary );
-    m_truthRecordSvc->registerTruthIncident( truth);
-
-}
-
 bool ActsFatras::PhotonConversionTool::pairProduction(const Trk::MaterialProperties& mprop,
                                                  double pathCorrection,
                                                  double p) const
@@ -256,7 +181,7 @@ bool ActsFatras::PhotonConversionTool::pairProduction(const Trk::MaterialPropert
 double ActsFatras::PhotonConversionTool::childEnergyFraction(double gammaMom) const {
 
   // the fraction
-  double epsilon0      = findMass(Trk::electron)/gammaMom;
+  double epsilon0      = findMass(eElectron) / gammaMom;
   // some needed manipolations
   double Z             = 13.; //mprop.averageZ(); // TODO: the other part was never used
   double oneOverZpow   = 1./pow(Z,s_oneOverThree);
@@ -350,10 +275,82 @@ Amg::Vector3D ActsFatras::PhotonConversionTool::childDirection(const Amg::Vector
 
 }
 
-/** interface for processing of the presampled nuclear interactions on layer*/
+template <typename generator_t>
+void ActsFatras::PhotonConversionTool::recordChilds(generator_t& generator, ActsFatras::Particle& photon,
+                                                double childEnergy,
+                                                const Acts::Vector3D& childDirection,
+                                                Acts::PdgParticle pdgProduced) const
+{
+    // Calculate the child momentum
+    const double massChild = findMass(pdgProduced);
+    const double momentum1 = sqrt(childEnergy * childEnergy - massChild * massChild);    
+
+    // now properly : energy-momentum conservation
+    const Particle::Vector3 vtmp = photom.momentum4().template segment<3>(Acts::eDir0) - momentum1 * childDirection;
+    const double momentum2 = vtmp.norm();
+
+    // charge sampling
+    std::uniform_real_distribution<double> uniformDistribution {0., 1.};
+    Particle::Scalar charge1;
+    Particle::Scalar charge2;
+    charge1 = charge2 = 0.;
+    if (CLHEP::RandFlat::shoot(m_randomEngine)>0.5) {
+      charge1 = -1.;
+      charge2 =  1.;
+    }
+    else {
+      charge1 =  1.;
+      charge2 = -1.;
+    }
+
+    // add the new secondary states to the ISF particle stack
+    int    pdg1  = s_pdgToHypo.convert(childType, charge1, false);
+    int    pdg2  = s_pdgToHypo.convert(childType, charge2, false);
+
+    // remove soft children
+    int nchild = 0;
+    if ( p1 > m_minChildEnergy ) nchild++;
+    if ( p2 > m_minChildEnergy ) nchild++;
+
+    ISF::ISFParticleVector children(nchild);
+
+    int ichild = 0;
+    if (  p1 > m_minChildEnergy ) {
+      ISF::ISFParticle* ch1 = new ISF::ISFParticle( vertex,
+                                               p1*childDirection,
+                                               mass,
+                                               charge1,
+                                               pdg1,
+                                               time,
+                                               *parent );
+      children[ichild] = ch1;
+      ichild++;
+    }
+
+    if (  p2 > m_minChildEnergy ) {
+      ISF::ISFParticle* ch2  = new ISF::ISFParticle( vertex,
+                                               p2*childDirection,
+                                               mass,
+                                               charge2,
+                                               pdg2,
+                                               time,
+                                               *parent );
+      children[ichild] = ch2;
+    }
+
+    // register TruthIncident
+    ISF::ISFTruthIncident truth( const_cast<ISF::ISFParticle&>(*parent),
+                                 children,
+                                 m_processCode,
+                                 parent->nextGeoID(),
+                                 ISF::fKillsPrimary );
+    m_truthRecordSvc->registerTruthIncident( truth);
+
+}
+
 std::vector<ActsFatras::Particle> ActsFatras::PhotonConversionTool::doConversion(
-	double time, const Trk::NeutralParameters& parm) const {
-  double p = parm.momentum().mag();
+	double time, const ActsFatras::Particle& parm) const {
+  const double p = parm.absMomentum();
 
   // get the energy
   double childEnergy = p*childEnergyFraction(p);

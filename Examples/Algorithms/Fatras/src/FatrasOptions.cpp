@@ -7,6 +7,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "ActsExamples/Fatras/FatrasOptions.hpp"
+#include "ActsExamples/Utilities/Options.hpp"
 
 #include <string>
 
@@ -29,4 +30,7 @@ void ActsExamples::Options::addFatrasOptions(
           ->value_name("none|sensitive|material|all")
           ->default_value("sensitive"),
       "Which surfaces should record charged particle hits");
+  opt("fatras-nuclear-interaction-parametrisation",
+     value<read_strings>()->multitoken()->default_value({}),
+     "asdfasdfasdfasdf");
 }
