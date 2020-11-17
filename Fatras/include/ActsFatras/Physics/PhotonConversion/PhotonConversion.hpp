@@ -49,10 +49,7 @@ namespace ActsFatras {
   */
    
   class PhotonConversionTool {
-  public:      
-      /**AlgTool constructor for PhotonConversionTool*/
-      PhotonConversionTool(const std::string&,const std::string&,const IInterface*);
-          
+  public:          
       /** interface for processing of the pair production */
       bool pairProduction(const Trk::MaterialProperties& mprop,
 			  double pathCorrection,
@@ -262,6 +259,7 @@ bool ActsFatras::PhotonConversionTool::pairProduction(const Trk::MaterialPropert
  double attenuation = exp( -7.777e-01*pathCorrection*mprop.thicknessInX0()*(1.-xi) );
 
   return (m_conversionProbScaleFactor*CLHEP::RandFlat::shoot(m_randomEngine) > attenuation) ? true : false;
+  // TODO: Transform this probability to a sample in X_0
 
 }
 
