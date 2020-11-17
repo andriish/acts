@@ -369,8 +369,11 @@ ActsExamples::RootNuclearInteractionParametersWriter::endRun() {
                                               m_cfg.interactionProbabilityBins);
 
   if (m_cfg.writeHistograms)
+  {
     gDirectory->WriteObject(nuclearInteractionProbability,
                             "NuclearInteractionHistogram");
+  }
+
   const auto mapNIprob =
       buildMap(nuclearInteractionProbability, m_cfg.nSimulatedEvents);
   gDirectory->WriteObject(&mapNIprob.first, "NuclearInteractionBinBorders");
