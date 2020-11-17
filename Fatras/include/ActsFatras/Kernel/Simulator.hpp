@@ -76,11 +76,11 @@ struct ParticleSimulator {
 
     // propagator-related additional types
     using Interactor =
-        detail::Interactor<generator_t, physics_list_t, hit_surface_selector_t>;
+        detail::Interactor<generator_t, physics_list_t, hit_surface_selector_t, post_propagation_interactor_t>;
     using InteractorResult = typename Interactor::result_type;
     using Actions = Acts::ActionList<Interactor>;
     using Abort = Acts::AbortList<typename Interactor::ParticleNotAlive,
-                                  Acts::EndOfWorldReached, post_propagation_interactor_t>;
+                                  Acts::EndOfWorldReached>;
     using PropagatorOptions = Acts::PropagatorOptions<Actions, Abort>;
 
     // Construct per-call options.
@@ -94,8 +94,8 @@ struct ParticleSimulator {
     interactor.physics = physics;
     interactor.selectHitSurface = selectHitSurface;
     interactor.particle = particle;
-    auto& postPropagationInteraction = options.abortList.template get<post_propagation_interactor_t>();
-    postPropagationInteraction.setAbortConditions(generator, particle);
+    auto& postPropagationInteractor = options.abortList.template get<typename Interactor::ParticleNotAlive>().postPropagationInteractor;
+    postPropagationInteractor.setAbortConditions(generator, particle);
     // use AnyCharge to be able to handle neutral and charged parameters
     Acts::SingleCurvilinearTrackParameters<Acts::AnyCharge> start(
         particle.position4(), particle.unitDirection(), particle.absMomentum(),
@@ -103,7 +103,7 @@ struct ParticleSimulator {
     auto result = propagator.propagate(start, options);
     if (result.ok()) {
 	  auto& interactorResult = result.value().template get<InteractorResult>();
-	  postPropagationInteraction(generator, interactorResult);
+	  postPropagationInteractor(generator, interactorResult);
       return interactorResult;
     } else {
       return result.error();

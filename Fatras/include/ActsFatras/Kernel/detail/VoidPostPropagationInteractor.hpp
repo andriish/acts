@@ -9,6 +9,7 @@
 #pragma once
 
 #include "ActsFatras/Kernel/SimulationResult.hpp"
+#include "ActsFatras/EventData/Particle.hpp"
 
 namespace ActsFatras {
 
@@ -17,9 +18,8 @@ namespace ActsFatras {
 /// @note Any conditions used in this class have no effect upon the @c Interactor.
 struct VoidPostPropagationInteractor {
 
-	/// @brief Aborter used in the propagation. This method allows to trigger its effect(s) if its conditions are fulfilled.
-	template <typename propagator_state_t, typename stepper_t>
-	constexpr bool operator()(propagator_state_t& /*state*/, const stepper_t& /*stepper*/) const {
+	/// @brief Aborter condition used in the propagation. This method allows to trigger its effect(s) if its conditions are fulfilled.
+	constexpr bool operator()(const Particle::Scalar /*x0*/, const Particle::Scalar /*l0*/, const Particle::Scalar /*time*/) const {
 	  return false;
 	}
 		
