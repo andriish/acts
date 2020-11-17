@@ -180,9 +180,9 @@ class Particle {
     m_limitL0 = limitL0;
     return *this;
   }
-  constexpr Particle& setLifetimeLimit(Scalar limitTime) {
-	  m_limitTime = limitTime;
-	  return *this;
+  constexpr Particle &setLifetimeLimit(Scalar limitTime) {
+    m_limitTime = limitTime;
+    return *this;
   }
   /// The passed material measured in radiation lengths.
   constexpr Scalar pathInX0() const { return m_pathX0; }
