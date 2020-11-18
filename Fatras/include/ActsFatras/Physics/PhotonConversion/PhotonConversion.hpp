@@ -8,37 +8,22 @@
 
 #pragma once
 
-// Gaudi & Athena
-#include "AthenaBaseComps/AthAlgTool.h"
-#include "GaudiKernel/ServiceHandle.h"
-#include "GaudiKernel/ToolHandle.h"
-#include "AthenaKernel/IAtRndmGenSvc.h"
-// Trk
-#include "TrkEventPrimitives/PropDirection.h"
-#include "TrkEventPrimitives/ParticleHypothesis.h"
-#include "TrkExUtils/MaterialUpdateMode.h"
-#include "TrkDetDescrUtils/GeometrySignature.h"
-// Fatras
-#include "ISF_FatrasInterfaces/IPhotonConversionTool.h"
-// Barcode
-#include "BarcodeEvent/PhysicsProcessCode.h"
-
-
-
 #include "Acts/Utilities/Units.hpp"
 #include "ActsFatras/Utilities/ParticleData.hpp"
-
-namespace Trk {
-  class Layer;
-  class CylinderVolumeBounds;
-  class PdgToParticleHypothesis;
-  class TrackingGeometry;
-  class ITrackingGeometrySvc;
-}
+#include <random>
+#include "ActsFatras/EventData/ProcessType.hpp"
+#include <vector>
+#include "ActsFatras/EventData/Particle.hpp"
 
 namespace ActsFatras {   
-  class PhotonConversionTool {
-  public:          
+  class PhotonConversion {
+  public:
+  
+      /** The cut from which on the child products are followed */
+      double                                       m_minChildEnergy = 50. * Acts::UnitConstants::MeV;
+      double                                       m_childEnergyScaleFactor = 2.;
+      double                                       m_conversionProbScaleFactor = 0.98;
+      
       /** interface for processing of the pair production */
       bool pairProduction(const Trk::MaterialProperties& mprop,
 			  double pathCorrection,
@@ -46,51 +31,41 @@ namespace ActsFatras {
       
       /** interface for processing of the presampled pair production */      
       /** interface for processing of the presampled nuclear interactions on layer*/
-      std::vector<Particle> doConversion(double time, const Trk::NeutralParameters& parm) const;
-
-
+      template <typename generator_t>
+      std::vector<Particle> doConversion(generator_t& generator ,double time, const Particle& parm) const;
     
    private:
       /** record childs - create interface already for mu-/mu+ pair production*/
-      void recordChilds(const Particle& photon, 
+      template <typename generator_t>
+      std::vector<Particle> recordChilds(generator_t& generator, const Particle& photon, 
 			double childEnergy,
-			const Acts::Vector3D& childDirection,
-			Acts::PdgParticle = 11) const;
+			const Acts::Vector3D& childDirection) const;
 	
       /** simulate the child energy */
-      double childEnergyFraction(double gammaMom) const;
+      template <typename generator_t>
+      Particle::Scalar childEnergyFraction(generator_t& generator, Particle::Scalar gammaMom) const;
       
       /** simulate the one child direction - the second one is given clear then*/
-      Amg::Vector3D childDirection(const Amg::Vector3D& gammaMom,
-					  double childE) const;
+      template <typename generator_t>
+      Particle::Vector3 childDirection(generator_t& generator, const Particle::Vector4& gammaMom4) const;
       
       /** helper functions for the Phi1/phi2 */
       double phi1(double delta) const;
       
       /** helper functions for the Phi1/phi2 */
       double phi2(double delta) const;
-      
-      /** MCTruth process code for TruthIncidents created by this tool */
-      Barcode::PhysicsProcessCode                  m_processCode = 14; // TODO: Will become part of the process enum
-      
-      /** The cut from which on the child products are followed */
-      double                                       m_minChildEnergy = 50. * Acts::UnitConstants::MeV;
-      double                                       m_childEnergyScaleFactor = 2.;
-      double                                       m_conversionProbScaleFactor = 0.98;
             
-      /** struct of Particle Masses */
-      static Trk::PdgToParticleHypothesis          s_pdgToHypo;
       /** Inverse fine structure constant */
       constexpr double                                s_alphaEM = 1. / 137.;
+      constexpr double s_alphaEM2 = s_alphaEM * s_alphaEM;
       constexpr double                                s_oneOverThree = 1. / 3.;
    };
   
 
 inline double PhotonConversionTool::phi1(double delta) const {
   if (delta <= 1.)
-     return 20.867 - 3.242 * delta  + 0.625*delta*delta;
-  else
-    return 21.12 - 4.184*log(delta+0.952);
+     return 20.867 - 3.242 * delta  + 0.625 * delta * delta;
+  return 21.12 - 4.184*log(delta+0.952);
 }
 
 inline double PhotonConversionTool::phi2(double delta) const {
@@ -102,52 +77,10 @@ inline double PhotonConversionTool::phi2(double delta) const {
 }
 
 
-
-///////////////////////////////////////////////////////////////////
-// PhotonConversionTool.cxx, (c) ATLAS Detector software
-///////////////////////////////////////////////////////////////////
-
-// class header
-#include "PhotonConversionTool.h"
-
-// Gaudi Kernel
-#include "GaudiKernel/RndmGenerators.h"
-#include "GaudiKernel/DataSvc.h"
-#include "GaudiKernel/SmartDataPtr.h"
-// ISF includes
-#include "ISF_Event/ISFParticle.h"
-#include "ISF_Event/ISFParticleVector.h"
-#include "ISF_Event/ParticleClipboard.h"
-#include "ISF_Event/ParticleUserInformation.h"
-#include "ISF_Event/ISFTruthIncident.h"
-// Trk inlcude
-#include "TrkEventPrimitives/PdgToParticleHypothesis.h"
-#include "TrkExInterfaces/IEnergyLossUpdator.h"
-#include "TrkExInterfaces/ITimedExtrapolator.h"
-#include "TrkExInterfaces/IMultipleScatteringUpdator.h"
-#include "TrkSurfaces/Surface.h"
-#include "TrkGeometry/Layer.h"
-#include "TrkGeometry/MaterialProperties.h"
-#include "TrkVolumes/CylinderVolumeBounds.h"
-#include "TrkNeutralParameters/NeutralParameters.h"
-// CLHEP
-#include "CLHEP/Units/SystemOfUnits.h"
-#include "CLHEP/Matrix/Vector.h"
-#include "CLHEP/Vector/LorentzVector.h"
-// STD
 #include <math.h>
 
-// temporary
-#include "TrkDetDescrInterfaces/ITrackingGeometrySvc.h"
-#include "TrkGeometry/TrackingGeometry.h"
-#include "TrkGeometry/TrackingVolume.h"
-
-// statics doubles 
-Trk::PdgToParticleHypothesis  ActsFatras::PhotonConversionTool::s_pdgToHypo;
-
-bool ActsFatras::PhotonConversionTool::pairProduction(const Trk::MaterialProperties& mprop,
-                                                 double pathCorrection,
-                                                 double p) const
+template <typename generator_t>
+Particle::Scalar ActsFatras::PhotonConversionTool::pairProduction(generator_t& generator, Particle::Scalar momentum) const
 {
 
  // use for the moment only Al data - Yung Tsai - Rev.Mod.Particle Physics Vol. 46, No.4, October 1974
@@ -164,206 +97,182 @@ bool ActsFatras::PhotonConversionTool::pairProduction(const Trk::MaterialPropert
  //  2  p1           7.69040e-02   1.00059e+00   8.90718e-05  -8.41167e-07
  //  3  p2          -6.07682e-01   5.13256e+00   6.07228e-04  -9.44448e-07
 
- double  p0  =       -7.01612e-03;
- double  p1  =        7.69040e-02;
- double  p2  =       -6.07682e-01;
+ constexpr double  p0  =       -7.01612e-03;
+ constexpr double  p1  =        7.69040e-02;
+ constexpr double  p2  =       -6.07682e-01;
  // calculate xi
- double xi = p0 + p1*pow(p/1000.,p2);
+ const double xi = p0 + p1*pow(p,p2);
  // now calculate what's left
- double attenuation = exp( -7.777e-01*pathCorrection*mprop.thicknessInX0()*(1.-xi) );
+ //~ double attenuation = exp( -7.777e-01*pathCorrection*mprop.thicknessInX0()*(1.-xi) ); // eq. 3.75
 
-  return (m_conversionProbScaleFactor*CLHEP::RandFlat::shoot(m_randomEngine) > attenuation) ? true : false;
-  // TODO: Transform this probability to a sample in X_0
-
+  //~ return (m_conversionProbScaleFactor*CLHEP::RandFlat::shoot(m_randomEngine) > attenuation) ? true : false;
+  
+  //~ return (CLHEP::RandFlat::shoot(m_randomEngine) < 1 - attenuation / m_conversionProbScaleFactor) ? true : false;
+  //~ m_conversionProbScaleFactor(rnd - 1) < -attenuation
+  //~ m_conversionProbScaleFactor(1 - rnd) > attenuation
+  //~ ln(m_conversionProbScaleFactor(1 - rnd)) > -7/9*pathCorrection*mprop.thicknessInX0()*(1.-xi)
+  
+  constexpr double NineOverSeven = 9 / 7;
+  std::uniform_real_distribution<double> uniformDistribution {0., 1.};
+  return -NineOverSeven * ln(m_conversionProbScaleFactor * (1 - uniformDistribution(generator))) / (1.-xi);
 }
 
+template <typename generator_t>
+ActsFatras::Particle::Scalar ActsFatras::PhotonConversionTool::childEnergyFraction(generator_t& generator, Particle::Scalar gammaMom) const {
 
-double ActsFatras::PhotonConversionTool::childEnergyFraction(double gammaMom) const {
-
+  /// Some (if not all) calculations are from G4PairProductionRelModel
+  
   // the fraction
-  double epsilon0      = findMass(eElectron) / gammaMom;
+  const double epsilon0      = findMass(eElectron) / gammaMom;
   // some needed manipolations
-  double Z             = 13.; //mprop.averageZ(); // TODO: the other part was never used
-  double oneOverZpow   = 1./pow(Z,s_oneOverThree);
-  double alphaZsquare  = (s_alpha*s_alpha*Z*Z);
+  // TODO: why fixed Z? and why is it Al?
+  constexpr double Z             = 13.; //mprop.averageZ(); // TODO: the other part was never used
+  constexpr double oneOverZpow   = 1. / pow(Z,s_oneOverThree);
+  constexpr double alphaZsquare  = s_alphaEM2 * Z * Z;
   // now f(Z) - from Z and s_alpha
-  double fZ            = alphaZsquare*(1./(1.+alphaZsquare)+0.20206-0.0369*alphaZsquare+0.0083*alphaZsquare*alphaZsquare);
+  constexpr double fZ            = alphaZsquare * (1. / (1. + alphaZsquare) + 0.20206 - 0.0369 * alphaZsquare + 0.0083 * alphaZsquare * alphaZsquare);
   // delta_max
-  double deltaMax      = exp((42.24-fZ)*.1195)-0.952;
+  constexpr double deltaMax      = exp((42.24 - fZ) * 0.1195) - 0.952;
   // delta_min
-  double deltaMin      = 4.*epsilon0*136.*oneOverZpow; 
+  const double deltaMin          = 4. * epsilon0 * 136. * oneOverZpow; 
   // the minimum fraction
-  double epsilon1      = 0.5-0.5*sqrt(1.-deltaMin/deltaMax);
-  double epsilonMin    = epsilon1 > epsilon0 ? epsilon1 : epsilon0;
+  const double epsilon1          = 0.5 - 0.5 * sqrt(1. - deltaMin / deltaMax);
+  const double epsilonMin    = std::max(epsilon1, epsilon0);
   // calculate phi1 / phi2 - calculate from deltaMin
-  double Phi1          = phi1(deltaMin);
-  double Phi2          = phi2(deltaMin);
+  const double Phi1          = phi1(deltaMin);
+  const double Phi2          = phi2(deltaMin);
   // then calculate F10/F20
-  double F10           = 3.*Phi1 - Phi2 - fZ;
-  double F20           = 1.5*Phi1 - 0.5*Phi2 - fZ;
+  const double F10           = 3. * Phi1 - Phi2 - fZ;
+  const double F20           = 1.5 * Phi1 - 0.5 * Phi2 - fZ;
   // and finally calucate N1, N2
-  double N1            = (0.25-epsilonMin+epsilonMin*epsilonMin)*F10;
-  double N2            = 1.5*F20;
-  // ------------ decide wich one to take 
-  if ( N1/(N1+N2) < CLHEP::RandFlat::shoot(m_randomEngine) ) {  
+  const double N1            = (0.25 - epsilonMin + epsilonMin * epsilonMin) * F10;
+  const double N2            = 1.5 * F20;
+  
+  // ------------ decide wich one to take
+  double epsilon;
+  double delta;
+  double F;
+  const double deltaNumerator = onOverZpow * 136. * epsilon0;
+  std::uniform_real_distribution<double> uniformDistribution {0., 1.};
+  if ( N1 < uniformDistribution(generator) * (N1 + N2) ) {
     // sample from f1,g1 distribution
-    for ( ; ; ){
-      double epsilon = 0.5 - (0.5 - epsilonMin)*pow(CLHEP::RandFlat::shoot(m_randomEngine),s_oneOverThree);
+    do{
+      epsilon = 0.5 - (0.5 - epsilonMin) * pow(uniformDistribution(generator),s_oneOverThree);
       // prepare for the rejection check
-      double delta   = 136.*epsilon0*oneOverZpow/(epsilon-epsilon*epsilon);
-      double F1 = 3.*phi1(delta)-phi2(delta)-fZ;   
+      delta   = deltaNumerator / (epsilon - epsilon * epsilon);
+      F = 3. * phi1(delta) - phi2(delta) - fZ;   
       // reject ? - or redo the exercise 
-      if (F1/F10 > CLHEP::RandFlat::shoot(m_randomEngine)) return m_childEnergyScaleFactor*epsilon;
-    }
+    } while(F <= uniformDistribution(generator) * F10);
   } else {
     // sample from f2,g2 distribution
-    for ( ; ; ){
-      double epsilon = epsilonMin + (0.5-epsilonMin)*CLHEP::RandFlat::shoot(m_randomEngine);
+    do {
+      epsilon = epsilonMin + (0.5-epsilonMin)*uniformDistribution(generator);
       // prepare for the rejection check
-      double delta   = 136.*epsilon0*oneOverZpow/(epsilon-epsilon*epsilon);
-      double F2 = 1.5*phi1(delta)-0.5*phi2(delta)-fZ;   
+      delta   = deltaNumerator / (epsilon - epsilon * epsilon);
+      F = 1.5 * phi1(delta) - 0.5 * phi2(delta) - fZ;   
      // reject ? - or redo the exercise 
-     if (F2/F20 > CLHEP::RandFlat::shoot(m_randomEngine)) return m_childEnergyScaleFactor*epsilon;  
-    }
+    } while (F <= uniformDistribution(generator) * F20);    
   }
-
+  return m_childEnergyScaleFactor * epsilon;
 }
 
-Amg::Vector3D ActsFatras::PhotonConversionTool::childDirection(const Amg::Vector3D& gammaMom,
-                                                                 double childE) const
+template <typename generator_t>
+Particle::Vector3 ActsFatras::PhotonConversionTool::childDirection(generator_t& generator, const ActsFatras::Particle::Vector4& gammaMom4) const
 {
     // --------------------------------------------------
     // Following the Geant4 approximation from L. Urban
     // the azimutal angle
-    double psi    =  2.*M_PI*CLHEP::RandFlat::shoot(m_randomEngine);
     
     // the start of the equation
-    double theta = findMass(Trk::electron)/childE;
-    // follow 
-    double a = 0.625; // 5/8
-    //double d = 27.;
+    Particle::Scalar theta = findMass(eElectron) / gammaMom4[eEnergy];
 
-    double r1 = CLHEP::RandFlat::shoot(m_randomEngine);
-    double r2 = CLHEP::RandFlat::shoot(m_randomEngine);
-    double r3 = CLHEP::RandFlat::shoot(m_randomEngine);
-
-    double u =  -log(r2*r3)/a;
+	std::unitform_real_distribution<Particle::Scalar> uniformDistribution {0., 1.};
+    const Particle::Scalar u =  -log(uniformDistribution(generator) * uniformDistribution(generator)) * 1.6;
     
-    theta *= (r1 < 0.25 ) ? u : u*s_oneOverThree; // 9./(9.+27) = 0.25
-
-     ATH_MSG_VERBOSE( "[ conv ] Simulated angle to photon    = " << theta << "." );
+    theta *= (uniformDistribution(generator) < 0.25 ) ? u : u*s_oneOverThree; // 9./(9.+27) = 0.25
 
     // more complex but "more true"
-    CLHEP::Hep3Vector gammaMomHep( gammaMom.x(), gammaMom.y(), gammaMom.z() );
-    CLHEP::Hep3Vector newDirectionHep(gammaMomHep.unit());
-    double x = -newDirectionHep.y();
-    double y = newDirectionHep.x();
-    double z = 0.;
+    const Particle::Vector3 gammaMomHep = gammaMom4.template segment<3>(eDir0);
+    const Particle::Vector3 newDirectionHep(gammaMomHep.normalized());
+    
     // if it runs along the z axis - no good ==> take the x axis
-    if (newDirectionHep.z()*newDirectionHep.z() > 0.999999)       
-        x = 1.;
+    const Particle::Scalar x = (newDirectionHep[eZ] * newDirectionHep[eZ] > 0.999999) ? 1. : -newDirectionHep[eY];
+    const Particle::Scalar y = newDirectionHep[eX];
+    
     // deflector direction
-    CLHEP::Hep3Vector deflectorHep(x,y,z);
+    const Particle::Vector3 deflectorHep(x, y, 0.);
     // rotate the new direction for scattering
-    newDirectionHep.rotate(theta, deflectorHep);
-    // and arbitrarily in psi             
-    newDirectionHep.rotate(psi,gammaMomHep);
+    Eigen::Transform rotTheta = Eigen::AngleAxis<Particle::Scalar>(theta, deflectorHep);
+    
+    // and arbitrarily in psi
+    Eigen::Transform rotPsi = Eigen::AngleAxis<Particle::Scalar>(uniformDistribution(generator) * 2. * M_PI, gammaMomHep);
 
-    // assign the new values
-    Amg::Vector3D newDirection( newDirectionHep.x(), newDirectionHep.y(), newDirectionHep.z() );
-    return newDirection;
-
+    return rotPsi * rotTheta * newDirectionHep;
 }
 
 template <typename generator_t>
 void ActsFatras::PhotonConversionTool::recordChilds(generator_t& generator, ActsFatras::Particle& photon,
-                                                double childEnergy,
-                                                const Acts::Vector3D& childDirection,
+                                                ActsFatras::Particle::Scalar childEnergy,
+                                                const ActsFatras::Particle::Vector3& childDirection,
                                                 Acts::PdgParticle pdgProduced) const
 {
     // Calculate the child momentum
-    const double massChild = findMass(pdgProduced);
-    const double momentum1 = sqrt(childEnergy * childEnergy - massChild * massChild);    
+    const float massChild = findMass(pdgProduced);
+    const Particle::Scalar momentum1 = sqrt(childEnergy * childEnergy - massChild * massChild);    
 
     // now properly : energy-momentum conservation
     const Particle::Vector3 vtmp = photom.momentum4().template segment<3>(Acts::eDir0) - momentum1 * childDirection;
-    const double momentum2 = vtmp.norm();
+    const Particle::Scalar momentum2 = vtmp.norm();
 
     // charge sampling
-    std::uniform_real_distribution<double> uniformDistribution {0., 1.};
+    std::uniform_int_distribution<> uniformDistribution {0, 1};
     Particle::Scalar charge1;
     Particle::Scalar charge2;
-    charge1 = charge2 = 0.;
-    if (CLHEP::RandFlat::shoot(m_randomEngine)>0.5) {
+    if (uniformDistribution(generator) == 1) {
       charge1 = -1.;
       charge2 =  1.;
-    }
-    else {
+    } else {
       charge1 =  1.;
       charge2 = -1.;
     }
 
     // add the new secondary states to the ISF particle stack
-    int    pdg1  = s_pdgToHypo.convert(childType, charge1, false);
-    int    pdg2  = s_pdgToHypo.convert(childType, charge2, false);
+    const Acts::PdgParticle    pdg1  = std::copysign(Acts::PdgParticle::eElectron, charge1);
+    const Acts::PdgParticle    pdg2  = std::copysign(Acts::PdgParticle::eElectron, charge2);
 
     // remove soft children
     int nchild = 0;
     if ( p1 > m_minChildEnergy ) nchild++;
     if ( p2 > m_minChildEnergy ) nchild++;
 
-    ISF::ISFParticleVector children(nchild);
+    std::vector<Particle> children;
+    children.reserve(2);
 
-    int ichild = 0;
-    if (  p1 > m_minChildEnergy ) {
-      ISF::ISFParticle* ch1 = new ISF::ISFParticle( vertex,
-                                               p1*childDirection,
-                                               mass,
-                                               charge1,
-                                               pdg1,
-                                               time,
-                                               *parent );
-      children[ichild] = ch1;
-      ichild++;
+    if (  momentum1 > m_minChildEnergy ) {
+		Particle child = Particle(Barcode(), pdg1).setPosition4(photon.position4()).setDirection(childDirection).setAbsMomentum(p1).setProcess(ProcessType::ePhotonConversion);
+	  children.push_back(std::move(child));
     }
 
-    if (  p2 > m_minChildEnergy ) {
-      ISF::ISFParticle* ch2  = new ISF::ISFParticle( vertex,
-                                               p2*childDirection,
-                                               mass,
-                                               charge2,
-                                               pdg2,
-                                               time,
-                                               *parent );
-      children[ichild] = ch2;
+    if (  momentum2 > m_minChildEnergy ) {
+		Particle child = Particle(Barcode(), pdg2).setPosition4(photon.position4()).setDirection(childDirection)
+			.setAbsMomentum(p2).setProcess(ProcessType::ePhotonConversion);
+	  children.push_back(std::move(child));
     }
-
-    // register TruthIncident
-    ISF::ISFTruthIncident truth( const_cast<ISF::ISFParticle&>(*parent),
-                                 children,
-                                 m_processCode,
-                                 parent->nextGeoID(),
-                                 ISF::fKillsPrimary );
-    m_truthRecordSvc->registerTruthIncident( truth);
-
+    return children;
 }
 
-std::vector<ActsFatras::Particle> ActsFatras::PhotonConversionTool::doConversion(
+template <typename generator_t>
+std::vector<ActsFatras::Particle> ActsFatras::PhotonConversionTool::doConversion(generator_t& generator,
 	double time, const ActsFatras::Particle& parm) const {
   const double p = parm.absMomentum();
 
   // get the energy
-  double childEnergy = p*childEnergyFraction(p);
+  const Particle::Scalar childEnergy = p * childEnergyFraction(generator, p);
 
   // now get the deflection
-  Amg::Vector3D childDir(childDirection(parm.momentum(), childEnergy));
+  Particle::Vector3 childDir = childDirection(generator, parm.momentum4());
   // verbose output
-  ATH_MSG_VERBOSE(  "[ conv ] Child energy simulated as : " << childEnergy << " MeV" );
-  
-	    recordChilds(time,
-	       parm.position(),
-               parm.momentum().unit(),
-	       childEnergy, p,
-	       childDir,
-	       Trk::electron);
+   return recordChilds(parm,
+       childEnergy,
+       childDir);
 }

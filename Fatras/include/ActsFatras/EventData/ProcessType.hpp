@@ -20,6 +20,7 @@ enum class ProcessType : uint32_t {
   eUndefined = 0,
   eNuclearInteraction = 1,
   eDecay = 2,
+  ePhotonConversion = 3,
 };
 
 std::ostream &operator<<(std::ostream &os, ProcessType processType);
