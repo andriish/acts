@@ -22,7 +22,6 @@ namespace ActsFatras {
 	/// @brief This class handles the photon conversion. It evaluates the distance after which the interaction will occur and the final state due the interaction itself.
   class PhotonConversion {
   public:
-  
       /// Lower energy threshold for produced children
       double                                       childMomentumMin = 50. * Acts::UnitConstants::MeV;
       /// Scaling factor of children energy
@@ -61,7 +60,7 @@ namespace ActsFatras {
       ///
       /// @return Vector containing the produced leptons
       template <typename generator_t>
-      std::vector<Particle> recordChilds(generator_t& generator, const Particle& photon, 
+      std::vector<Particle> recordProduct(generator_t& generator, const Particle& photon, 
 			double childEnergy,
 			const Acts::Vector3D& childDirection) const;
 	
@@ -75,9 +74,6 @@ namespace ActsFatras {
       template <typename generator_t>
       Particle::Scalar childEnergyFraction(generator_t& generator, Particle::Scalar gammaMom) const;
       
-      template <typename generator_t>
-      Particle::Scalar childEnergyFractionReDo(generator_t& generator, Particle::Scalar gammaMom) const;
-      
       /// @brief This method evaluates the direction of a child particle
       ///
       /// @tparam generator_t Type of the random number generator
@@ -88,22 +84,67 @@ namespace ActsFatras {
       template <typename generator_t>
       Particle::Vector3 childDirection(generator_t& generator, const Particle::Vector4& gammaMom4) const;
       
-      template <typename generator_t>
-      Particle::Vector3 childDirectionReDo(generator_t& generator, const Particle::Vector4& gammaMom4) const;
-      
-      /// Helper methods for angular evaluation
-      double phi1(double delta) const;
-      double phi2(double delta) const;
+      /// Helper methods for momentum evaluation
+      /// @note These methods are taken from the Geant4 class G4PairProductionRelModel
+      double screenFunction1(const double delta) const;
+      double screenFunction2(const double delta) const;
             
-      /// Fine structure constant
-      constexpr double                                alphaEM = 1. / 137.;
-      constexpr double alphaEM2 = alphaEM * alphaEM;
+      constexpr float m_Z = 13.; // Aluminium
       
       /// Irrational numbers
-      constexpr double                                oneOverThree = 1. / 3.;
-      constexpr double nineOverSeven = 9 / 7;
-      
-     // use for the moment only Al data - Yung Tsai - Rev.Mod.Particle Physics Vol. 46, No.4, October 1974
+      constexpr double                                m_oneOverThree = 1. / 3.;
+      constexpr double m_nineOverSeven = 9 / 7;
+   
+    constexpr double computeCoulombFactor() const;
+   };
+
+inline double 
+PhotonConversionTool::screenFunction1(const double delta) const
+{
+  // Compute the value of the screening function 3*PHI1(delta) - PHI2(delta)
+  return (delta > 1.4) ? 42.038 - 8.29 * log(delta + 0.958) 
+                       : 42.184 - delta * (7.444 - 1.623 * delta);
+}
+
+inline double 
+PhotonConversionTool::screenFunction2(const double delta) const
+{
+  // Compute the value of the screening function 1.5*PHI1(delta) +0.5*PHI2(delta)
+  return (delta > 1.4) ? 42.038 - 8.29 * log(delta + 0.958)
+                       : 41.326 - delta * (5.848 - 0.902 * delta);
+}
+
+    inline constexpr double computeCoulombFactor() const
+	{
+	 /// @note This method is from the Geant4 class G4Element
+	  //
+	  //  Compute Coulomb correction factor (Phys Rev. D50 3-1 (1994) page 1254)
+
+	  constexpr double k1 = 0.0083;
+	  constexpr double k2 = 0.20206;
+	  constexpr double k3 = 0.0020; // This term is missing in Athena
+	  constexpr double k4 = 0.0369;
+
+	  constexpr double                                alphaEM = 1. / 137.;
+
+	  constexpr double az2 = (alphaEM * m_Z) * (alphaEM * m_Z);
+	  constexpr double az4 = az2 * az2;
+
+	  return (k1*az4 + k2 + 1./(1.+az2))*az2 - (k3*az4 + k4)*az4;
+	}
+}
+
+template <typename generator_t>
+Particle::Scalar 
+ActsFatras::PhotonConversion::pairProduction(generator_t& generator, Particle::Scalar momentum) const
+{
+	/// This method is based upon the Athena class PhotonConversionTool
+	
+	// Fast exit if the energy is too low
+	if(momentum < 100. * Acts::UnitConstants::MeV)
+		return std::numeric_limits<Particle::Scalar>::max();
+	
+	 // use for the moment only Al data - Yung Tsai - Rev.Mod.Particle Physics Vol. 46, No.4, October 1974
 	 // optainef from a fit given in the momentum range 100 10 6 2 1 0.6 0.4 0.2 0.1 GeV
 
 	 //// Quadratic background function
@@ -119,158 +160,35 @@ namespace ActsFatras {
 	 constexpr double  p0  =       -7.01612e-03;
 	 constexpr double  p1  =        7.69040e-02;
 	 constexpr double  p2  =       -6.07682e-01;
-   
-    //From G4Element
-    constexpr double computeCoulombFactor()
-	{
-	  //
-	  //  Compute Coulomb correction factor (Phys Rev. D50 3-1 (1994) page 1254)
-
-	  constexpr double k1 = 0.0083;
-	  constexpr double k2 = 0.20206;
-	  constexpr double k3 = 0.0020; // This term is missing in Athena
-	  constexpr double k4 = 0.0369;
-
-		constexpr float z = 13.; // Aluminium
-
-	  constexpr double az2 = (alphaEM * z)*(alphaEM * z);
-	  constexpr double az4 = az2 * az2;
-
-	  return (k1*az4 + k2 + 1./(1.+az2))*az2 - (k3*az4 + k4)*az4;
-	}
-
-// Compute the value of the screening function 3*PHI1(delta) - PHI2(delta):
-inline double ScreenFunction1(const double delta)
-{
-  return (delta > 1.4) ? 42.038 - 8.29 * log(delta + 0.958) 
-                       : 42.184 - delta * (7.444 - 1.623 * delta);
-}
-
-
-// Compute the value of the screening function 1.5*PHI1(delta) +0.5*PHI2(delta):
-inline double ScreenFunction2(const double delta)
-{
-  return (delta > 1.4) ? 42.038 - 8.29 * log(delta + 0.958)
-                       : 41.326 - delta * (5.848 - 0.902 * delta);
-}
-   
-   };
-  
-
-inline double PhotonConversionTool::phi1(double delta) const {
-  /// G4PairProductionRelModel::Phi1
-  if (delta <= 1.)
-     return 20.867 - 3.242 * delta  + 0.625 * delta * delta;
-  return 21.12 - 4.184*log(delta+0.952);
-}
-
-inline double PhotonConversionTool::phi2(double delta) const {
-  /// G4PairProductionRelModel::Phi2
-  if (delta <= 1.)
-     return 20.209 - 1.930 * delta  - 0.086*delta*delta;
-   return 21.12 - 4.184*log(delta+0.952);
-}
-
-}
-
-template <typename generator_t>
-Particle::Scalar 
-ActsFatras::PhotonConversion::pairProduction(generator_t& generator, Particle::Scalar momentum) const
-{
-	if(momentum < 100. * Acts::UnitConstants::MeV)
-		return std::numeric_limits<Particle::Scalar>::max();
-		
-	// eq. 3.75
-	
-	
+	 
  // calculate xi
- const double xi = p0 + p1*pow(p,p2);
- // now calculate what's left
- //~ double attenuation = exp( -7.777e-01*pathCorrection*mprop.thicknessInX0()*(1.-xi) ); 
+ const double xi = p0 + p1*pow(p, p2);
+ 
+  /// Athena
+  //~ double attenuation = exp( -7.777e-01*pathCorrection*mprop.thicknessInX0()*(1.-xi) ); 
   //~ return (conversionProbScaleFactor*CLHEP::RandFlat::shoot(m_randomEngine) > attenuation) ? true : false;
   
+  /// Transformation steps
   //~ return (CLHEP::RandFlat::shoot(m_randomEngine) < 1 - attenuation / conversionProbScaleFactor) ? true : false;
   //~ conversionProbScaleFactor(rnd - 1) < -attenuation
   //~ conversionProbScaleFactor(1 - rnd) > attenuation
   //~ ln(conversionProbScaleFactor(1 - rnd)) > -7/9*pathCorrection*mprop.thicknessInX0()*(1.-xi)
   
   std::uniform_real_distribution<double> uniformDistribution {0., 1.};
-  return -nineOverSeven * ln(conversionProbScaleFactor * (1 - uniformDistribution(generator))) / (1.-xi);
+  // This is a transformation of eq. 3.75
+  return -m_nineOverSeven * ln(conversionProbScaleFactor * (1 - uniformDistribution(generator))) / (1.-xi);
 }
 
 template <typename generator_t>
-ActsFatras::Particle::Scalar 
+Particle::Scalar 
 ActsFatras::PhotonConversion::childEnergyFraction(generator_t& generator, Particle::Scalar gammaMom) const {
-
-  /// Some (if not all) calculations are from G4PairProductionRelModel
-  
-  // the fraction
-  const double epsilon0      = findMass(eElectron) / gammaMom; // == eps0
-  // some needed manipolations
-  // TODO: why fixed Z? and why is it Al?
-  constexpr double Z             = 13.; //mprop.averageZ(); // TODO: the other part was never used
-  constexpr double oneOverZpow   = 1. / pow(Z,s_oneOverThree); // == part of gElementData[iZet]->fDeltaFactor
-  constexpr double alphaZsquare  = alphaEM2 * Z * Z;
-  // now f(Z) - from Z and s_alpha
-  constexpr double fZ            = alphaZsquare * (1. / (1. + alphaZsquare) + 0.20206 - 0.0369 * alphaZsquare + 0.0083 * alphaZsquare * alphaZsquare);
-  // delta_max
-  constexpr double deltaMax      = exp((42.24 - fZ) * 0.1195) + 0.952; //From G4: "F.Hariri : correct sign of last term"
-  // delta_min 			 G4Exp((42.038 - FZHigh)/8.29) - 0.958; 	FZHigh = 8.*(logZ13 + fc);
-  const double deltaMin          = 4. * epsilon0 * 136. * oneOverZpow; // == deltaMin
-  // the minimum fraction
-  const double epsilon1          = 0.5 - 0.5 * sqrt(1. - deltaMin / deltaMax);
-  const double epsilonMin    = std::max(epsilon1, epsilon0);
-  // calculate phi1 / phi2 - calculate from deltaMin
-  const double Phi1          = phi1(deltaMin);
-  const double Phi2          = phi2(deltaMin);
-  // then calculate F10/F20
-  const double F10           = 3. * Phi1 - Phi2 - fZ;
-  const double F20           = 1.5 * Phi1 - 0.5 * Phi2 - fZ;
-  // and finally calucate N1, N2
-  const double N1            = (0.25 - epsilonMin + epsilonMin * epsilonMin) * F10;
-  const double N2            = 1.5 * F20;
-  
-  // ------------ decide wich one to take
-  double epsilon;
-  double delta;
-  double F;
-  const double deltaNumerator = onOverZpow * 136. * epsilon0;
-  std::uniform_real_distribution<double> uniformDistribution {0., 1.};
-  if ( N1 < uniformDistribution(generator) * (N1 + N2) ) {
-    // sample from f1,g1 distribution
-    do{
-      epsilon = 0.5 - (0.5 - epsilonMin) * pow(uniformDistribution(generator),s_oneOverThree);
-      // prepare for the rejection check
-      delta   = deltaNumerator / (epsilon - epsilon * epsilon);
-      F = 3. * phi1(delta) - phi2(delta) - fZ;   
-      // reject ? - or redo the exercise 
-    } while(F <= uniformDistribution(generator) * F10);
-  } else {
-    // sample from f2,g2 distribution
-    do {
-      epsilon = epsilonMin + (0.5-epsilonMin)*uniformDistribution(generator);
-      // prepare for the rejection check
-      delta   = deltaNumerator / (epsilon - epsilon * epsilon);
-      F = 1.5 * phi1(delta) - 0.5 * phi2(delta) - fZ;   
-     // reject ? - or redo the exercise 
-    } while (F <= uniformDistribution(generator) * F20);    
-  }
-  return m_childEnergyScaleFactor * epsilon;
-}
-
-template <typename generator_t>
-Particle::Scalar childEnergyFractionReDo(generator_t& generator, Particle::Scalar gammaMom) const {
 	
-  // Require photon energy >= 100 MeV
-  if(gammaMom < 100. * Acts::UnitConstants::MeV)
-	return 0.; // TODO: The return value should be different
-                                           
-    constexpr float    iZet        = 13.;    
-    constexpr double logZ13 = log(iZet) / 3.;
-    constexpr double  FZ      = 8.*(logZ13 + computeCoulombFactor()); 
+ /// This method is based upon the Geant4 class G4PairProductionRelModel                                           
+    constexpr double logZ13 = log(m_Z) * oneOverThree;
+    constexpr double  FZ      = 8. * (logZ13 + computeCoulombFactor()); 
     constexpr double  deltaMax = exp((42.038 - FZ) * 0.1206) - 0.958;
     
-    constexpr double deltaPreFactor = 136. / pow(Z, oneOverThree);
+    constexpr double deltaPreFactor = 136. / pow(m_Z, oneOverThree);
     const double    eps0        = findMass(eElectron) / gammaMom;
     const double deltaFactor = deltaPreFactor * eps0;
     const double deltaMin    = 4. * deltaFactor;
@@ -278,10 +196,10 @@ Particle::Scalar childEnergyFractionReDo(generator_t& generator, Particle::Scala
     // compute the limits of eps
     const double epsMin      = std::max(eps0, 0.5 - 0.5 * std::sqrt(1. - deltaMin/deltaMax));
     const double epsRange    = 0.5 - epsMin;
-    //
+    
     // sample the energy rate (eps) of the created electron (or positron)
-    const double F10 = ScreenFunction1(deltaMin) - FZ;
-    const double F20 = ScreenFunction2(deltaMin) - FZ; 
+    const double F10 = screenFunction1(deltaMin) - FZ;
+    const double F20 = screenFunction2(deltaMin) - FZ; 
     const double NormF1   = F10 * epsRange * epsRange; 
     const double NormF2   = 1.5 * F20;
     
@@ -293,11 +211,11 @@ Particle::Scalar childEnergyFractionReDo(generator_t& generator, Particle::Scala
       if (NormF1 > rndmEngine(generator) * (NormF1 + NormF2)) {
         eps = 0.5 - epsRange * pow(rndmEngine(generator), oneOverThree);
         const double delta = deltaFactor / (eps * (1. - eps));
-          greject = (ScreenFunction1(delta)-FZ)/F10;
+          greject = (screenFunction1(delta)-FZ)/F10;
       } else {
         eps = epsMin + epsRange * rndmEngine(generator);
         const double delta = deltaFactor / (eps * (1. - eps));
-          greject = (ScreenFunction2(delta)-FZ)/F20;
+          greject = (screenFunction2(delta)-FZ)/F20;
       }
       // Loop checking, 03-Aug-2015, Vladimir Ivanchenko
     } while (greject < rndmEngine(generator));
@@ -309,7 +227,8 @@ template <typename generator_t>
 Particle::Vector3 
 ActsFatras::PhotonConversion::childDirection(generator_t& generator, const ActsFatras::Particle::Vector4& gammaMom4) const
 {
-    // --------------------------------------------------
+	/// This method is based upon the Athena class PhotonConversionTool
+	
     // Following the Geant4 approximation from L. Urban
     // the azimutal angle
     
@@ -342,7 +261,7 @@ ActsFatras::PhotonConversion::childDirection(generator_t& generator, const ActsF
 
 template <typename generator_t>
 void 
-ActsFatras::PhotonConversion::recordChilds(generator_t& generator, ActsFatras::Particle& photon,
+ActsFatras::PhotonConversion::recordProduct(generator_t& generator, ActsFatras::Particle& photon,
                                                 ActsFatras::Particle::Scalar childEnergy,
                                                 const ActsFatras::Particle::Vector3& childDirection,
                                                 Acts::PdgParticle pdgProduced) const
@@ -351,11 +270,11 @@ ActsFatras::PhotonConversion::recordChilds(generator_t& generator, ActsFatras::P
     const float massChild = findMass(Acts::PdgParticle::eElectron);
     const Particle::Scalar momentum1 = sqrt(childEnergy * childEnergy - massChild * massChild);    
 
-    // now properly : energy-momentum conservation
+    // Use energy-momentum conservation for the other child
     const Particle::Vector3 vtmp = photom.momentum4().template segment<3>(Acts::eDir0) - momentum1 * childDirection;
     const Particle::Scalar momentum2 = vtmp.norm();
 
-    // charge sampling
+    // Charge sampling
     std::uniform_int_distribution<> uniformDistribution {0, 1};
     Particle::Scalar charge1;
     Particle::Scalar charge2;
@@ -367,18 +286,19 @@ ActsFatras::PhotonConversion::recordChilds(generator_t& generator, ActsFatras::P
       charge2 = -1.;
     }
 
-    // add the new secondary states to the ISF particle stack
+    // Assign the PDG ID
     const Acts::PdgParticle    pdg1  = std::copysign(Acts::PdgParticle::eElectron, charge1);
     const Acts::PdgParticle    pdg2  = std::copysign(Acts::PdgParticle::eElectron, charge2);
 
+	// Build the particles and store them
     std::vector<Particle> children;
     children.reserve(2);
-
+    
     if (  momentum1 > childMomentumMin ) {
-		Particle child = Particle(Barcode(), pdg1).setPosition4(photon.position4()).setDirection(childDirection).setAbsMomentum(p1).setProcess(ProcessType::ePhotonConversion);
+		Particle child = Particle(Barcode(), pdg1).setPosition4(photon.position4()).setDirection(childDirection)
+			.setAbsMomentum(p1).setProcess(ProcessType::ePhotonConversion);
 	  children.push_back(std::move(child));
     }
-
     if (  momentum2 > childMomentumMin ) {
 		Particle child = Particle(Barcode(), pdg2).setPosition4(photon.position4()).setDirection(childDirection)
 			.setAbsMomentum(p2).setProcess(ProcessType::ePhotonConversion);
@@ -393,14 +313,16 @@ ActsFatras::PhotonConversion::doConversion(generator_t& generator,
 	const ActsFatras::Particle& particle) const {
   const double p = particle.absMomentum();
 
-  // get the energy
+  // Get one child energy
   const Particle::Scalar childEnergy = p * childEnergyFractionReDo(generator, p);
 
-  // now get the deflection
+  // Now get the deflection
   Particle::Vector3 childDir = childDirection(generator, particle.momentum4()); 
   
-  // verbose output
-   return recordChilds(particle,
+  // TODO: The parent must die, maybe here?
+  
+  // Produce the final state
+   return recordProduct(particle,
        childEnergy,
        childDir);
 }
