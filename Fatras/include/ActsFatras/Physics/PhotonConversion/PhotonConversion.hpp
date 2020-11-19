@@ -15,6 +15,8 @@
 #include <vector>
 #include "ActsFatras/EventData/Particle.hpp"
 #include <math.h>
+#include "Acts/Utilities/Units.hpp"
+#include <limits>
 
 namespace ActsFatras {
 	/// @brief This class handles the photon conversion. It evaluates the distance after which the interaction will occur and the final state due the interaction itself.
@@ -22,11 +24,11 @@ namespace ActsFatras {
   public:
   
       /// Lower energy threshold for produced children
-      double                                       m_minChildEnergy = 50. * Acts::UnitConstants::MeV;
+      double                                       childMomentumMin = 50. * Acts::UnitConstants::MeV;
       /// Scaling factor of children energy
-      double                                       m_childEnergyScaleFactor = 2.;
+      double                                       childEnergyScaleFactor = 2.;
       /// Scaling factor for photon conversion probability
-      double                                       m_conversionProbScaleFactor = 0.98;
+      double                                       conversionProbScaleFactor = 0.98;
       
       /// @brief Method for evaluating the distance after which the photon conversion will occur
       ///
@@ -85,6 +87,9 @@ namespace ActsFatras {
       /// @return The direction vector of the child particle
       template <typename generator_t>
       Particle::Vector3 childDirection(generator_t& generator, const Particle::Vector4& gammaMom4) const;
+      
+      template <typename generator_t>
+      Particle::Vector3 childDirectionReDo(generator_t& generator, const Particle::Vector4& gammaMom4) const;
       
       /// Helper methods for angular evaluation
       double phi1(double delta) const;
@@ -172,6 +177,9 @@ template <typename generator_t>
 Particle::Scalar 
 ActsFatras::PhotonConversion::pairProduction(generator_t& generator, Particle::Scalar momentum) const
 {
+	if(momentum < 100. * Acts::UnitConstants::MeV)
+		return std::numeric_limits<Particle::Scalar>::max();
+		
 	// eq. 3.75
 	
 	
@@ -179,16 +187,15 @@ ActsFatras::PhotonConversion::pairProduction(generator_t& generator, Particle::S
  const double xi = p0 + p1*pow(p,p2);
  // now calculate what's left
  //~ double attenuation = exp( -7.777e-01*pathCorrection*mprop.thicknessInX0()*(1.-xi) ); 
-
-  //~ return (m_conversionProbScaleFactor*CLHEP::RandFlat::shoot(m_randomEngine) > attenuation) ? true : false;
+  //~ return (conversionProbScaleFactor*CLHEP::RandFlat::shoot(m_randomEngine) > attenuation) ? true : false;
   
-  //~ return (CLHEP::RandFlat::shoot(m_randomEngine) < 1 - attenuation / m_conversionProbScaleFactor) ? true : false;
-  //~ m_conversionProbScaleFactor(rnd - 1) < -attenuation
-  //~ m_conversionProbScaleFactor(1 - rnd) > attenuation
-  //~ ln(m_conversionProbScaleFactor(1 - rnd)) > -7/9*pathCorrection*mprop.thicknessInX0()*(1.-xi)
+  //~ return (CLHEP::RandFlat::shoot(m_randomEngine) < 1 - attenuation / conversionProbScaleFactor) ? true : false;
+  //~ conversionProbScaleFactor(rnd - 1) < -attenuation
+  //~ conversionProbScaleFactor(1 - rnd) > attenuation
+  //~ ln(conversionProbScaleFactor(1 - rnd)) > -7/9*pathCorrection*mprop.thicknessInX0()*(1.-xi)
   
   std::uniform_real_distribution<double> uniformDistribution {0., 1.};
-  return -nineOverSeven * ln(m_conversionProbScaleFactor * (1 - uniformDistribution(generator))) / (1.-xi);
+  return -nineOverSeven * ln(conversionProbScaleFactor * (1 - uniformDistribution(generator))) / (1.-xi);
 }
 
 template <typename generator_t>
@@ -257,22 +264,19 @@ Particle::Scalar childEnergyFractionReDo(generator_t& generator, Particle::Scala
   // Require photon energy >= 100 MeV
   if(gammaMom < 100. * Acts::UnitConstants::MeV)
 	return 0.; // TODO: The return value should be different
-	
-  const double    eps0        = findMass(eElectron) / gammaMom;
-  
-  std::uniform_real_distribution<double> rndmEngine;
                                            
-    constexpr float    iZet        = 13.;
-    const double deltaFactor = 136. / pow(Z, oneOverThree) * eps0;
+    constexpr float    iZet        = 13.;    
+    constexpr double logZ13 = log(iZet) / 3.;
+    constexpr double  FZ      = 8.*(logZ13 + computeCoulombFactor()); 
+    constexpr double  deltaMax = exp((42.038 - FZ) * 0.1206) - 0.958;
+    
+    constexpr double deltaPreFactor = 136. / pow(Z, oneOverThree);
+    const double    eps0        = findMass(eElectron) / gammaMom;
+    const double deltaFactor = deltaPreFactor * eps0;
     const double deltaMin    = 4. * deltaFactor;
     
-    constexpr double logZ13 = log(iZet) / 3.;
-    constexpr double  FZ      =8. * logZ13 + 8. * computeCoulombFactor(); 
-    constexpr double  deltaMax = 8.*(logZ13 + computeCoulombFactor());
-    
     // compute the limits of eps
-    const double epsp        = 0.5 - 0.5*std::sqrt(1. - deltaMin/deltaMax);
-    const double epsMin      = std::max(eps0,epsp);
+    const double epsMin      = std::max(eps0, 0.5 - 0.5 * std::sqrt(1. - deltaMin/deltaMax));
     const double epsRange    = 0.5 - epsMin;
     //
     // sample the energy rate (eps) of the created electron (or positron)
@@ -284,6 +288,7 @@ Particle::Scalar childEnergyFractionReDo(generator_t& generator, Particle::Scala
     // we will need 3 uniform random number for each trial of sampling 
     double greject = 0.;
     double eps;
+    std::uniform_real_distribution<double> rndmEngine;
     do {
       if (NormF1 > rndmEngine(generator) * (NormF1 + NormF2)) {
         eps = 0.5 - epsRange * pow(rndmEngine(generator), oneOverThree);
@@ -297,63 +302,8 @@ Particle::Scalar childEnergyFractionReDo(generator_t& generator, Particle::Scala
       // Loop checking, 03-Aug-2015, Vladimir Ivanchenko
     } while (greject < rndmEngine(generator));
     //  end of eps sampling
-	return eps;
+	return eps * childEnergyScaleFactor;
 }
-
-  //~ //
-  //~ // select charges randomly
-  //~ G4double eTotEnergy, pTotEnergy;
-  //~ if (rndmEngine->flat() > 0.5) {
-    //~ eTotEnergy = (1.-eps)*gammaMom;
-    //~ pTotEnergy = eps*gammaMom;
-  //~ } else {
-    //~ pTotEnergy = (1.-eps)*gammaMom;
-    //~ eTotEnergy = eps*gammaMom;
-  //~ }
-  //~ //
-  //~ // sample pair kinematics
-  //~ // 
-  //~ const G4double eKinEnergy = std::max(0.,eTotEnergy - CLHEP::electron_mass_c2);
-  //~ const G4double pKinEnergy = std::max(0.,pTotEnergy - CLHEP::electron_mass_c2);
-  //~ //
-  //~ G4ThreeVector eDirection, pDirection;
-  //~ //
-  //~ GetAngularDistribution()->SamplePairDirections(aDynamicGamma, 
-						 //~ eKinEnergy, pKinEnergy, eDirection, pDirection);
-  //~ // create G4DynamicParticle object for the particle1
-  //~ G4DynamicParticle* aParticle1= new G4DynamicParticle(
-                     //~ fTheElectron,eDirection,eKinEnergy);
-
-  //~ // create G4DynamicParticle object for the particle2
-  //~ G4DynamicParticle* aParticle2= new G4DynamicParticle(
-                     //~ fThePositron,pDirection,pKinEnergy);
-  //~ // Fill output vector
-  //~ fvect->push_back(aParticle1);
-  //~ fvect->push_back(aParticle2);
-  //~ // kill incident photon
-  //~ fParticleChange->SetProposedKineticEnergy(0.);
-  //~ fParticleChange->ProposeTrackStatus(fStopAndKill);
-}
-
-  
-/// Accoring to the comment in these functions, these are related to F10 and F20
-//~ inline G4double G4PairProductionRelModel::ScreenFunction1(G4double ScreenVariable)
-//~ // compute the value of the screening function 3*PHI1 - PHI2
-//~ {
-  //~ return (ScreenVariable > 1.)
-    //~ ? 42.24 - 8.368*G4Log(ScreenVariable+0.952)
-    //~ : 42.392 - ScreenVariable*(7.796 - 1.961*ScreenVariable);
-//~ }
-
-//~ //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-//~ inline G4double G4PairProductionRelModel::ScreenFunction2(G4double ScreenVariable)
-//~ // compute the value of the screening function 1.5*PHI1 + 0.5*PHI2
-//~ {
-  //~ return (ScreenVariable > 1.)
-    //~ ? 42.24 - 8.368*G4Log(ScreenVariable+0.952)
-    //~ : 41.405 - ScreenVariable*(5.828 - 0.8945*ScreenVariable);
-//~ }
 
 template <typename generator_t>
 Particle::Vector3 
@@ -424,12 +374,12 @@ ActsFatras::PhotonConversion::recordChilds(generator_t& generator, ActsFatras::P
     std::vector<Particle> children;
     children.reserve(2);
 
-    if (  momentum1 > m_minChildEnergy ) {
+    if (  momentum1 > childMomentumMin ) {
 		Particle child = Particle(Barcode(), pdg1).setPosition4(photon.position4()).setDirection(childDirection).setAbsMomentum(p1).setProcess(ProcessType::ePhotonConversion);
 	  children.push_back(std::move(child));
     }
 
-    if (  momentum2 > m_minChildEnergy ) {
+    if (  momentum2 > childMomentumMin ) {
 		Particle child = Particle(Barcode(), pdg2).setPosition4(photon.position4()).setDirection(childDirection)
 			.setAbsMomentum(p2).setProcess(ProcessType::ePhotonConversion);
 	  children.push_back(std::move(child));
@@ -444,10 +394,11 @@ ActsFatras::PhotonConversion::doConversion(generator_t& generator,
   const double p = particle.absMomentum();
 
   // get the energy
-  const Particle::Scalar childEnergy = p * childEnergyFraction(generator, p);
+  const Particle::Scalar childEnergy = p * childEnergyFractionReDo(generator, p);
 
   // now get the deflection
-  Particle::Vector3 childDir = childDirection(generator, particle.momentum4());
+  Particle::Vector3 childDir = childDirection(generator, particle.momentum4()); 
+  
   // verbose output
    return recordChilds(particle,
        childEnergy,
