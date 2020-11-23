@@ -21,7 +21,7 @@
 
 #include <boost/program_options.hpp>
 
-#include "ActsExamples/Io/Root/RootNuclearInteractionParametersReader.hpp"
+//~ #include "ActsExamples/Fatras/RootNuclearInteractionParametersReader.hpp"
 
 // helper functions are implemented in separate compilation units to reduce
 // resource consumption during compilation
@@ -83,12 +83,12 @@ int runFatras(int argc, char* argv[],
   }
   // setup other modules
   setupInput(vars, sequencer, randomNumbers);
-  setupSimulation(vars, sequencer, randomNumbers, trackingGeometry); // TODO: make the parametrisation configurable in there
+  setupSimulation(vars, sequencer, randomNumbers, trackingGeometry);
   setupDigitization(vars, sequencer, randomNumbers, trackingGeometry);
 
-  ActsExamples::RootNuclearInteractionParametersReader::Config rniprCfg;
-  rniprCfg.fileList = {"parameters.root"};
-  sequencer.addReader(std::make_shared<ActsExamples::RootNuclearInteractionParametersReader>(rniprCfg));
+  //~ ActsExamples::RootNuclearInteractionParametersReader::Config rniprCfg;
+  //~ rniprCfg.fileList = {"parameters.root"};
+  //~ sequencer.addReader(std::make_shared<ActsExamples::RootNuclearInteractionParametersReader>(rniprCfg));
   
   // run the simulation
   return sequencer.run();

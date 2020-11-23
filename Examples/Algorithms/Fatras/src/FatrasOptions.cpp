@@ -1,6 +1,6 @@
 // This file is part of the Acts project.
 //
-// Copyright (C) 2019 CERN for the benefit of the Acts project
+// Copyright (C) 2019-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -30,7 +30,4 @@ void ActsExamples::Options::addFatrasOptions(
           ->value_name("none|sensitive|material|all")
           ->default_value("sensitive"),
       "Which surfaces should record charged particle hits");
-  opt("fatras-nuclear-interaction-parametrisation",
-     value<read_strings>()->multitoken()->default_value({}),
-     "asdfasdfasdfasdf");
 }

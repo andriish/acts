@@ -1,5 +1,6 @@
 add_library(
   ActsExamplesFatras SHARED
+  src/NuclearInteractionOptions.cpp
   src/FatrasOptions.cpp)
 target_include_directories(
   ActsExamplesFatras

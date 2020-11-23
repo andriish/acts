@@ -1,18 +1,18 @@
 // This file is part of the Acts project.
 //
-// Copyright (C) 2020 CERN for the benefit of the Acts project
+// Copyright (C) 2019-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "ActsExamples/Io/Root/RootNuclearInteractionParametersReader.hpp"
+#include "ActsExamples/Fatras/NuclearInteractionOptions.hpp"
+#include "ActsExamples/Utilities/Options.hpp"
 
-#include "ActsExamples/Framework/WhiteBoard.hpp"
+#include <string>
 #include <TFile.h>
 #include <TH1F.h>
 #include <TVectorF.h>
-#include <ActsFatras/Physics/NuclearInteraction/Parameters.hpp>
 
 namespace {
 // TODO: some functions were moved to the writer and can be removed
@@ -136,55 +136,42 @@ std::pair<std::vector<float>, std::vector<uint32_t>> buildMap(TH1F const* hist, 
   reduceMap(histoBorders, normalisedHistoContents);
 
   return std::make_pair(histoBorders, normalisedHistoContents);}
-}
-
-ActsExamples::RootNuclearInteractionParametersReader::RootNuclearInteractionParametersReader(
-    const ActsExamples::RootNuclearInteractionParametersReader::Config& cfg)
-    : ActsExamples::IReader(), m_cfg(cfg) {
-  if (m_cfg.fileList.empty()) {
-    throw std::invalid_argument("Missing input files");
-  }
-  if (m_cfg.outputParametrisation.empty()) {
-    throw std::invalid_argument("Missing output collection");
-  }
-}
-
-ActsExamples::RootNuclearInteractionParametersReader::~RootNuclearInteractionParametersReader() {
-}
-
-std::string ActsExamples::RootNuclearInteractionParametersReader::name() const {
-  return m_cfg.name;
-}
-
-std::pair<size_t, size_t>
-ActsExamples::RootNuclearInteractionParametersReader::availableEvents() const {
-  return {0u, 1u};
-}
-
-std::vector<std::pair<std::vector<float>, std::vector<uint32_t>>> ActsExamples::RootNuclearInteractionParametersReader::buildMaps(
-    const std::vector<TH1F*>& histos) const {
+  
+std::vector<std::pair<std::vector<float>, std::vector<uint32_t>>> buildMaps(
+    const std::vector<TH1F*>& histos) {
   std::vector<std::pair<std::vector<float>, std::vector<uint32_t>>> maps;
   for (auto& h : histos) {
     maps.push_back(buildMap(h));
   }
   return maps;
 }
+}
 
-ActsExamples::ProcessCode ActsExamples::RootNuclearInteractionParametersReader::read(
-    const ActsExamples::AlgorithmContext& context) {
+void ActsExamples::Options::addNuclearInteractionOptions(
+    ActsExamples::Options::Description& desc) {
+  using boost::program_options::value;
+
+  auto opt = desc.add_options();
+  opt("fatras-nuclear-interaction-parametrisation",
+     value<read_strings>()->multitoken()->default_value({}),
+     "List of files containing a parametrisation for nuclear interaction.");
+  opt("fatras-simulated-events-nuclear-interaction-parametrisation",
+    value<read_series>()->multitoken()->default_value({}),
+    "Number of events simulated for the parametrisation of the nuclear interaction.");
+}
+
+ActsFatras::detail::MultiParticleParametrisation ActsExamples::Options::readParametrisations(
+    const std::vector<std::string>& fileNames, const std::vector<int>& nSimulatedEvents) {
 std::cout << "Read call " << std::endl;	
-	ACTS_DEBUG("Trying to read nulcear interaction parametrisations.");
 	
-  // Read and prepare the parametrisation
-  if (context.eventNumber < 1) {
-    // lock the mutex
-    std::lock_guard<std::mutex> lock(m_read_mutex);
 	// The collection
-	ActsFatras::detail::Parametrisation parametrisation;
+	ActsFatras::detail::MultiParticleParametrisation mpp;
+
     // Now read all files
-	for(const std::string& file : m_cfg.fileList)
+	for(const std::string& file : fileNames)
 	{
 std::cout << "Reading file " << file << std::endl;
+		ActsFatras::detail::Parametrisation parametrisation;
 		TFile tf(file.c_str(), "read");
 		gDirectory->cd();
 		// Walk over all elements in the file
@@ -202,7 +189,7 @@ std::cout << "Momentum found: "<< parameters.momentum << " " << name << std::end
 			// Get the nuclear interaction probability
 			TH1F* nuclearInteraction = (TH1F*) gDirectory->Get("NuclearInteraction");
 std::cout << "NuclearInteraction retrieved: " << nuclearInteraction << std::endl;
-			parameters.nuclearInteractionProbability = buildMap(nuclearInteraction, m_cfg.nSimulatedEvents);
+			parameters.nuclearInteractionProbability = buildMap(nuclearInteraction, nSimulatedEvents[0]); // TODO: nSimulatedEvents need to be treated in the loop
 std::cout << "Nuclear interaction" << std::endl;
 			// Get the soft interaction probability
 			TVectorF* softInteraction = (TVectorF*) gDirectory->Get("SoftInteraction");
@@ -333,15 +320,11 @@ std::cout << "multiplicity" << std::endl;
 			parametrisation.push_back(std::make_pair(parameters.momentum, parameters));
 		}
 		tf.Close();
+		
+		// Write to the collection to the EventStore
+		mpp.push_back(std::make_pair(211, parametrisation));
 	}
-	ACTS_DEBUG("Nuclear interaction parametrisation loaded");
-	
-	// Write to the collection to the EventStore
-	ActsFatras::detail::MultiParticleParametrisation mpp;
-	mpp.push_back(std::make_pair(211, parametrisation));
-    context.eventStore.add(m_cfg.outputParametrisation, std::move(mpp));
-  }
   
   // Return success flag
-  return ActsExamples::ProcessCode::SUCCESS;
+  return mpp;
 }
