@@ -28,7 +28,7 @@ namespace ActsFatras {
 /// @brief This class provides a parametrised nuclear interaction. The thereby required parametrisation needs to be set and is not provided by default.
 struct NuclearInteraction {
 	/// The storage of the parameterisation
-  detail::MultiParticleParametrisation const* multiParticleParameterisation = nullptr;
+  detail::MultiParticleParametrisation multiParticleParameterisation;
   
   //~ Listener listener;
   
@@ -53,9 +53,9 @@ struct NuclearInteraction {
 	//~ if(particle.pathLimitL0() == std::numeric_limits<Particle::Scalar>::max())
 	//~ {
 		//~ std::cout << "Need a limit for " << particle.pdg() << std::endl;
-		//~ if(multiParticleParameterisation->find(particle.pdg()) != multiParticleParameterisation->end())
+		//~ if(multiParticleParameterisation.find(particle.pdg()) != multiParticleParameterisation.end())
 		//~ {
-			//~ const auto& distribution = multiParticleParameterisation->at(particle.pdg()).at(particle.absMomentum()).nuclearInteractionProbability;
+			//~ const auto& distribution = multiParticleParameterisation.at(particle.pdg()).at(particle.absMomentum()).nuclearInteractionProbability;
 			//~ particle.setMaterialLimits(particle.pathLimitX0(), sampleContinuousValues(uniformDistribution(generator), distribution));
 		//~ }
 	//~ }
@@ -64,10 +64,10 @@ struct NuclearInteraction {
     //~ if(particle.pathInL0() >= particle.pathLimitL0())
     //~ {
 		//~ // Fast exit if there is no parametrisation
-		//~ if(multiParticleParameterisation->empty())
+		//~ if(multiParticleParameterisation.empty())
 			//~ return {};
-		//~ const auto parametrisationIterator = multiParticleParameterisation->find(particle.pdg());
-		//~ if(parametrisationIterator == multiParticleParameterisation->end())
+		//~ const auto parametrisationIterator = multiParticleParameterisation.find(particle.pdg());
+		//~ if(parametrisationIterator == multiParticleParameterisation.end())
 			//~ return {};
 		//~ const detail::Parametrisation& parametrisation = parametrisationIterator->second;
 		
@@ -389,11 +389,11 @@ std::vector<Particle> NuclearInteraction::convertParametersToParticles(generator
 	  p.setProcess(ProcessType::eNuclearInteraction).setPosition4(initialParticle.position4())
 		.setAbsMomentum(momentum).setDirection(direction);
 	
-	auto cit = multiParticleParameterisation->begin();
-	while(cit->first != p.pdg() && cit != multiParticleParameterisation->end())
+	auto cit = multiParticleParameterisation.begin();
+	while(cit->first != p.pdg() && cit != multiParticleParameterisation.end())
 		cit++;
 		
-	if(cit != multiParticleParameterisation->end())
+	if(cit != multiParticleParameterisation.end())
 	{
 		const auto& distribution = findParameters(uniformDistribution(generator), cit->second, p.absMomentum()).nuclearInteractionProbability;
 		p.setMaterialLimits(p.pathLimitX0(), sampleContinuousValues(uniformDistribution(generator), distribution));

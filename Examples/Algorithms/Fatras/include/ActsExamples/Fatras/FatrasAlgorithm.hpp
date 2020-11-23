@@ -80,14 +80,6 @@ class FatrasAlgorithm final : public BareAlgorithm {
     particlesFinalUnordered.reserve(inputParticles.size());
     simHitsUnordered.reserve(kMeanHitsPerParticle * inputParticles.size());
 
-	auto const* nuclearInteractionParametrisation = &ctx.eventStore.get<ActsFatras::detail::MultiParticleParametrisation>(m_cfg.imputParametrisation);
-    const_cast<ActsFatras::ChargedElectroMagneticPhysicsList*>
-		(&m_cfg.simulator.charged.physics)->get<ActsFatras::detail::ParametrisedNuclearInteraction>()
-		.physics.multiParticleParameterisation = nuclearInteractionParametrisation;
-    const_cast<ActsFatras::NeutralPhysicsList*>
-		(&m_cfg.simulator.neutral.physics)->get<ActsFatras::detail::ParametrisedNuclearInteraction>()
-		.physics.multiParticleParameterisation = nuclearInteractionParametrisation;
-
     // run the simulation w/ a local random generator
     auto rng = m_cfg.randomNumbers->spawnGenerator(ctx);
     auto ret = m_cfg.simulator.simulate(

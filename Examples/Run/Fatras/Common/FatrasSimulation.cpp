@@ -42,6 +42,7 @@
 #include "ActsFatras/Selectors/SelectorHelpers.hpp"
 #include "ActsFatras/Selectors/SurfaceSelectors.hpp"
 #include "ActsFatras/Kernel/detail/VoidPostPropagationInteractor.hpp"
+#include "ActsExamples/Fatras/NuclearInteractionOptions.hpp"
 
 #include <boost/program_options.hpp>
 
@@ -140,6 +141,9 @@ void setupSimulationAlgorithms(
   fatras.outputParticlesFinal = "particles_final";
   fatras.outputSimHits = kFatrasCollectionHits;
   fatras.randomNumbers = randomNumbers;
+  
+  ActsExamples::Options::readNuclearInteractionConfig(vars, fatras.simulator);
+  
   sequencer.addAlgorithm(
       std::make_shared<SimulationAlgorithm>(fatras, logLevel));
 
@@ -206,6 +210,7 @@ void setupSimulationAlgorithms(
 void addSimulationOptions(ActsExamples::Options::Description& desc) {
   ActsExamples::Options::addBFieldOptions(desc);
   ActsExamples::Options::addFatrasOptions(desc);
+  ActsExamples::Options::addNuclearInteractionOptions(desc);
 }
 
 void setupSimulation(

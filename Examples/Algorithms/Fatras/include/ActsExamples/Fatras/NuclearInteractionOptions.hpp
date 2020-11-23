@@ -14,18 +14,12 @@
 #include "ActsExamples/Utilities/OptionsFwd.hpp"
 #include "ActsFatras/Kernel/Process.hpp"
 #include "ActsFatras/Physics/StandardPhysicsLists.hpp"
-#include "ActsExamples/Fatras/RootNuclearInteractionParametersReader.hpp"
 #include "ActsFatras/Physics/NuclearInteraction/NuclearInteraction.hpp"
 #include "ActsFatras/Physics/NuclearInteraction/Parameters.hpp"
 
 #include <utility>
 
 #include <boost/program_options.hpp>
-
-
-class TH1F;
-
-
 
 namespace ActsExamples {
 namespace Options {
@@ -74,8 +68,8 @@ void readNuclearInteractionConfig(
 	const auto mpp = readParametrisations(nuclearInteractionParametrisations, nSimulatedEvents);
 	ACTS_VERBOSE("Parametrisations for nuclear interaction from " << mpp.size() << " particles provided");
 	
-	chargedNuclearInteraction.physics = mpp;
-	neutralNuclearInteraction.physics = mpp;
+	chargedNuclearInteraction.physics.multiParticleParameterisation = mpp;
+	neutralNuclearInteraction.physics.multiParticleParameterisation = mpp;
 }
 
 }  // namespace Options
