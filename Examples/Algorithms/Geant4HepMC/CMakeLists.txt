@@ -13,7 +13,8 @@ target_include_directories(
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_link_libraries(
   ActsExamplesEventRecording
-  PUBLIC ActsCore ActsExamplesFramework ActsExamplesGeant4 ${HEPMC3_LIBRARIES})
+  PUBLIC ActsCore ActsExamplesFramework ActsExamplesGeant4 ${HEPMC3_LIBRARIES}
+  PRIVATE ROOT::Core ROOT::Hist)
 
 install(
   TARGETS ActsExamplesEventRecording

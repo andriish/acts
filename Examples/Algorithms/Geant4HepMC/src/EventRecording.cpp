@@ -30,6 +30,9 @@
 #include "Acts/EventData/TrackParameters.hpp"
 #include "Acts/EventData/detail/TransformationBoundToFree.hpp"
 #include "Acts/Geometry/GeometryContext.hpp"
+#include <TH1F.h>
+#include <TCanvas.h>
+#include "Acts/Utilities/Units.hpp"
 
 ActsExamples::EventRecording::~EventRecording() {
   m_runManager = nullptr;
@@ -63,7 +66,26 @@ ActsExamples::EventRecording::EventRecording(
   m_runManager->Initialize();
   
   if(m_cfg.covarianceSample)
-  {
+  {    
+	  Acts::BoundVector stddev = Acts::BoundVector::Zero();
+	  stddev[Acts::eBoundLoc0] = 15. * Acts::UnitConstants::um;
+	  stddev[Acts::eBoundLoc1] = 80. * Acts::UnitConstants::um;
+	  stddev[Acts::eBoundTime] = 25. * Acts::UnitConstants::ns;
+	  stddev[Acts::eBoundPhi] = 1. * Acts::UnitConstants::degree;
+	  stddev[Acts::eBoundTheta] = 1.5 * Acts::UnitConstants::degree;
+	  stddev[Acts::eBoundQOverP] = 1. * Acts::UnitConstants::e / 10. * Acts::UnitConstants::GeV;
+	  
+	  Acts::BoundSymMatrix corr = Acts::BoundSymMatrix::Identity();
+	  //~ corr(Acts::eBoundLoc0, Acts::eBoundLoc1) = corr(Acts::eBoundLoc1, Acts::eBoundLoc0) = 0.125;
+	  //~ corr(Acts::eBoundLoc0, Acts::eBoundPhi) = corr(Acts::eBoundPhi, Acts::eBoundLoc0) = 0.25;
+	  //~ corr(Acts::eBoundLoc1, Acts::eBoundTheta) = corr(Acts::eBoundTheta, Acts::eBoundLoc1) = -0.25;
+	  //~ corr(Acts::eBoundTime, Acts::eBoundQOverP) = corr(Acts::eBoundQOverP, Acts::eBoundTime) = 0.125;
+	  //~ corr(Acts::eBoundPhi, Acts::eBoundTheta) = corr(Acts::eBoundTheta, Acts::eBoundPhi) = -0.25;
+	  //~ corr(Acts::eBoundPhi, Acts::eBoundQOverP) = corr(Acts::eBoundPhi, Acts::eBoundQOverP) = -0.125;
+	  //~ corr(Acts::eBoundTheta, Acts::eBoundQOverP) = corr(Acts::eBoundTheta, Acts::eBoundQOverP) = 0.5;
+
+	  m_cfg.covariance = stddev.asDiagonal() * corr * stddev.asDiagonal();
+  
 	Eigen::SelfAdjointEigenSolver<Acts::BoundSymMatrix> eigenSolver(m_cfg.covariance);
 	m_transform = eigenSolver.eigenvectors() * eigenSolver.eigenvalues().cwiseSqrt().asDiagonal();	  
   }
@@ -83,73 +105,96 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
   std::vector<HepMC3::GenEvent> events;
   events.reserve(initialParticles.size());
 
+  std::vector<TH1F*> histos;
+  histos.resize(Acts::eBoundSize);
+  for(unsigned int i = 0; i < Acts::eBoundSize; i++)
+  {
+	  histos[i] = new TH1F("", "", 40, -3, 3);
+  }
+
   for (const auto& part : initialParticles) {
-    // Prepare the particle gun
-    ActsExamples::PrimaryGeneratorAction::instance()->prepareParticleGun(part);
+	  for(unsigned int i = 0; i < m_cfg.numSamples; i++)
+	  {
+		 // Prepare the particle gun
+		 if(m_cfg.covarianceSample)
+		  {
+			  ActsExamples::PrimaryGeneratorAction::instance()->prepareParticleGun(sampleFromCovariance(part, histos));
+		  } else {
+			ActsExamples::PrimaryGeneratorAction::instance()->prepareParticleGun(part);
+		}
+		
+		// Begin with the simulation
+		m_runManager->BeamOn(1);
 
-    // Begin with the simulation
-    m_runManager->BeamOn(1);
+		// Test if the event was aborted
+		if (SteppingAction::instance()->eventAborted()) {
+		  continue;
+		}
 
-    // Test if the event was aborted
-    if (SteppingAction::instance()->eventAborted()) {
-      continue;
-    }
+		// Set event start time
+		HepMC3::GenEvent event = ActsExamples::EventAction::instance()->event();
+		HepMC3::FourVector shift(0., 0., 0., part.time() / Acts::UnitConstants::mm);
+		event.shift_position_by(shift);
 
-    // Set event start time
-    HepMC3::GenEvent event = ActsExamples::EventAction::instance()->event();
-    HepMC3::FourVector shift(0., 0., 0., part.time() / Acts::UnitConstants::mm);
-    event.shift_position_by(shift);
+		// Set beam particle properties
+		const Acts::Vector4D momentum4 =
+			part.momentum4() / Acts::UnitConstants::GeV;
+		HepMC3::FourVector beamMom4(momentum4[0], momentum4[1], momentum4[2],
+									momentum4[3]);
+		auto beamParticle = event.particles()[0];
+		beamParticle->set_momentum(beamMom4);
+		beamParticle->set_pid(part.pdg());
 
-    // Set beam particle properties
-    const Acts::Vector4D momentum4 =
-        part.fourMomentum() / Acts::UnitConstants::GeV;
-    HepMC3::FourVector beamMom4(momentum4[0], momentum4[1], momentum4[2],
-                                momentum4[3]);
-    auto beamParticle = event.particles()[0];
-    beamParticle->set_momentum(beamMom4);
-    beamParticle->set_pid(part.pdg());
+		if (m_cfg.processSelect.empty()) {
+		  // Store the result
+		  events.push_back(std::move(event));
+		} else {
+		  bool storeEvent = false;
+		  // Test if the event has a process of interest in it
+		  for (const auto& vertex : event.vertices()) {
+			if (vertex->id() == -1) {
+			  vertex->add_particle_in(beamParticle);
+			}
+			const std::vector<std::string> vertexAttributes =
+				vertex->attribute_names();
+			for (const auto& att : vertexAttributes) {
+			  if ((vertex->attribute_as_string(att).find(m_cfg.processSelect) !=
+				   std::string::npos) &&
+				  !vertex->particles_in().empty() &&
+				  vertex->particles_in()[0]->attribute<HepMC3::IntAttribute>(
+					  "TrackID") &&
+				  vertex->particles_in()[0]
+						  ->attribute<HepMC3::IntAttribute>("TrackID")
+						  ->value() == 1) {
+				storeEvent = true;
+				break;
+			  }
+			}
+			if (storeEvent) {
+			  break;
+			}
+		  }
+		  // Store the result
+		  if (storeEvent) {
+			// Remove vertices without outgoing particles
+			for (auto it = event.vertices().crbegin();
+				 it != event.vertices().crend(); it++) {
+			  if ((*it)->particles_out().empty()) {
+				event.remove_vertex(*it);
+			  }
+			}
+			events.push_back(std::move(event));
+		  }
+		}
+	}
+  }
 
-    if (m_cfg.processSelect.empty()) {
-      // Store the result
-      events.push_back(std::move(event));
-    } else {
-      bool storeEvent = false;
-      // Test if the event has a process of interest in it
-      for (const auto& vertex : event.vertices()) {
-        if (vertex->id() == -1) {
-          vertex->add_particle_in(beamParticle);
-        }
-        const std::vector<std::string> vertexAttributes =
-            vertex->attribute_names();
-        for (const auto& att : vertexAttributes) {
-          if ((vertex->attribute_as_string(att).find(m_cfg.processSelect) !=
-               std::string::npos) &&
-              !vertex->particles_in().empty() &&
-              vertex->particles_in()[0]->attribute<HepMC3::IntAttribute>(
-                  "TrackID") &&
-              vertex->particles_in()[0]
-                      ->attribute<HepMC3::IntAttribute>("TrackID")
-                      ->value() == 1) {
-            storeEvent = true;
-            break;
-          }
-        }
-        if (storeEvent) {
-          break;
-        }
-      }
-      // Store the result
-      if (storeEvent) {
-        // Remove vertices without outgoing particles
-        for (auto it = event.vertices().crbegin();
-             it != event.vertices().crend(); it++) {
-          if ((*it)->particles_out().empty()) {
-            event.remove_vertex(*it);
-          }
-        }
-        events.push_back(std::move(event));
-      }
-    }
+  TCanvas* tc = new TCanvas();
+  for(unsigned int i = 0; i < Acts::eBoundSize; i++)
+  {
+	histos[i]->Draw();
+	tc->Print(("Parameter_" + std::to_string(i) + ".png").c_str());
+	delete(histos[i]);
   }
 
   ACTS_INFO(initialParticles.size() << " initial particles provided");
@@ -162,7 +207,7 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
 }
 
 ActsExamples::SimParticle
-ActsExamples::EventRecording::sampleFromCovariance(const ActsExamples::SimParticle& particle) const {
+ActsExamples::EventRecording::sampleFromCovariance(const ActsExamples::SimParticle& particle, const std::vector<TH1F*>& histos) const {
 	  SimParticle result = particle;
 	  
 	  Acts::CurvilinearTrackParameters mean(particle.position4(), particle.unitDirection(), particle.charge(), particle.absMomentum());
@@ -173,6 +218,9 @@ ActsExamples::EventRecording::sampleFromCovariance(const ActsExamples::SimPartic
         const auto sample = mean.parameters() 
 			+ m_transform * Acts::BoundVector{mean.parameters().size()}.unaryExpr(
 				[&](ActsExamples::SimParticle::Scalar /*x*/) { return dist(gen); });
+	
+	for(unsigned int i = 0; i < Acts::eBoundSize; i++)
+		histos[i]->Fill(sample[i] - mean.parameters()[i]);
 	
 	Acts::GeometryContext gctx;			
 	 const auto freeSample = Acts::detail::transformBoundToFreeParameters(mean.referenceSurface(), gctx, sample);
