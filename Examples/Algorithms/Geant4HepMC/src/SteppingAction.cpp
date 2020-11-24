@@ -51,6 +51,13 @@ void ActsExamples::SteppingAction::UserSteppingAction(const G4Step* step) {
     G4RunManager::GetRunManager()->AbortEvent();
     return;
   }
+  
+  if(step->GetPostStepPoint()->GetPhysicalVolume())
+  {
+	  std::cout << step->GetPostStepPoint()->GetPhysicalVolume()->GetName() << std::endl;
+  } else {
+	  std::cout << "Nullptr" << std::endl;
+  }
 
   /// Store the step such that a vertex knows the position and upcoming process
   /// for a particle. The particle properties are stored as ingoing before and
