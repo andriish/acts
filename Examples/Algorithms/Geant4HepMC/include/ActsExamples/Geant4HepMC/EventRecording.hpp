@@ -62,8 +62,7 @@ class EventRecording final : public ActsExamples::BareAlgorithm {
 
  private:
   
-  //~ SimParticle
-  Acts::BoundVector
+  SimParticle
   sampleFromCovariance(const SimParticle& particle) const;
  
   Acts::BoundSymMatrix m_transform;
