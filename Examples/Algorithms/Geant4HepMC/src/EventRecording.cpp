@@ -87,10 +87,6 @@ ActsExamples::EventRecording::EventRecording(
 	  m_cfg.covariance = stddev.asDiagonal() * corr * stddev.asDiagonal();
 
 	Eigen::SelfAdjointEigenSolver<Acts::BoundSymMatrix> eigenSolver(m_cfg.covariance);
-	
-//~ std::cout << "evec: \n" << eigenSolver.eigenvectors() << std::endl;
-//~ std::cout << "eval: \n" << Acts::BoundSymMatrix(eigenSolver.eigenvalues().cwiseSqrt().asDiagonal()) << std::endl;
-//~ exit(1);
 
 	m_transform = eigenSolver.eigenvectors() * eigenSolver.eigenvalues().cwiseSqrt().asDiagonal();
   }
