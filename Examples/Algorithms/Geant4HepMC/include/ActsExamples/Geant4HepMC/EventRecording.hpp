@@ -19,6 +19,7 @@
 
 #include <G4VUserDetectorConstruction.hh>
 #include <HepMC3/GenEvent.h>
+#include "ActsExamples/EventData/SimParticle.hpp"
 
 class G4RunManager;
 
@@ -61,9 +62,12 @@ class EventRecording final : public ActsExamples::BareAlgorithm {
 
  private:
   
-  void
-  sampleFromCovariance(ActsExamples::SimParticle& particle) const;
+  //~ SimParticle
+  Acts::BoundVector
+  sampleFromCovariance(const SimParticle& particle) const;
  
+  Acts::BoundSymMatrix m_transform;
+
   /// The config object
   Config m_cfg;
   /// G4 run manager
