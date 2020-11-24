@@ -22,6 +22,7 @@
 #include "ActsExamples/EventData/SimParticle.hpp"
 
 class G4RunManager;
+class TH1F;
 
 namespace ActsExamples {
 
@@ -41,8 +42,9 @@ class EventRecording final : public ActsExamples::BareAlgorithm {
     /// random number seed 2
     int seed2 = 45678;
     
-    bool covarianceSample = false;
+    bool covarianceSample = true;
     Acts::BoundSymMatrix covariance = Acts::BoundSymMatrix::Identity();
+    unsigned int numSamples = 1000;
 
     /// List of processes that can be combined to a single vertex
     std::vector<std::string> processesCombine;
@@ -63,7 +65,7 @@ class EventRecording final : public ActsExamples::BareAlgorithm {
  private:
   
   SimParticle
-  sampleFromCovariance(const SimParticle& particle) const;
+  sampleFromCovariance(const SimParticle& particle, const std::vector<TH1F*>& histos) const;
  
   Acts::BoundSymMatrix m_transform;
 
