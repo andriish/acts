@@ -70,7 +70,7 @@ ActsExamples::EventRecording::EventRecording(
 	  Acts::BoundVector stddev = Acts::BoundVector::Zero();
 	  stddev[Acts::eBoundLoc0] = 15. * Acts::UnitConstants::um;
 	  stddev[Acts::eBoundLoc1] = 80. * Acts::UnitConstants::um;
-	  stddev[Acts::eBoundTime] = 25. * Acts::UnitConstants::ns;
+	  stddev[Acts::eBoundTime] = 0.1 * Acts::UnitConstants::ns;
 	  stddev[Acts::eBoundPhi] = 1. * Acts::UnitConstants::degree;
 	  stddev[Acts::eBoundTheta] = 1.5 * Acts::UnitConstants::degree;
 	  stddev[Acts::eBoundQOverP] = 1. * Acts::UnitConstants::e / 10. * Acts::UnitConstants::GeV;
@@ -85,9 +85,14 @@ ActsExamples::EventRecording::EventRecording(
 	  //~ corr(Acts::eBoundTheta, Acts::eBoundQOverP) = corr(Acts::eBoundTheta, Acts::eBoundQOverP) = 0.5;
 
 	  m_cfg.covariance = stddev.asDiagonal() * corr * stddev.asDiagonal();
-  
+
 	Eigen::SelfAdjointEigenSolver<Acts::BoundSymMatrix> eigenSolver(m_cfg.covariance);
-	m_transform = eigenSolver.eigenvectors() * eigenSolver.eigenvalues().cwiseSqrt().asDiagonal();	  
+	
+//~ std::cout << "evec: \n" << eigenSolver.eigenvectors() << std::endl;
+//~ std::cout << "eval: \n" << Acts::BoundSymMatrix(eigenSolver.eigenvalues().cwiseSqrt().asDiagonal()) << std::endl;
+//~ exit(1);
+
+	m_transform = eigenSolver.eigenvectors() * eigenSolver.eigenvalues().cwiseSqrt().asDiagonal();
   }
 }
 
@@ -109,12 +114,13 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
   histos.resize(Acts::eBoundSize);
   for(unsigned int i = 0; i < Acts::eBoundSize; i++)
   {
-	  histos[i] = new TH1F("", "", 40, -3, 3);
+	  histos[i] = new TH1F("", "", 100, -5, 5);
   }
 
   for (const auto& part : initialParticles) {
 	  for(unsigned int i = 0; i < m_cfg.numSamples; i++)
 	  {
+		ACTS_VERBOSE("Starting variation number " << i);
 		 // Prepare the particle gun
 		 if(m_cfg.covarianceSample)
 		  {
@@ -188,7 +194,7 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
 		}
 	}
   }
-
+  
   TCanvas* tc = new TCanvas();
   for(unsigned int i = 0; i < Acts::eBoundSize; i++)
   {
@@ -215,14 +221,14 @@ ActsExamples::EventRecording::sampleFromCovariance(const ActsExamples::SimPartic
         static std::mt19937 gen{ std::random_device{}() };
         static std::normal_distribution<> dist;
 
-        const auto sample = mean.parameters() 
+        const Acts::BoundVector sample = mean.parameters() 
 			+ m_transform * Acts::BoundVector{mean.parameters().size()}.unaryExpr(
 				[&](ActsExamples::SimParticle::Scalar /*x*/) { return dist(gen); });
 	
 	for(unsigned int i = 0; i < Acts::eBoundSize; i++)
-		histos[i]->Fill(sample[i] - mean.parameters()[i]);
+		histos[i]->Fill((sample[i] - mean.parameters()[i]) / std::sqrt(m_cfg.covariance(i, i))); // TODO: Pull only valid for diagonal matrix
 	
-	Acts::GeometryContext gctx;			
+	Acts::GeometryContext gctx;
 	 const auto freeSample = Acts::detail::transformBoundToFreeParameters(mean.referenceSurface(), gctx, sample);
 
 	result.setPosition4(freeSample.template segment<4>(Acts::eFreePos0));
