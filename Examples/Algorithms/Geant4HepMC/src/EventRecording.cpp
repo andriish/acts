@@ -27,6 +27,9 @@
 #include <HepMC3/GenParticle.h>
 #include <Eigen/Eigenvalues> 
 #include <random>
+#include "Acts/EventData/TrackParameters.hpp"
+#include "Acts/EventData/detail/TransformationBoundToFree.hpp"
+#include "Acts/Geometry/GeometryContext.hpp"
 
 ActsExamples::EventRecording::~EventRecording() {
   m_runManager = nullptr;
@@ -158,13 +161,24 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
   return ActsExamples::ProcessCode::SUCCESS;
 }
 
-//~ ActsExamples::SimParticle
-Acts::BoundVector
+ActsExamples::SimParticle
 ActsExamples::EventRecording::sampleFromCovariance(const ActsExamples::SimParticle& particle) const {
 	  SimParticle result = particle;
 	  
+	  Acts::CurvilinearTrackParameters mean(particle.position4(), particle.unitDirection(), particle.charge(), particle.absMomentum());
+	  
         static std::mt19937 gen{ std::random_device{}() };
         static std::normal_distribution<> dist;
-Acts::BoundVector mean = Acts::BoundVector::Zero();
-        return mean + m_transform * Acts::BoundVector{ mean.size() }.unaryExpr([&](ActsExamples::SimParticle::Scalar /*x*/) { return dist(gen); });
+
+        const auto sample = mean.parameters() 
+			+ m_transform * Acts::BoundVector{mean.parameters().size()}.unaryExpr(
+				[&](ActsExamples::SimParticle::Scalar /*x*/) { return dist(gen); });
+	
+	Acts::GeometryContext gctx;			
+	 const auto freeSample = Acts::detail::transformBoundToFreeParameters(mean.referenceSurface(), gctx, sample);
+
+	result.setPosition4(freeSample.template segment<4>(Acts::eFreePos0));
+	result.setDirection(freeSample.template segment<3>(Acts::eFreeDir0));
+	result.setAbsMomentum(std::abs(1. / freeSample[Acts::eFreeQOverP]));
+	return result;
 }
