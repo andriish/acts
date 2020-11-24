@@ -24,6 +24,10 @@
 #include "RunAction.hpp"
 #include "SteppingAction.hpp"
 
+#include <HepMC3/GenParticle.h>
+#include <Eigen/Eigenvalues> 
+#include <random>
+
 ActsExamples::EventRecording::~EventRecording() {
   m_runManager = nullptr;
 }
@@ -54,6 +58,12 @@ ActsExamples::EventRecording::EventRecording(
   m_runManager->SetUserAction(
       new ActsExamples::SteppingAction(m_cfg.processesReject));
   m_runManager->Initialize();
+  
+  if(m_cfg.covarianceSample)
+  {
+	Eigen::SelfAdjointEigenSolver<Acts::BoundSymMatrix> eigenSolver(m_cfg.covariance);
+	m_transform = eigenSolver.eigenvectors() * eigenSolver.eigenvalues().cwiseSqrt().asDiagonal();	  
+  }
 }
 
 ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
@@ -148,31 +158,13 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
   return ActsExamples::ProcessCode::SUCCESS;
 }
 
-void
-  ActsExamples::EventRecording::sampleFromCovariance(ActsExamples::SimParticle& particle) const {
+//~ ActsExamples::SimParticle
+Acts::BoundVector
+ActsExamples::EventRecording::sampleFromCovariance(const ActsExamples::SimParticle& particle) const {
+	  SimParticle result = particle;
 	  
-	  struct normal_random_variable
-{
-    normal_random_variable(Eigen::MatrixXd const& covar)
-        : normal_random_variable(Eigen::VectorXd::Zero(covar.rows()), covar)
-    {}
-
-    normal_random_variable(Eigen::VectorXd const& mean, Eigen::MatrixXd const& covar)
-        : mean(mean)
-    {
-        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigenSolver(covar);
-        transform = eigenSolver.eigenvectors() * eigenSolver.eigenvalues().cwiseSqrt().asDiagonal();
-    }
-
-    Eigen::VectorXd mean;
-    Eigen::MatrixXd transform;
-
-    Eigen::VectorXd operator()() const
-    {
         static std::mt19937 gen{ std::random_device{}() };
         static std::normal_distribution<> dist;
-
-        return mean + transform * Eigen::VectorXd{ mean.size() }.unaryExpr([&](auto x) { return dist(gen); });
-    }
-};
-  }
+Acts::BoundVector mean = Acts::BoundVector::Zero();
+        return mean + m_transform * Acts::BoundVector{ mean.size() }.unaryExpr([&](ActsExamples::SimParticle::Scalar /*x*/) { return dist(gen); });
+}
