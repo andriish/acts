@@ -52,12 +52,12 @@ void ActsExamples::SteppingAction::UserSteppingAction(const G4Step* step) {
     return;
   }
   
-  if(step->GetPostStepPoint()->GetPhysicalVolume())
-  {
-	  std::cout << step->GetPostStepPoint()->GetPhysicalVolume()->GetName() << std::endl;
-  } else {
-	  std::cout << "Nullptr" << std::endl;
-  }
+  //~ if(step->GetPostStepPoint()->GetPhysicalVolume())
+  //~ {
+	  //~ std::cout << step->GetPostStepPoint()->GetPhysicalVolume()->GetName() << std::endl;
+  //~ } else {
+	  //~ std::cout << "Nullptr" << std::endl;
+  //~ }
 
   /// Store the step such that a vertex knows the position and upcoming process
   /// for a particle. The particle properties are stored as ingoing before and
