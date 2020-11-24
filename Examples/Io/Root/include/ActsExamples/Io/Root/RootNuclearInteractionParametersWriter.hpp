@@ -39,13 +39,13 @@ class RootNuclearInteractionParametersWriter final
     std::string fileMode = "RECREATE";
 
     /// Number of bins used for the interaction probability distributions
-    unsigned int interactionProbabilityBins = 1e6;
+    unsigned int interactionProbabilityBins = 1e4;
     /// Number of bins used for the momentum distributions
-    unsigned int momentumBins = 1e6;
+    unsigned int momentumBins = 1e4;
     /// Number of bins used for the invariant mass distributions
-    unsigned int invariantMassBins = 1e6;
+    unsigned int invariantMassBins = 1e4;
     /// The highest final state multiplicity that will considered
-    unsigned int multiplicityMax = 10;
+    unsigned int multiplicityMax = 2;
     /// Choice whether the histograms should be written to file
     bool writeHistograms = true;
     /// Number of simulated histograms
