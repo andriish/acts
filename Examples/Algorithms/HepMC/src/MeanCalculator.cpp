@@ -227,8 +227,41 @@ ActsExamples::ProcessCode ActsExamples::MeanCalculator::execute(
   
   for(const ActsExamples::SimParticle& initialParticle : initialParticles)
   {
+	  // Propagate the mean
 	Acts::CurvilinearTrackParameters mean(initialParticle.position4(), initialParticle.unitDirection(), initialParticle.charge(), initialParticle.absMomentum());
-	propagator.propagate(mean, options);
+	const auto& result = propagator.propagate(mean, options).value(); //result.ok()
+	const auto stepperLog = result.get<typename Acts::detail::SteppingLogger::result_type>();
+	
+	// Walk over each step
+	for(const auto& step : stepperLog.steps)
+	{
+		// Only care about surfaces
+		if(!step.surface)
+			continue;
+		// Calculate the value of the mean on the surface
+		const auto localPropagatedMean = step.surface->globalToLocal(gctx, step.position, step.momentum); // Result<Vector2D>
+		
+		// Now find the corresponding G4 steps
+		std::vector<Acts::Vector2D> localG4Positions;
+		localG4Positions.reserve(events.size());
+		
+		for(const auto& event : events)
+		{
+			// Fast continue
+			if(event.vertices().empty())
+				continue;
+			// Get the track ID that we follow
+			const int trackID = event.vertices()[0]->particles_out()[0]->attribute<HepMC3::IntAttribute>("TrackID")->value();
+			// The storage of each step
+			std::vector<std::pair<Acts::Vector3D, Acts::Vector3D>> posMomParticle;
+			
+			for (const auto& vertex : event.vertices()) {
+			}
+
+			// Reject if not the initial particle
+			// Reject if vacuum or air
+		}
+	}
 	}
                    
   //~ std::vector<ActsExamples::ExtractedSimulationProcess> fractions;
