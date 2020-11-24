@@ -147,3 +147,32 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
 
   return ActsExamples::ProcessCode::SUCCESS;
 }
+
+void
+  ActsExamples::EventRecording::sampleFromCovariance(ActsExamples::SimParticle& particle) const {
+	  
+	  struct normal_random_variable
+{
+    normal_random_variable(Eigen::MatrixXd const& covar)
+        : normal_random_variable(Eigen::VectorXd::Zero(covar.rows()), covar)
+    {}
+
+    normal_random_variable(Eigen::VectorXd const& mean, Eigen::MatrixXd const& covar)
+        : mean(mean)
+    {
+        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigenSolver(covar);
+        transform = eigenSolver.eigenvectors() * eigenSolver.eigenvalues().cwiseSqrt().asDiagonal();
+    }
+
+    Eigen::VectorXd mean;
+    Eigen::MatrixXd transform;
+
+    Eigen::VectorXd operator()() const
+    {
+        static std::mt19937 gen{ std::random_device{}() };
+        static std::normal_distribution<> dist;
+
+        return mean + transform * Eigen::VectorXd{ mean.size() }.unaryExpr([&](auto x) { return dist(gen); });
+    }
+};
+  }
