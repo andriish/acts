@@ -253,9 +253,23 @@ ActsExamples::ProcessCode ActsExamples::MeanCalculator::execute(
 			// Get the track ID that we follow
 			const int trackID = event.vertices()[0]->particles_out()[0]->attribute<HepMC3::IntAttribute>("TrackID")->value();
 			// The storage of each step
-			std::vector<std::pair<Acts::Vector3D, Acts::Vector3D>> posMomParticle;
+			std::vector<ActsExamples::SimParticle> g4Steps;
 			
 			for (const auto& vertex : event.vertices()) {
+				for(const auto& particle :vertex->particles_out()) {
+					if(particle->attribute<HepMC3::IntAttribute>("TrackID")->value() == trackID)
+					{
+						const auto& posVtx = vertex->position();
+						const Acts::Vector3D position(posVtx.x(), posVtx.y(), posVtx.z());
+						const double time = posVtx.t();
+						
+						const auto& momPart = particle->momentum();
+						const Acts::Vector3D momentum(momPart.x(), momPart.y(), momPart.z());
+						
+						ActsExamples::SimParticle g4Particle
+						break;
+					}
+				}
 			}
 
 			// Reject if not the initial particle
