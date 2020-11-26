@@ -28,7 +28,9 @@
 #include <HepMC3/GenParticle.h>
 #include <HepMC3/GenVertex.h>
 
-//~ namespace {
+//~ #include "Acts/Utilities/Definitions.hpp"
+
+namespace {
 
 //~ /// @brief This method searches for an outgoing particle from a vertex
 //~ ///
@@ -183,7 +185,88 @@
               //~ });
   //~ }
 //~ }
-//~ }  // namespace
+
+std::vector<ActsExamples::SimParticle>
+collectG4Steps(const HepMC3::GenEvent& event, int trackID) {
+	std::vector<ActsExamples::SimParticle> g4Steps;
+	for (const auto& vertex : event.vertices()) {
+		const auto material = vertex->attribute<HepMC3::StringAttribute>("Material")->value();
+		if(material == "NoMaterial" || material == "Vacuum" || material == "Air")
+			continue;
+		for(const auto& particle :vertex->particles_out()) {
+			if(particle->attribute<HepMC3::IntAttribute>("TrackID")->value() == trackID)
+			{
+				const auto& posVtx = vertex->position();
+				const Acts::Vector4D position(posVtx.x(), posVtx.y(), posVtx.z(), posVtx.t());
+				
+				const auto& momPart = particle->momentum();
+				const Acts::Vector3D momentum(momPart.x(), momPart.y(), momPart.z());
+				
+				ActsExamples::SimParticle g4Particle;
+				g4Particle.setPosition4(position).setDirection(momentum.normalized()).setAbsMomentum(momentum.norm());
+				g4Steps.push_back(g4Particle);
+				break;
+			}
+		}
+	}
+	return g4Steps;
+}
+
+Acts::BoundVector
+findClosestPoint(const std::vector<ActsExamples::SimParticle>& g4Steps, std::shared_ptr<const Acts::Surface> surface, const Acts::GeometryContext& gctx) {
+	std::vector<std::pair<double, Acts::BoundVector>> pathLengthPosition;
+	Acts::BoundaryCheck bCheck(false);
+	for(const ActsExamples::SimParticle& g4Step : g4Steps)
+	{
+		const Acts::SurfaceIntersection intersection = surface->intersect(gctx, g4Step.position(), g4Step.unitDirection(), bCheck);
+		if(intersection)
+		{				
+			const Acts::Vector3D pos3 = intersection.intersection.position;
+			const Acts::Vector3D mom3 = g4Step.momentum4().template segment<3>(Acts::eMom0);
+			//~ const Acts::Vector2D pos2 = surface->globalToLocal(gctx, pos3, mom3).value(); // Result<Vector2D>
+			Acts::FreeVector freeParams;
+			freeParams[eFreePos0] = pos3[eX];
+			freeParams[eFreePos1] = pos3[eY];
+			freeParams[eFreePos2] = pos3[eZ];
+			freeParams[eFreeTime] = g4Step.time();
+			freeParams[eFreeDir0] = g4Step.unitDirection()[eMom0];
+			freeParams[eFreeDir1] = g4Step.unitDirection()[eMom0];
+			freeParams[eFreeDir2] = g4Step.unitDirection()[eMom0];
+			freeParams[eFreeQOverP] = (g4Step.charge() == 0. ? 1. : g4Step.charge()) / g4Step.absMomentum();
+			
+			Acts::BoundVector params = transformFreeToBoundParameters(freeParams, surface, gctx);
+			
+			const double pathLength = intersection.intersection.pathLength;
+			pathLengthPosition.push_back(std::make_pair(pathLength, params));
+			// TODO: test posG4 value
+		}
+	}
+	const auto closest = std::min_element(pathLengthPosition.begin(), pathLengthPosition.end(), 
+			[&](const std::pair<double, Acts::Vector2D>& pos1, const std::pair<double, Acts::Vector2D>& pos2) 
+				{ return  pos1.first < pos2.first; });
+	return closest->second;
+}
+
+Acts::BoundVector
+mean(const std::vector<Acts::BoundVector>& positions) {
+	
+	Acts::BoundVector mean = Acts::BoundVector::Zero();
+	for(const Acts::BoundVector& position : positions)
+	{
+		mean += position;
+	}
+	mean /= positions.size();
+	return mean;
+}
+
+void
+plotMean(const std::vector<std::pair<Acts::BoundVector, Acts::BoundVector>>& meanProbG4) {
+	
+	// TODO: should rather do this for all events once
+	// TODO: split the plot in e.g. vs. r, phi, z, eta, ...
+}
+
+}  // namespace
 
 ActsExamples::MeanCalculator::~MeanCalculator() {}
 
@@ -239,10 +322,11 @@ ActsExamples::ProcessCode ActsExamples::MeanCalculator::execute(
 		if(!step.surface)
 			continue;
 		// Calculate the value of the mean on the surface
-		const auto localPropagatedMean = step.surface->globalToLocal(gctx, step.position, step.momentum); // Result<Vector2D>
+		// TODO: This transformation should be transformationFreeToBound(...)
+		const BoundVector localPropagatedMean = step.surface->globalToLocal(gctx, step.position, step.momentum); // Result<Vector2D>
 		
 		// Now find the corresponding G4 steps
-		std::vector<Acts::Vector2D> localG4Positions;
+		std::vector<Acts::BoundVector> localG4Params;
 		localG4Positions.reserve(events.size());
 		
 		for(const auto& event : events)
@@ -253,29 +337,14 @@ ActsExamples::ProcessCode ActsExamples::MeanCalculator::execute(
 			// Get the track ID that we follow
 			const int trackID = event.vertices()[0]->particles_out()[0]->attribute<HepMC3::IntAttribute>("TrackID")->value();
 			// The storage of each step
-			std::vector<ActsExamples::SimParticle> g4Steps;
+			std::vector<ActsExamples::SimParticle> g4Steps = collectG4Steps(event, trackID);
 			
-			for (const auto& vertex : event.vertices()) {
-				for(const auto& particle :vertex->particles_out()) {
-					if(particle->attribute<HepMC3::IntAttribute>("TrackID")->value() == trackID)
-					{
-						const auto& posVtx = vertex->position();
-						const Acts::Vector3D position(posVtx.x(), posVtx.y(), posVtx.z());
-						const double time = posVtx.t();
-						
-						const auto& momPart = particle->momentum();
-						const Acts::Vector3D momentum(momPart.x(), momPart.y(), momPart.z());
-						
-						ActsExamples::SimParticle g4Particle
-						break;
-					}
-				}
-			}
-
-			// Reject if not the initial particle
-			// Reject if vacuum or air
+			localG4Params.push_back(findClosestPoint(g4Steps, step.surface, gctx));
 		}
+		
+		const Acts::BoundVector meanG4 = mean(localG4Params);
 	}
+	// TODO: plot either here or below
 	}
                    
   //~ std::vector<ActsExamples::ExtractedSimulationProcess> fractions;
