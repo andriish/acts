@@ -29,6 +29,7 @@ struct Step {
   ConstrainedStep stepSize = 0.;
   Vector3D position = Vector3D(0., 0., 0.);
   Vector3D momentum = Vector3D(0., 0., 0.);
+  double time = 0.;
   std::shared_ptr<const Surface> surface = nullptr;
   const TrackingVolume* volume = nullptr;
 };
@@ -67,6 +68,7 @@ struct SteppingLogger {
     step.position = stepper.position(state.stepping);
     step.momentum =
         stepper.momentum(state.stepping) * stepper.direction(state.stepping);
+    step.time = stepper.time(state.stepping);
 
     if (state.navigation.currentSurface != nullptr) {
       // hang on to surface

@@ -28,163 +28,7 @@
 #include <HepMC3/GenParticle.h>
 #include <HepMC3/GenVertex.h>
 
-//~ #include "Acts/Utilities/Definitions.hpp"
-
 namespace {
-
-//~ /// @brief This method searches for an outgoing particle from a vertex
-//~ ///
-//~ /// @param [in] vertex The vertex
-//~ /// @param [in] id The track ID of the particle
-//~ ///
-//~ /// @return The particle pointer if found, else nullptr
-//~ HepMC3::ConstGenParticlePtr searchProcessParticleById(
-    //~ HepMC3::ConstGenVertexPtr vertex, const int id) {
-  //~ // Loop over all outgoing particles
-  //~ for (const auto& particle : vertex->particles_out()) {
-    //~ const int trackid =
-        //~ particle->attribute<HepMC3::IntAttribute>("TrackID")->value();
-    //~ // Compare ID
-    //~ if (trackid == id) {
-      //~ return particle;
-    //~ }
-  //~ }
-  //~ return nullptr;
-//~ }
-
-//~ /// @brief This method collects the material in X_0 and L_0 a particle has
-//~ /// passed from its creation up to a certain vertex.
-//~ ///
-//~ /// @param [in] vertex The end vertex of the collection
-//~ /// @param [in] id The track ID
-//~ /// @param [in, out] particle The particle that get the passed material attached
-//~ void setPassedMaterial(const HepMC3::ConstGenVertexPtr& vertex, const int id,
-                       //~ ActsExamples::SimParticle& particle) {
-  //~ double x0 = 0.;
-  //~ double l0 = 0.;
-  //~ HepMC3::ConstGenParticlePtr currentParticle = nullptr;
-  //~ HepMC3::ConstGenVertexPtr currentVertex = vertex;
-  //~ // Loop backwards and test whether the track still exists
-  //~ while (currentVertex && !currentVertex->particles_in().empty() &&
-         //~ currentVertex->particles_in()[0]->attribute<HepMC3::IntAttribute>(
-             //~ "TrackID") &&
-         //~ currentVertex->particles_in()[0]
-                 //~ ->attribute<HepMC3::IntAttribute>("TrackID")
-                 //~ ->value() == id) {
-    //~ // Get the step length
-    //~ currentParticle = currentVertex->particles_in()[0];
-    //~ const double stepLength =
-        //~ currentParticle->attribute<HepMC3::DoubleAttribute>("StepLength")
-            //~ ->value();
-    //~ // Add the passed material
-    //~ x0 +=
-        //~ stepLength /
-        //~ currentParticle->attribute<HepMC3::DoubleAttribute>("NextX0")->value();
-    //~ l0 +=
-        //~ stepLength /
-        //~ currentParticle->attribute<HepMC3::DoubleAttribute>("NextL0")->value();
-    //~ currentVertex = currentParticle->production_vertex();
-  //~ }
-  //~ // Assign the passed material to the particle
-  //~ particle.setMaterialPassed(x0, l0);
-//~ }
-
-//~ /// @brief This function collects outgoing particles from a vertex while keeping
-//~ /// track of the future of the ingoing particle.
-//~ ///
-//~ /// @param [in] vertex The vertex
-//~ /// @param [in] trackID The track ID of the ingoing particle
-//~ ///
-//~ /// @return Vector containing the outgoing particles from a vertex
-//~ std::vector<ActsExamples::SimParticle> selectOutgoingParticles(
-    //~ HepMC3::ConstGenVertexPtr vertex, const int trackID) {
-  //~ std::vector<ActsExamples::SimParticle> finalStateParticles;
-
-  //~ // Identify the ingoing particle in the outgoing particles
-  //~ HepMC3::ConstGenParticlePtr procPart =
-      //~ searchProcessParticleById(vertex, trackID);
-
-  //~ // Test whether this particle survives or dies
-  //~ HepMC3::ConstGenVertexPtr endVertex = procPart->end_vertex();
-  //~ if (endVertex
-          //~ ->attribute<HepMC3::StringAttribute>("NextProcessOf-" +
-                                               //~ std::to_string(trackID))
-          //~ ->value() != "Death") {
-    //~ // Store the particle if it survives
-    //~ finalStateParticles.push_back(
-        //~ ActsExamples::HepMC3Particle::particle(procPart));
-  //~ } else {
-    //~ // Store the leftovers if it dies
-    //~ for (const HepMC3::ConstGenParticlePtr& procPartOut :
-         //~ endVertex->particles_out())
-      //~ if (procPartOut->attribute<HepMC3::IntAttribute>("TrackID")->value() ==
-              //~ trackID &&
-          //~ procPartOut->end_vertex()) {
-        //~ for (const HepMC3::ConstGenParticlePtr dyingPartOut :
-             //~ procPartOut->end_vertex()->particles_out()) {
-          //~ finalStateParticles.push_back(
-              //~ ActsExamples::HepMC3Particle::particle(dyingPartOut));
-        //~ }
-      //~ }
-  //~ }
-
-  //~ // Record the particles produced in this process
-  //~ const std::vector<std::string> attributes = endVertex->attribute_names();
-  //~ for (const auto& att : attributes) {
-    //~ // Search for initial parameters
-    //~ if (att.find("InitialParametersOf") != std::string::npos) {
-      //~ const std::vector<double> mom4 =
-          //~ endVertex->attribute<HepMC3::VectorDoubleAttribute>(att)->value();
-      //~ const HepMC3::FourVector& pos4 = endVertex->position();
-      //~ const int id = stoi(att.substr(att.find("-") + 1));
-      //~ HepMC3::ConstGenParticlePtr genParticle =
-          //~ searchProcessParticleById(endVertex, id);
-      //~ ActsFatras::Barcode barcode = ActsFatras::Barcode().setParticle(id);
-      //~ auto pid = static_cast<Acts::PdgParticle>(genParticle->pid());
-
-      //~ // Build an Acts particle out of the data
-      //~ ActsExamples::SimParticle simParticle(barcode, pid);
-      //~ simParticle.setPosition4(pos4.x(), pos4.y(), pos4.z(), pos4.t());
-      //~ Acts::Vector3D mom3(mom4[0], mom4[1], mom4[2]);
-      //~ simParticle.setDirection(mom3.normalized());
-      //~ simParticle.setAbsMomentum(mom3.norm());
-
-      //~ // Store the particle
-      //~ finalStateParticles.push_back(simParticle);
-    //~ }
-  //~ }
-
-  //~ return finalStateParticles;
-//~ }
-
-//~ /// @brief This method filters and sorts the recorded interactions.
-//~ ///
-//~ /// @param [in] cfg Configuration of the filtering
-//~ /// @param [in, out] interactions The recorded interactions
-//~ void filterAndSort(
-    //~ const ActsExamples::MeanCalculator::Config& cfg,
-    //~ std::vector<ActsExamples::ExtractedSimulationProcess>& interactions) {
-  //~ for (auto& interaction : interactions) {
-    //~ for (auto cit = interaction.after.cbegin();
-         //~ cit != interaction.after.cend();) {
-      //~ // Test whether a particle fulfills the conditions
-      //~ if (cit->pdg() < cfg.absPdgMin || cit->pdg() > cfg.absPdgMax ||
-          //~ cit->absMomentum() < cfg.pMin) {
-        //~ interaction.after.erase(cit);
-      //~ } else {
-        //~ cit++;
-      //~ }
-    //~ }
-  //~ }
-
-  //~ // Sort the particles based on their momentum
-  //~ for (auto& interaction : interactions) {
-    //~ std::sort(interaction.after.begin(), interaction.after.end(),
-              //~ [](ActsExamples::SimParticle& a, ActsExamples::SimParticle& b) {
-                //~ return a.absMomentum() > b.absMomentum();
-              //~ });
-  //~ }
-//~ }
 
 std::vector<ActsExamples::SimParticle>
 collectG4Steps(const HepMC3::GenEvent& event, int trackID) {
@@ -222,19 +66,17 @@ findClosestPoint(const std::vector<ActsExamples::SimParticle>& g4Steps, std::sha
 		if(intersection)
 		{				
 			const Acts::Vector3D pos3 = intersection.intersection.position;
-			const Acts::Vector3D mom3 = g4Step.momentum4().template segment<3>(Acts::eMom0);
-			//~ const Acts::Vector2D pos2 = surface->globalToLocal(gctx, pos3, mom3).value(); // Result<Vector2D>
 			Acts::FreeVector freeParams;
-			freeParams[eFreePos0] = pos3[eX];
-			freeParams[eFreePos1] = pos3[eY];
-			freeParams[eFreePos2] = pos3[eZ];
-			freeParams[eFreeTime] = g4Step.time();
-			freeParams[eFreeDir0] = g4Step.unitDirection()[eMom0];
-			freeParams[eFreeDir1] = g4Step.unitDirection()[eMom0];
-			freeParams[eFreeDir2] = g4Step.unitDirection()[eMom0];
-			freeParams[eFreeQOverP] = (g4Step.charge() == 0. ? 1. : g4Step.charge()) / g4Step.absMomentum();
+			freeParams[Acts::eFreePos0] = pos3[Acts::eX];
+			freeParams[Acts::eFreePos1] = pos3[Acts::eY];
+			freeParams[Acts::eFreePos2] = pos3[Acts::eZ];
+			freeParams[Acts::eFreeTime] = g4Step.time();
+			freeParams[Acts::eFreeDir0] = g4Step.unitDirection()[Acts::eMom0];
+			freeParams[Acts::eFreeDir1] = g4Step.unitDirection()[Acts::eMom1];
+			freeParams[Acts::eFreeDir2] = g4Step.unitDirection()[Acts::eMom2];
+			freeParams[Acts::eFreeQOverP] = (g4Step.charge() == 0. ? 1. : g4Step.charge()) / g4Step.absMomentum();
 			
-			Acts::BoundVector params = transformFreeToBoundParameters(freeParams, surface, gctx);
+			Acts::BoundVector params = Acts::detail::transformFreeToBoundParameters(freeParams, *surface, gctx);
 			
 			const double pathLength = intersection.intersection.pathLength;
 			pathLengthPosition.push_back(std::make_pair(pathLength, params));
@@ -242,13 +84,13 @@ findClosestPoint(const std::vector<ActsExamples::SimParticle>& g4Steps, std::sha
 		}
 	}
 	const auto closest = std::min_element(pathLengthPosition.begin(), pathLengthPosition.end(), 
-			[&](const std::pair<double, Acts::Vector2D>& pos1, const std::pair<double, Acts::Vector2D>& pos2) 
+			[&](const std::pair<double, Acts::BoundVector>& pos1, const std::pair<double, Acts::BoundVector>& pos2) 
 				{ return  pos1.first < pos2.first; });
 	return closest->second;
 }
 
 Acts::BoundVector
-mean(const std::vector<Acts::BoundVector>& positions) {
+calculateMean(const std::vector<Acts::BoundVector>& positions) {
 	
 	Acts::BoundVector mean = Acts::BoundVector::Zero();
 	for(const Acts::BoundVector& position : positions)
@@ -259,8 +101,14 @@ mean(const std::vector<Acts::BoundVector>& positions) {
 	return mean;
 }
 
+struct SummaryObject {
+	ActsExamples::SimParticle initialParticle;
+	std::vector<Acts::BoundVector> meanPropagated;
+	std::vector<Acts::BoundVector> meanG4;
+};
+
 void
-plotMean(const std::vector<std::pair<Acts::BoundVector, Acts::BoundVector>>& meanProbG4) {
+plotMean(const std::vector<SummaryObject>& summaries) {
 	
 	// TODO: should rather do this for all events once
 	// TODO: split the plot in e.g. vs. r, phi, z, eta, ...
@@ -294,6 +142,8 @@ ActsExamples::ProcessCode ActsExamples::MeanCalculator::execute(
       context.eventStore.get<ActsExamples::SimParticleContainer>(
           m_cfg.inputParticles);
   
+  std::vector<SummaryObject> summaries;
+  
   // The stepper
   Acts::NullBField bfield;  
   Acts::EigenStepper stepper(bfield);
@@ -308,94 +158,61 @@ ActsExamples::ProcessCode ActsExamples::MeanCalculator::execute(
   Acts::MagneticFieldContext mctx;
   Acts::PropagatorOptions<Acts::ActionList<Acts::detail::SteppingLogger>> options(gctx, mctx, Acts::getDummyLogger());
   
+  // Loop over initial particles
   for(const ActsExamples::SimParticle& initialParticle : initialParticles)
   {
-	  // Propagate the mean
-	Acts::CurvilinearTrackParameters mean(initialParticle.position4(), initialParticle.unitDirection(), initialParticle.charge(), initialParticle.absMomentum());
-	const auto& result = propagator.propagate(mean, options).value(); //result.ok()
-	const auto stepperLog = result.get<typename Acts::detail::SteppingLogger::result_type>();
-	
-	// Walk over each step
-	for(const auto& step : stepperLog.steps)
-	{
-		// Only care about surfaces
-		if(!step.surface)
-			continue;
-		// Calculate the value of the mean on the surface
-		// TODO: This transformation should be transformationFreeToBound(...)
-		const BoundVector localPropagatedMean = step.surface->globalToLocal(gctx, step.position, step.momentum); // Result<Vector2D>
+	    SummaryObject summary;
+	    summary.initialParticle = initialParticle;
+	  
+	    // Propagate the mean
+		Acts::CurvilinearTrackParameters mean(initialParticle.position4(), initialParticle.unitDirection(), initialParticle.charge(), initialParticle.absMomentum());
+		const auto& result = propagator.propagate(mean, options).value(); //result.ok()
+		const auto stepperLog = result.get<typename Acts::detail::SteppingLogger::result_type>();
 		
-		// Now find the corresponding G4 steps
-		std::vector<Acts::BoundVector> localG4Params;
-		localG4Positions.reserve(events.size());
-		
-		for(const auto& event : events)
+		// Walk over each step
+		for(const auto& step : stepperLog.steps)
 		{
-			// Fast continue
-			if(event.vertices().empty())
+			// Only care about surfaces
+			if(!step.surface)
 				continue;
-			// Get the track ID that we follow
-			const int trackID = event.vertices()[0]->particles_out()[0]->attribute<HepMC3::IntAttribute>("TrackID")->value();
-			// The storage of each step
-			std::vector<ActsExamples::SimParticle> g4Steps = collectG4Steps(event, trackID);
+			// Calculate the value of the mean on the surface
+			Acts::Vector3D dir = step.momentum.normalized();
+			Acts::FreeVector freeProp;
+			freeProp[Acts::eFreePos0] = step.position[Acts::eX];
+			freeProp[Acts::eFreePos1] = step.position[Acts::eY];
+			freeProp[Acts::eFreePos2] = step.position[Acts::eZ];
+			freeProp[Acts::eFreeTime] = step.time;
+			freeProp[Acts::eFreeDir0] = dir[Acts::eMom0];
+			freeProp[Acts::eFreeDir1] = dir[Acts::eMom1];
+			freeProp[Acts::eFreeDir2] = dir[Acts::eMom2];
+			freeProp[Acts::eFreeQOverP] = (mean.charge() == 0. ? 1. : mean.charge()) / step.momentum.norm();		
+			const Acts::BoundVector localPropagatedMean = Acts::detail::transformFreeToBoundParameters(freeProp, *step.surface, gctx);
+			summary.meanPropagated.push_back(std::move(localPropagatedMean));
 			
-			localG4Params.push_back(findClosestPoint(g4Steps, step.surface, gctx));
+			// Now find the corresponding G4 steps
+			std::vector<Acts::BoundVector> localG4Params;
+			localG4Params.reserve(events.size());
+			
+			// Find the G4 hits on each surface
+			for(const auto& event : events)
+			{
+				// Fast continue
+				if(event.vertices().empty())
+					continue;
+				// Get the track ID that we follow
+				const int trackID = event.vertices()[0]->particles_out()[0]->attribute<HepMC3::IntAttribute>("TrackID")->value();
+				// The storage of each step
+				std::vector<ActsExamples::SimParticle> g4Steps = collectG4Steps(event, trackID);
+				
+				localG4Params.push_back(findClosestPoint(g4Steps, step.surface, gctx));
+			}
+			
+			const Acts::BoundVector meanG4 = calculateMean(localG4Params);
+			summary.meanG4.push_back(std::move(meanG4));
 		}
-		
-		const Acts::BoundVector meanG4 = mean(localG4Params);
+		summaries.push_back(std::move(summary));
 	}
-	// TODO: plot either here or below
-	}
-                   
-  //~ std::vector<ActsExamples::ExtractedSimulationProcess> fractions;
-  //~ for (const HepMC3::GenEvent& event : events) {
-    //~ // Fast exit
-    //~ if (event.particles().empty() || event.vertices().empty()) {
-      //~ break;
-    //~ }
-
-    //~ // Get the initial particle
-    //~ HepMC3::ConstGenParticlePtr initialParticle = event.particles()[0];
-    //~ ActsExamples::SimParticle simParticle =
-        //~ HepMC3Particle::particle(initialParticle);
-
-    //~ // Get the final state particles
-    //~ ActsExamples::SimParticle particleToInteraction;
-    //~ std::vector<ActsExamples::SimParticle> finalStateParticles;
-    //~ // Search the process vertex
-    //~ bool vertexFound = false;
-    //~ for (const auto& vertex : event.vertices()) {
-      //~ const std::vector<std::string> attributes = vertex->attribute_names();
-      //~ for (const auto& attribute : attributes) {
-        //~ if (vertex->attribute_as_string(attribute).find(
-                //~ m_cfg.extractionProcess) != std::string::npos) {
-          //~ const int procID = stoi(attribute.substr(attribute.find("-") + 1));
-          //~ // Get the particle before the interaction
-          //~ particleToInteraction =
-              //~ HepMC3Particle::particle(vertex->particles_in()[0]);
-          //~ // Attach passed material to the particle
-          //~ setPassedMaterial(vertex, procID, particleToInteraction);
-          //~ // Record the final state particles
-          //~ finalStateParticles = selectOutgoingParticles(vertex, procID);
-          //~ vertexFound = true;
-          //~ break;
-        //~ }
-      //~ }
-      //~ if (vertexFound) {
-        //~ break;
-      //~ }
-    //~ }
-    //~ fractions.push_back(ActsExamples::ExtractedSimulationProcess{
-        //~ simParticle, particleToInteraction, finalStateParticles});
-  //~ }
-
-  //~ // Filter and sort the record
-  //~ filterAndSort(m_cfg, fractions);
-
-  //~ ACTS_INFO(events.size() << " processed");
-
-  //~ // Write the recorded material to the event store
-  //~ context.eventStore.add(m_cfg.outputSimulationProcesses, std::move(fractions));
+  plotMean(summaries);
 
   return ActsExamples::ProcessCode::SUCCESS;
 }
