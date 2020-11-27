@@ -148,6 +148,23 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
 		beamParticle->set_pid(part.pdg());
 
 		if (m_cfg.processSelect.empty()) {
+			// Add the beam particle
+		  for (const auto& vertex : event.vertices()) {
+//~ std:cout << "Vtx ID: " << vertex->id() << std::endl;
+				if (vertex->id() == -1) {
+				  vertex->add_particle_in(beamParticle);
+//~ std::cout << "Found" << std::endl;
+				  break;
+				}
+			}
+			
+			// Remove vertices without outgoing particles
+			for (auto it = event.vertices().crbegin();
+				 it != event.vertices().crend(); it++) {
+			  if ((*it)->particles_out().empty()) {
+				event.remove_vertex(*it);
+			  }
+			}
 		  // Store the result
 		  events.push_back(std::move(event));
 		} else {

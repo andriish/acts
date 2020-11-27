@@ -28,7 +28,7 @@ auto Acts::Propagator<S, N>::propagate_impl(propagator_state_t& state) const
 
   // start at true, if we don't begin the stepping loop we're fine.
   bool terminatedNormally = true;
-
+std::cout << "After1stAction" << std::endl;
   // Pre-Stepping: abort condition check
   if (!state.options.abortList(result, state, m_stepper)) {
     // Pre-Stepping: target setting
@@ -37,7 +37,7 @@ auto Acts::Propagator<S, N>::propagate_impl(propagator_state_t& state) const
     ACTS_VERBOSE("Starting stepping loop.");
 
     terminatedNormally = false;  // priming error condition
-
+std::cout << "Entering loop " << state.options.maxSteps << std::endl;
     // Propagation loop : stepping
     for (; result.steps < state.options.maxSteps; ++result.steps) {
       // Perform a propagation step - it takes the propagation state
@@ -61,6 +61,7 @@ auto Acts::Propagator<S, N>::propagate_impl(propagator_state_t& state) const
         break;
       }
       m_navigator.target(state, m_stepper);
+std::cout << "Iteration " << result.steps << " | " << state.options.maxSteps << std::endl;
     }
   } else {
     ACTS_VERBOSE("Propagation terminated without going into stepping loop.");
@@ -92,6 +93,7 @@ auto Acts::Propagator<S, N>::propagate(
     -> Result<action_list_t_result_t<
         CurvilinearTrackParameters,
         typename propagator_options_t::action_list_type>> {
+std::cout << "PropStart" << std::endl;
   static_assert(Concepts::BoundTrackParametersConcept<parameters_t>,
                 "Parameters do not fulfill bound parameters concept.");
 
