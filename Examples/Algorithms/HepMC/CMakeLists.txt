@@ -1,6 +1,7 @@
 add_library(
   ActsExamplesHepMC SHARED
   src/HepMCProcessExtractor.cpp
+  src/Plot.cpp
   src/MeanCalculator.cpp)
 target_include_directories(
   ActsExamplesHepMC

@@ -45,7 +45,6 @@ int main(int argc, char** argv) {
   // The detector
   auto [trackingGeometry, contextDecorators] = ActsExamples::Geometry::build(vm, *detector);
 
-
   // Create the readers
   // Read particles (initial states) and clusters from CSV files
   auto particleReader = ActsExamples::Options::readCsvParticleReaderConfig(vm);

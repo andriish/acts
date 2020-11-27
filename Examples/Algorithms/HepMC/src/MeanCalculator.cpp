@@ -27,6 +27,7 @@
 #include <HepMC3/GenEvent.h>
 #include <HepMC3/GenParticle.h>
 #include <HepMC3/GenVertex.h>
+#include "Plot.hpp"
 
 namespace {
 
@@ -109,7 +110,8 @@ struct SummaryObject {
 
 void
 plotMean(const std::vector<SummaryObject>& summaries) {
-	
+	for(const SummaryObject& summary : summaries)
+		ActsExamples::Plot::mean(summary.meanPropagated, summary.meanG4);
 	// TODO: should rather do this for all events once
 	// TODO: split the plot in e.g. vs. r, phi, z, eta, ...
 }
@@ -147,6 +149,7 @@ ActsExamples::ProcessCode ActsExamples::MeanCalculator::execute(
   // The stepper
   Acts::NullBField bfield;  
   Acts::EigenStepper stepper(bfield);
+std::cout << "TrackingGeometry: " << m_cfg.trackingGeometry << std::endl;
   
   // The Navigator
   Acts::Navigator navigator(m_cfg.trackingGeometry);
@@ -161,11 +164,14 @@ ActsExamples::ProcessCode ActsExamples::MeanCalculator::execute(
   // Loop over initial particles
   for(const ActsExamples::SimParticle& initialParticle : initialParticles)
   {
+	    // Storage of the summary
 	    SummaryObject summary;
 	    summary.initialParticle = initialParticle;
 	  
 	    // Propagate the mean
 		Acts::CurvilinearTrackParameters mean(initialParticle.position4(), initialParticle.unitDirection(), initialParticle.charge(), initialParticle.absMomentum());
+std::cout << "Params: " << initialParticle.position4().transpose() << " | " << initialParticle.unitDirection().transpose()
+	<< " | " << initialParticle.charge() << " | " << initialParticle.absMomentum() << std::endl;
 		const auto& result = propagator.propagate(mean, options).value(); //result.ok()
 		const auto stepperLog = result.get<typename Acts::detail::SteppingLogger::result_type>();
 		
@@ -206,12 +212,13 @@ ActsExamples::ProcessCode ActsExamples::MeanCalculator::execute(
 				
 				localG4Params.push_back(findClosestPoint(g4Steps, step.surface, gctx));
 			}
-			
+			// Calculate the mean of the G4 data
 			const Acts::BoundVector meanG4 = calculateMean(localG4Params);
 			summary.meanG4.push_back(std::move(meanG4));
 		}
 		summaries.push_back(std::move(summary));
 	}
+	// Plot the result
   plotMean(summaries);
 
   return ActsExamples::ProcessCode::SUCCESS;
