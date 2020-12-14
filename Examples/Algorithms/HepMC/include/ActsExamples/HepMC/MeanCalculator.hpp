@@ -10,15 +10,19 @@
 
 #include <memory>
 
-#include "Acts/Utilities/Definitions.hpp"
+#include "Acts/Definitions/Common.hpp"
 #include "Acts/Utilities/Logger.hpp"
-#include "Acts/Utilities/Units.hpp"
 #include "ActsExamples/EventData/SimParticle.hpp"
 #include "ActsExamples/Framework/BareAlgorithm.hpp"
 #include "ActsExamples/Framework/ProcessCode.hpp"
 #include "Acts/Geometry/TrackingGeometry.hpp"
+#include "ActsExamples/HepMC/Plot.hpp"
+
+struct TrackSummary;
 
 namespace ActsExamples {
+
+Plot plot;
 
 class MeanCalculator final : public ActsExamples::BareAlgorithm {
  public:
@@ -44,7 +48,12 @@ class MeanCalculator final : public ActsExamples::BareAlgorithm {
       const AlgorithmContext& context) const final override;
 
  private:
+   
+	void
+	plotMean(const std::vector<TrackSummary>& summaries) const;
+ 
   /// The config object
   Config m_cfg;
+  
 };
 }  // namespace ActsExamples
