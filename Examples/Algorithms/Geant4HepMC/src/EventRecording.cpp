@@ -32,7 +32,8 @@
 #include "Acts/Geometry/GeometryContext.hpp"
 #include <TH1F.h>
 #include <TCanvas.h>
-#include "Acts/Utilities/Units.hpp"
+#include "Acts/Definitions/Units.hpp"
+#include <TFile.h>
 
 ActsExamples::EventRecording::~EventRecording() {
   m_runManager = nullptr;
@@ -106,12 +107,14 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
   std::vector<HepMC3::GenEvent> events;
   events.reserve(initialParticles.size());
 
+  /// Build the histograms       
   std::vector<TH1F*> histos;
   histos.resize(Acts::eBoundSize);
   for(unsigned int i = 0; i < Acts::eBoundSize; i++)
   {
 	  histos[i] = new TH1F("", "", 100, -5, 5);
   }
+  ///
 
   for (const auto& part : initialParticles) {
 	  for(unsigned int i = 0; i < m_cfg.numSamples; i++)
@@ -140,7 +143,7 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
 
 		// Set beam particle properties
 		const Acts::Vector4D momentum4 =
-			part.momentum4() / Acts::UnitConstants::GeV;
+			part.fourMomentum() / Acts::UnitConstants::GeV;
 		HepMC3::FourVector beamMom4(momentum4[0], momentum4[1], momentum4[2],
 									momentum4[3]);
 		auto beamParticle = event.particles()[0];
@@ -208,13 +211,17 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
 	}
   }
   
+  TFile* tf = new TFile("G4InitialParameters", "RECREATE");
   TCanvas* tc = new TCanvas();
   for(unsigned int i = 0; i < Acts::eBoundSize; i++)
   {
 	histos[i]->Draw();
 	tc->Print(("Parameter_" + std::to_string(i) + ".png").c_str());
+	histos[i]->Write(("InitialParameter" + std::to_string(i)).c_str());
 	delete(histos[i]);
   }
+  tf->Write();
+  tf->Close();
 
   ACTS_INFO(initialParticles.size() << " initial particles provided");
   ACTS_INFO(events.size() << " tracks generated");
@@ -229,7 +236,7 @@ ActsExamples::SimParticle
 ActsExamples::EventRecording::sampleFromCovariance(const ActsExamples::SimParticle& particle, const std::vector<TH1F*>& histos) const {
 	  SimParticle result = particle;
 	  
-	  Acts::CurvilinearTrackParameters mean(particle.position4(), particle.unitDirection(), particle.charge(), particle.absMomentum());
+	  Acts::CurvilinearTrackParameters mean(particle.fourPosition(), particle.unitDirection(), particle.charge(), particle.absoluteMomentum());
 	  
         static std::mt19937 gen{ std::random_device{}() };
         static std::normal_distribution<> dist;
@@ -246,6 +253,6 @@ ActsExamples::EventRecording::sampleFromCovariance(const ActsExamples::SimPartic
 
 	result.setPosition4(freeSample.template segment<4>(Acts::eFreePos0));
 	result.setDirection(freeSample.template segment<3>(Acts::eFreeDir0));
-	result.setAbsMomentum(std::abs(1. / freeSample[Acts::eFreeQOverP]));
+	result.setAbsoluteMomentum(std::abs(1. / freeSample[Acts::eFreeQOverP]));
 	return result;
 }
