@@ -6,6 +6,7 @@ add_library(
   src/EventData/Particle.cpp
   src/EventData/ProcessType.cpp
   src/Kernel/SimulatorError.cpp
+  src/Physics/NuclearInteraction/NuclearInteraction.cpp
   src/Physics/StandardPhysicsLists.cpp
   src/Utilities/LandauDistribution.cpp
   src/Utilities/ParticleData.cpp)
