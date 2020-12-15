@@ -159,7 +159,7 @@ std::cout << "TrackingGeometry: " << m_cfg.trackingGeometry << std::endl;
   
   Acts::GeometryContext gctx;
   Acts::MagneticFieldContext mctx;
-  Acts::PropagatorOptions<Acts::ActionList<Acts::detail::SteppingLogger>> options(gctx, mctx, Acts::getDummyLogger());
+  Acts::PropagatorOptions<Acts::ActionList<Acts::detail::SteppingLogger>, Acts::AbortList<Acts::EndOfWorldReached>> options(gctx, mctx, Acts::getDummyLogger());
   
   // Loop over initial particles
   for(const ActsExamples::SimParticle& initialParticle : initialParticles)
@@ -174,6 +174,7 @@ std::cout << "TrackingGeometry: " << m_cfg.trackingGeometry << std::endl;
 std::cout << "Params: " << initialParticle.fourPosition().transpose() << " | " << initialParticle.unitDirection().transpose()
 	<< " | " << initialParticle.charge() << " | " << initialParticle.absoluteMomentum() << std::endl;
 		const auto& result = propagator.propagate(mean, options).value(); //result.ok()
+std::cout << "Propagation finished" << std::endl;
 		const auto stepperLog = result.get<typename Acts::detail::SteppingLogger::result_type>();
 		
 		/// Find the surfaces first

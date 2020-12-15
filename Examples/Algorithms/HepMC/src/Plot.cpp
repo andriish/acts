@@ -13,7 +13,7 @@
 #include "SummaryStruct.hpp"
 
 ActsExamples::Plot::Plot() {
-	tf = new TFile("Plot", "RECREATE");
+	tf = new TFile("Plot.root", "RECREATE");
 	tree = new TTree("Mean", "Mean");
 	if (tree == nullptr)
 		throw std::bad_alloc();

@@ -211,7 +211,7 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
 	}
   }
   
-  TFile* tf = new TFile("G4InitialParameters", "RECREATE");
+  TFile* tf = new TFile("G4InitialParameters.root", "RECREATE");
   TCanvas* tc = new TCanvas();
   for(unsigned int i = 0; i < Acts::eBoundSize; i++)
   {
