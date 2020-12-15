@@ -10,18 +10,21 @@
 
 namespace ActsFatras {
  
-const detail::Parameters& NuclearInteraction::findParameters(double rnd, const detail::Parametrisation& parametrisation, float particleMomentum) const 
-{ 
-	if(particleMomentum <= parametrisation.begin()->first)
-		return parametrisation.begin()->second;
-	if(particleMomentum >= parametrisation.end()->first)
-		return parametrisation.end()->second;
+const detail::Parameters& NuclearInteraction::findParameters(double rnd, const detail::Parametrization& parametrization, float particleMomentum) const 
+{
+	// Return lowest/highest if momentum outside the boundary 
+	if(particleMomentum <= parametrization.begin()->first)
+		return parametrization.begin()->second;
+	if(particleMomentum >= parametrization.end()->first)
+		return parametrization.end()->second;
 	
-	const auto lowerBound = std::lower_bound(parametrisation.begin(), parametrisation.end(), particleMomentum, 
+	// Find the two neighbouring parametrizations
+	const auto lowerBound = std::lower_bound(parametrization.begin(), parametrization.end(), particleMomentum, 
 		[](const std::pair<const float, ActsFatras::detail::Parameters>& params, const float mom){ return params.first < mom; });
-	
 	const float momentumUpperNeighbour = lowerBound->first;
 	const float momentumLowerNeighbour = std::prev(lowerBound, 1)->first;
+	
+	// Pick one randomly
 	const float weight = (momentumUpperNeighbour - particleMomentum) / (momentumUpperNeighbour - momentumLowerNeighbour);
 	return (rnd < weight) ? std::prev(lowerBound, 1)->second : lowerBound->second;
 }

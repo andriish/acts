@@ -23,7 +23,7 @@ struct Parameters {
   using Distributions = std::vector<CumulativeDistribution>;
   using PdgMap = std::vector<std::pair<int, std::vector<std::pair<int, float>>>>;
 
-  /// @brief Nested struct for the storage of the kinematic parametrisations for
+  /// @brief Nested struct for the storage of the kinematic parametrizations for
   /// a given final state multiplicity
   struct ParametersWithFixedMultiplicity {
 	ParametersWithFixedMultiplicity() = default;
@@ -103,9 +103,9 @@ struct Parameters {
   std::vector<ParametersWithFixedMultiplicity> hardKinematicParameters;
 };
 
-/// Parametrisation of a single particle
-using Parametrisation = std::vector<std::pair<float, Parameters>>;
-/// Parametrisation of multiple particles
-using MultiParticleParametrisation = std::vector<std::pair<int, Parametrisation>>;
+/// Parametrization of a single particle
+using Parametrization = std::vector<std::pair<float, Parameters>>;
+/// Parametrization of multiple particles
+using MultiParticleParametrization = std::vector<std::pair<int, Parametrization>>;
 }  // namespace detail
 }  // namespace ActsFatras
