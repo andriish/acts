@@ -90,7 +90,7 @@ struct NuclearInteraction {
 				const auto kinematics = sampleKinematics(generator, parametrizationOfMultiplicity, parametrization.momentum, multiplicity, softInteraction);
 				
 				// Construct the particles
-				const auto particles = convertParametersToParticles(generator, pdgIds, kinematics.first, kinematics.second, particle);
+				const auto particles = convertParametersToParticles(generator, pdgIds, kinematics.first, kinematics.second, particle, softInteraction);
 				
 				// Kill the particle in a hard process
 				if(!softInteraction)
@@ -187,7 +187,7 @@ struct NuclearInteraction {
 	/// @return The final state momenta and invariant masses
 	template<typename generator_t>
 	std::pair<Acts::ActsDynamicVector, Acts::ActsDynamicVector> sampleKinematics(generator_t& generator, 
-					const detail::Parameters& parameters, float momentum, unsigned int multiplicity, bool soft) const;
+					const detail::Parameters::ParametersWithFixedMultiplicity& parameters, float momentum, unsigned int multiplicity, bool soft) const;
 
 	/// @brief Converts relative angles to absolute angles wrt the global coordinate system.
 	/// @note It is assumed that the angles of the first particle are provided in the context of the global coordinate system whereas the angles of the second particle are provided relatively to the first particle.
@@ -209,11 +209,12 @@ struct NuclearInteraction {
     /// @param [in] momentum The momenta
     /// @param [in] invariantMass The invariant masses
     /// @param [in] initialParticle The initial particle
+	/// @param [in] soft Treat it as soft or hard nuclear interaction
     ///
     /// @return Vector containing the final state particles
     template <typename generator_t>
 	std::vector<Particle> convertParametersToParticles(generator_t& generator, const std::vector<int>& pdgId, const Acts::ActsDynamicVector& momenta, 
-							const Acts::ActsDynamicVector& invariantMasses, const Particle& initialParticle) const; // TODO: the initial particle should be non-const
+							const Acts::ActsDynamicVector& invariantMasses, Particle& initialParticle, bool soft) const;
     
     /// @brief This function performs an inverse sampling to provide a discrete value from a distribution.
     ///
@@ -221,7 +222,7 @@ struct NuclearInteraction {
     /// @param [in] distribution The distribution to sample from
     ///
     /// @return The sampled value
-    unsigned int sampleDiscreteValues(double rnd, const detail::Parameters::CumulativeDistribution& distribution) const; // TODO: this should be only used for multiplicity
+    unsigned int sampleDiscreteValues(double rnd, const detail::Parameters::CumulativeDistribution& distribution) const;
 	
 	/// @brief This function performs an inverse sampling to provide a continuous value from a distribition.
 	///
@@ -350,7 +351,7 @@ std::vector<int> NuclearInteraction::samplePdgIds(generator_t& generator, const 
 		const auto invariantMasses = sampleInvariantMasses(generator, parameters);
 		auto momenta = sampleMomenta(generator, parameters, momentum);
 		// Repeat momentum evaluation until the parameters match
-		// TODO: Make number of trial configurable
+		// TODO: Make number of trial configurable to avoid infinity loops in kinematical difficult regions
 		while(!match(momenta, invariantMasses, momentum)) {
 			momenta = sampleMomenta(generator, parameters, momentum);
 		}
@@ -359,16 +360,18 @@ std::vector<int> NuclearInteraction::samplePdgIds(generator_t& generator, const 
 
 template <typename generator_t>
 std::vector<Particle> NuclearInteraction::convertParametersToParticles(generator_t& generator, const std::vector<int>& pdgId, const Acts::ActsDynamicVector& momenta, 
-							const Acts::ActsDynamicVector& invariantMasses, const Particle& initialParticle) const {
+							const Acts::ActsDynamicVector& invariantMasses, Particle& initialParticle, bool soft) const {
   std::uniform_real_distribution<double> uniformDistribution {0., 1.};
-  std::vector<Particle> result;	
-// TODO: handle soft case
-// TODO: dice soft particle L0 again
   const auto initialMomentum = initialParticle.absoluteMomentum();
   const auto& initialDirection = initialParticle.unitDirection();
   const double phi = Acts::VectorHelpers::phi(initialDirection);
   const double theta = Acts::VectorHelpers::theta(initialDirection);
   const unsigned int size = momenta.size();
+  
+  std::vector<Particle> result;
+  result.reserve(size);
+  
+  // Build the particles
   for(unsigned int i = 0; i < size; i++)
   {
 		const float momentum = momenta[i];
@@ -382,15 +385,23 @@ std::vector<Particle> NuclearInteraction::convertParametersToParticles(generator
 	  p.setProcess(ProcessType::eNuclearInteraction).setPosition4(initialParticle.fourPosition())
 		.setAbsoluteMomentum(momentum).setDirection(direction);
 	
+	// Search for the parametrisation of the particle
 	auto cit = multiParticleParameterisation.begin();
 	while(cit->first != p.pdg() && cit != multiParticleParameterisation.end())
 		cit++;
-		
+	
 	if(cit != multiParticleParameterisation.end())
 	{
+		// Assign a path limit in L0 to the particle
 		const auto& distribution = findParameters(uniformDistribution(generator), cit->second, p.absoluteMomentum()).nuclearInteractionProbability;
 		p.setMaterialLimits(p.pathLimitX0(), sampleContinuousValues(uniformDistribution(generator), distribution));
 	}
+	
+	// Store the particle
+	if(i == 0 && soft)
+		initialParticle = p;
+	else
+		result.push_back(std::move(p));
   }
   					
   return result;

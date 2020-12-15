@@ -73,7 +73,7 @@ unsigned int NuclearInteraction::finalStateMultiplicity(double rnd, const detail
 std::pair<ActsFatras::Particle::Scalar, ActsFatras::Particle::Scalar>
 NuclearInteraction::globalAngle(ActsFatras::Particle::Scalar phi1, ActsFatras::Particle::Scalar theta1, float phi2, float theta2) const
 {	
-	const Acts::Vector3D vector2(std::sin(theta2) * std::cos(phi2), std::sin(theta2) * std::sin(phi2), std::cos(theta2));
+	// Rotation around the global y-axis
 	Acts::SymMatrix3D rotY = Acts::SymMatrix3D::Zero();
 	rotY(0,0) = std::cos(theta1);
 	rotY(0,2) = std::sin(theta1);
@@ -81,6 +81,7 @@ NuclearInteraction::globalAngle(ActsFatras::Particle::Scalar phi1, ActsFatras::P
 	rotY(2,0) = -std::sin(theta1);
 	rotY(2,2) = std::cos(theta1);
 	
+	// Rotation around the global z-axis
 	Acts::SymMatrix3D rotZ = Acts::SymMatrix3D::Zero();
 	rotZ(0,0) = std::cos(phi1);
 	rotZ(0,1) = -std::sin(phi1);
@@ -88,8 +89,11 @@ NuclearInteraction::globalAngle(ActsFatras::Particle::Scalar phi1, ActsFatras::P
 	rotZ(1,1) = std::cos(phi1);
 	rotZ(2,2) = 1.;
 	
+	// Rotate the direction vector of the second particle
+	const Acts::Vector3D vector2(std::sin(theta2) * std::cos(phi2), std::sin(theta2) * std::sin(phi2), std::cos(theta2));
 	const Acts::Vector3D vectorSum = rotZ * rotY * vector2;	
 	
+	// Calculate the global angles
 	const float theta = std::acos(vectorSum.z() / vectorSum.norm());
 	const float phi = std::atan2(vectorSum.y(), vectorSum.x());
 
@@ -102,12 +106,14 @@ NuclearInteraction::match(const Acts::ActsDynamicVector& momenta, const Acts::Ac
 	const unsigned int size = momenta.size();
 	for(unsigned int i = 0; i < size; i++)
 	{
+		// Calculate the invariant masses
 		const float momentum = momenta[i];
 		const float invariantMass = invariantMasses[i];
 		
 		const float p1p2 = 2. * momentum * initialMomentum;
 		const float costheta = 1. - invariantMass * invariantMass / p1p2;
 
+		// Abort if an angle cannot be calculated
 		if(std::abs(costheta) > 1)
 		{
 			return false;
