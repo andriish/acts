@@ -21,6 +21,7 @@
 #include <iterator>
 #include <cmath>
 #include <any>
+#include <limits>
 
 namespace ActsFatras {
 
@@ -30,6 +31,8 @@ namespace ActsFatras {
 struct NuclearInteraction {
 	/// The storage of the parameterisation
   detail::MultiParticleParametrization multiParticleParameterisation;
+  /// The number of trials to match momenta and inveriant masses
+  unsigned int nMatchingTrials = std::numeric_limits<unsigned int>::max();
     
   /// @brief Main call operator
   ///
@@ -348,12 +351,15 @@ std::vector<int> NuclearInteraction::samplePdgIds(generator_t& generator, const 
 	NuclearInteraction::sampleKinematics(generator_t& generator, 
 					const detail::Parameters::ParametersWithFixedMultiplicity& parameters, float momentum, unsigned int multiplicity, bool soft) const
 	{
-		const auto invariantMasses = sampleInvariantMasses(generator, parameters);
+		unsigned int trials = 0;
+		auto invariantMasses = sampleInvariantMasses(generator, parameters);
 		auto momenta = sampleMomenta(generator, parameters, momentum);
 		// Repeat momentum evaluation until the parameters match
-		// TODO: Make number of trial configurable to avoid infinity loops in kinematical difficult regions
 		while(!match(momenta, invariantMasses, momentum)) {
 			momenta = sampleMomenta(generator, parameters, momentum);
+			// Re-sampole invariant masses if no fitting momenta were found
+			if(trials % nMatchingTrials == 0)
+				invariantMasses = sampleInvariantMasses(generator, parameters);
 		}
 		return std::make_pair(momenta, invariantMasses);
 	}
