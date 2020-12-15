@@ -9,6 +9,7 @@
 #pragma once
 
 #include "Acts/Definitions/Common.hpp"
+
 #include <map>
 #include <unordered_map>
 #include <vector>
@@ -21,48 +22,45 @@ struct Parameters {
   using CumulativeDistribution =
       std::pair<std::vector<float>, std::vector<uint32_t>>;
   using Distributions = std::vector<CumulativeDistribution>;
-  using PdgMap = std::vector<std::pair<int, std::vector<std::pair<int, float>>>>;
+  using PdgMap =
+      std::vector<std::pair<int, std::vector<std::pair<int, float>>>>;
 
   /// @brief Nested struct for the storage of the kinematic parametrizations for
   /// a given final state multiplicity
   struct ParametersWithFixedMultiplicity {
-	ParametersWithFixedMultiplicity() = default;
-	
+    ParametersWithFixedMultiplicity() = default;
+
     ParametersWithFixedMultiplicity(
         Distributions&& momenta, std::vector<float>& eValMom,
         std::vector<float>& eVecMom, std::vector<float>& meanMom,
         Distributions&& invariantMasses, std::vector<float>& eValIM,
         std::vector<float>& eVecIM, std::vector<float>& meanIM)
         : momentumDistributions(momenta),
-          invariantMassDistributions(invariantMasses) 
-          {
-			  const unsigned int sizeMom = eValMom.size();
-			  eigenvaluesMomentum.resize(sizeMom);
-			  eigenvectorsMomentum.resize(sizeMom, sizeMom);
-			  meanMomentum.resize(sizeMom);
-			  
-			 for(unsigned int i = 0; i < sizeMom; i++)
-			 {
-				eigenvaluesMomentum(i) = eValMom[i];
-				for(unsigned int j = 0; j < sizeMom; j++)
-					eigenvectorsMomentum(i, j) = eVecMom[i * sizeMom + j];
-				meanMomentum(i) = meanMom[i];
-			 }
-			 
-			  const unsigned int sizeInvMass = eValIM.size();
-			  eigenvaluesInvariantMass.resize(sizeInvMass);
-			  eigenvectorsInvariantMass.resize(sizeInvMass, sizeInvMass);
-			  meanInvariantMass.resize(sizeInvMass);
-			  
-			 for(unsigned int i = 0; i < sizeInvMass; i++)
-			 {
-				eigenvaluesInvariantMass(i) = eValIM[i];
-				for(unsigned int j = 0; j < sizeMom; j++)
-					eigenvectorsInvariantMass(i, j) = eVecIM[i * sizeMom + j];
-				meanInvariantMass(i) = meanIM[i];
-			 } 
-			  
-		  }
+          invariantMassDistributions(invariantMasses) {
+      const unsigned int sizeMom = eValMom.size();
+      eigenvaluesMomentum.resize(sizeMom);
+      eigenvectorsMomentum.resize(sizeMom, sizeMom);
+      meanMomentum.resize(sizeMom);
+
+      for (unsigned int i = 0; i < sizeMom; i++) {
+        eigenvaluesMomentum(i) = eValMom[i];
+        for (unsigned int j = 0; j < sizeMom; j++)
+          eigenvectorsMomentum(i, j) = eVecMom[i * sizeMom + j];
+        meanMomentum(i) = meanMom[i];
+      }
+
+      const unsigned int sizeInvMass = eValIM.size();
+      eigenvaluesInvariantMass.resize(sizeInvMass);
+      eigenvectorsInvariantMass.resize(sizeInvMass, sizeInvMass);
+      meanInvariantMass.resize(sizeInvMass);
+
+      for (unsigned int i = 0; i < sizeInvMass; i++) {
+        eigenvaluesInvariantMass(i) = eValIM[i];
+        for (unsigned int j = 0; j < sizeMom; j++)
+          eigenvectorsInvariantMass(i, j) = eVecIM[i * sizeMom + j];
+        meanInvariantMass(i) = meanIM[i];
+      }
+    }
 
     /// Momentum parameters
     /// Generation-wise distributions
@@ -106,6 +104,7 @@ struct Parameters {
 /// Parametrization of a single particle
 using Parametrization = std::vector<std::pair<float, Parameters>>;
 /// Parametrization of multiple particles
-using MultiParticleParametrization = std::vector<std::pair<int, Parametrization>>;
+using MultiParticleParametrization =
+    std::vector<std::pair<int, Parametrization>>;
 }  // namespace detail
 }  // namespace ActsFatras
