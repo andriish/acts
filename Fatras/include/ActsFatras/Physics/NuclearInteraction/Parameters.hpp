@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "Acts/Utilities/Definitions.hpp"
+#include "Acts/Definitions/Common.hpp"
 #include <map>
 #include <unordered_map>
 #include <vector>
@@ -68,21 +68,21 @@ struct Parameters {
     /// Generation-wise distributions
     Distributions momentumDistributions;
     /// Eigenvalues
-    Acts::ActsVectorXf eigenvaluesMomentum;
+    Acts::ActsDynamicVector eigenvaluesMomentum;
     /// Eigenvectors
-    Acts::ActsMatrixXf eigenvectorsMomentum;
+    Acts::ActsDynamicMatrix eigenvectorsMomentum;
     /// Mean in eigenspace
-    Acts::ActsVectorXf meanMomentum;
+    Acts::ActsDynamicVector meanMomentum;
 
     /// Invariant mass parameters
     /// Generation-wise distributions
     Distributions invariantMassDistributions;
     /// Eigenvalues
-    Acts::ActsVectorXf eigenvaluesInvariantMass;
+    Acts::ActsDynamicVector eigenvaluesInvariantMass;
     /// Eigenvectors
-    Acts::ActsMatrixXf eigenvectorsInvariantMass;
+    Acts::ActsDynamicMatrix eigenvectorsInvariantMass;
     /// Mean in eigenspace
-    Acts::ActsVectorXf meanInvariantMass;
+    Acts::ActsDynamicVector meanInvariantMass;
   };
 
   /// Initial momentum

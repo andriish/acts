@@ -70,22 +70,22 @@ unsigned int NuclearInteraction::finalStateMultiplicity(double rnd, const detail
 std::pair<ActsFatras::Particle::Scalar, ActsFatras::Particle::Scalar>
 NuclearInteraction::globalAngle(ActsFatras::Particle::Scalar phi1, ActsFatras::Particle::Scalar theta1, float phi2, float theta2) const
 {	
-	const Acts::Vector3F vector2(std::sin(theta2) * std::cos(phi2), std::sin(theta2) * std::sin(phi2), std::cos(theta2));
-	Acts::SymMatrix3F rotY = Acts::SymMatrix3F::Zero();
+	const Acts::Vector3D vector2(std::sin(theta2) * std::cos(phi2), std::sin(theta2) * std::sin(phi2), std::cos(theta2));
+	Acts::SymMatrix3D rotY = Acts::SymMatrix3D::Zero();
 	rotY(0,0) = std::cos(theta1);
 	rotY(0,2) = std::sin(theta1);
 	rotY(1,1) = 1.;
 	rotY(2,0) = -std::sin(theta1);
 	rotY(2,2) = std::cos(theta1);
 	
-	Acts::SymMatrix3F rotZ = Acts::SymMatrix3F::Zero();
+	Acts::SymMatrix3D rotZ = Acts::SymMatrix3D::Zero();
 	rotZ(0,0) = std::cos(phi1);
 	rotZ(0,1) = -std::sin(phi1);
 	rotZ(1,0) = std::sin(phi1);
 	rotZ(1,1) = std::cos(phi1);
 	rotZ(2,2) = 1.;
 	
-	const Acts::Vector3F vectorSum = rotZ * rotY * vector2;	
+	const Acts::Vector3D vectorSum = rotZ * rotY * vector2;	
 	
 	const float theta = std::acos(vectorSum.z() / vectorSum.norm());
 	const float phi = std::atan2(vectorSum.y(), vectorSum.x());
@@ -94,7 +94,7 @@ NuclearInteraction::globalAngle(ActsFatras::Particle::Scalar phi1, ActsFatras::P
 }
 
 bool
-NuclearInteraction::match(const Acts::ActsVectorXf& momenta, const Acts::ActsVectorXf& invariantMasses, float initialMomentum) const
+NuclearInteraction::match(const Acts::ActsDynamicVector& momenta, const Acts::ActsDynamicVector& invariantMasses, float initialMomentum) const
 {
 	const unsigned int size = momenta.size();
 	for(unsigned int i = 0; i < size; i++)
