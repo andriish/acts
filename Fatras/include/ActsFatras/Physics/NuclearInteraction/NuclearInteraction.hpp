@@ -40,22 +40,68 @@ struct NuclearInteraction {
   template <typename generator_t>
   std::vector<Particle> operator()(generator_t& generator,
                                      const Acts::MaterialSlab& /*slab*/,
-                                     Particle& particle) const { return {}; }
-	//~ if(multiParticleParameterisation == nullptr)
-	//~ {
-		//~ return {};
-	//~ }
+                                     Particle& particle) const {
+	// Fast exit: No paramtrization provided
+	if(multiParticleParameterisation.empty())
+	{
+		return {};
+	}
 	
-	//~ std::uniform_real_distribution<double> uniformDistribution {0., 1.};
-	//~ if(particle.pathLimitL0() == std::numeric_limits<Particle::Scalar>::max())
-	//~ {
-		//~ std::cout << "Need a limit for " << particle.pdg() << std::endl;
-		//~ if(multiParticleParameterisation.find(particle.pdg()) != multiParticleParameterisation.end())
-		//~ {
-			//~ const auto& distribution = multiParticleParameterisation.at(particle.pdg()).at(particle.abosoluteMomentum()).nuclearInteractionProbability;
-			//~ particle.setMaterialLimits(particle.pathLimitX0(), sampleContinuousValues(uniformDistribution(generator), distribution));
-		//~ }
-	//~ }
+	// Find the parametrization that corresponds to the particle type
+	for(const auto& particleParametrisation : multiParticleParameterisation) // TODO: parametrization
+	{
+		if(particleParametrisation.first == particle.pdg())
+		{
+			std::uniform_real_distribution<double> uniformDistribution {0., 1.};
+			
+			// Get the parameters
+			const detail::Parametrisation& singleParticleParametrisation = particleParametrisation.second;
+			const detail::Parameters& parametrization = findParameters(uniformDistribution(generator), singleParticleParametrisation, particle.absoluteMomentum());
+		
+			// Set the L0 limit if not done already
+			if(particle.pathLimitL0() == std::numeric_limits<Particle::Scalar>::max())
+			{				
+				const auto& distribution = parametrization.nuclearInteractionProbability;
+				particle.setMaterialLimits(particle.pathLimitX0(), sampleContinuousValues(uniformDistribution(generator), distribution));	
+			}
+			
+			// Test whether enough material was passed for a nuclear interaction
+			if(particle.pathInL0() >= particle.pathLimitL0())
+			{
+				std::normal_distribution<double> normalDistribution {0., 1.};
+				// Dice the interaction type
+				const bool softInteraction = softInteraction(normalDistribution(generator), parametrization.softInteractionProbability);
+				
+				// Get the final state multiplicity
+				const unsigned int multiplicity = finalStateMultiplicity(uniformDistribution(generator), 
+					softInteraction ? parametrization.softMultiplicity : parametrization.hardMultiplicity);
+				
+				// Get the particle types
+				const std::vector<int> pdgIds = samplePdgIds(generator, parametrization.pdgMap, multiplicity, particle.pdg(), softInteraction);
+	
+				// Get the multiplicity
+				const std::vector<detail::Parameters::ParametersWithFixedMultiplicity>& parametrizationOfType = 
+					softInteraction ? parametrization.softKinematicParameters : parametrization.hardKinematicParameters;			
+				const detail::Parameters::ParametersWithFixedMultiplicity& parametrizationOfMultiplicity = parametrizationOfType[multiplicity];
+				
+				// Get the kinematics
+				const auto kinematics = sampleKinematics(generator, parametrization, multiplicity, softInteraction);
+				
+				// Construct the particles
+				const auto particles = convertParametersToParticles(generator, pdgIds, kinematics.first, kinematics.second, particle);
+				
+				// Kill the particle in a hard process
+				if(!softInteraction)
+					particle.setAbsoluteMomentum(0);
+					
+				return particles;
+			}
+		} else {
+			// Fast exit if no parametrization for the particle was provided
+			return {};
+		}
+	}
+}
 	
 	//~ // Test whether enough material was passed for a nuclear interaction
     //~ if(particle.pathInL0() >= particle.pathLimitL0())
