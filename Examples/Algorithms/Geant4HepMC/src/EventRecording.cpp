@@ -168,6 +168,15 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
 				event.remove_vertex(*it);
 			  }
 			}
+			/*
+			To be honest I have to think how this works.
+			I would write it simpler with explicit types, as here onnly one type is possible.
+			std::vector<HepMC::GenVertexPtr> todelete;
+			for (HepMC::GenVertexPtr v: event.vertices())  if (v->particles_out().empty()) todelete.push_back(v);
+			for (auto v: todelete) event.remove_vertex(v);
+			//Uh, I thought we had remove_vertices(). But no, we have only remove_particles(). Same below.
+			*/
+			
 		  // Store the result
 		  events.push_back(std::move(event));
 		} else {
@@ -179,6 +188,9 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
 			}
 			const std::vector<std::string> vertexAttributes =
 				vertex->attribute_names();
+			/*No, really 80 chars per line is not readable. http://lkml.iu.edu/hypermail/linux/kernel/2005.3/08168.html 
+			  Have to rewrite this a bit for my own understanding.
+			*/  
 			for (const auto& att : vertexAttributes) {
 			  if ((vertex->attribute_as_string(att).find(m_cfg.processSelect) !=
 				   std::string::npos) &&
@@ -195,8 +207,47 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
 			if (storeEvent) {
 			  break;
 			}
+/*			  
+	  bool storeEvent = false;
+		  // Test if the event has a process of interest in it
+                   for (const auto& vertex : event.vertices()) if (vertex->id() == -1) {vertex->add_particle_in(beamParticle); }
+                   // That stuff does not belong to the algorithm below.
+		   for (const auto& vertex : event.vertices()) {
+		       if (vertex->particles_in().empty()) continue;
+		       auto attrTrackID =vertex->particles_in().at(0)->attribute<HepMC3::IntAttribute>("TrackID");
+		       if (!attrTrackID) continue;
+		       if (attrTrackID->value() != 1) continue;
+                        const std::vector<std::string> vertexAttributes = vertex->attribute_names();
+			for (const auto& att : vertexAttributes) {
+			    if (vertex->attribute_as_string(att).find(m_cfg.processSelect) == std::string::npos) continue; 
+			   // Kind of "select attribute containing m_cfg.processSelect string" ? A nice thing to add to examples.
+			   storeEvent = true;
+			   break; 
+			  }
+			}
+			if (storeEvent) {
+			  break;
+			}
+                      }
+//OK, Ich verstehe was hast du gemacht. Alles siecht OK aus. Wo genau siehst du das etwas falst ist?
+//Noch eine Idee, statt
+                        const std::vector<std::string> vertexAttributes = vertex->attribute_names();
+			for (const auto& att : vertexAttributes) {
+			    if (vertex->attribute_as_string(att).find(m_cfg.processSelect) == std::string::npos) continue; 
+			   // Kind of "select attribute containing m_cfg.processSelect string" ? A nice thing to add to examples.
+			   storeEvent = true;
+			   break; 
+			  }
+			  
+			  
+			for (auto att: vertex->attributes()) if (strstr(att->unparsed_string(),m_cfg.processSelect)) { storeEvent =true;  break;  };
+                         
+
+*/
 		  }
-		  // Store the result
+
+			
+	          // Store the result
 		  if (storeEvent) {
 			// Remove vertices without outgoing particles
 			for (auto it = event.vertices().crbegin();
@@ -205,6 +256,12 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
 				event.remove_vertex(*it);
 			  }
 			}
+			/*    
+			std::vector<HepMC::GenVertexPtr> todelete;
+			for (HepMC::GenVertexPtr v: event.vertices())  if (v->particles_out().empty()) todelete.push_back(v);
+			for (auto v: todelete) event.remove_vertex(v);
+			//Uh, I thought we had remove_vertices(). But no, we have only remove_particles().
+			*/
 			events.push_back(std::move(event));
 		  }
 		}
