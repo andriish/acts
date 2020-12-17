@@ -14,7 +14,32 @@
 #include "ActsExamples/Io/Csv/CsvParticleReader.hpp"
 #include "ActsExamples/DD4hepDetector/DD4hepDetector.hpp"
 #include "ActsExamples/Geometry/CommonGeometry.hpp"
+#include "ActsExamples/Utilities/OptionsFwd.hpp"
 
+#include <boost/program_options.hpp>
+
+void addCustomOptions(::boost::program_options::options_description& desc) {
+  //~ using boost::program_options::bool_switch;
+  using boost::program_options::value;
+
+  auto opt = desc.add_options();
+  opt("mean-max-step-size", value<double>()->default_value(std::numeric_limits<double>::max()),
+      "Maximum step size in propagation");
+  opt("mean-max-steps", value<unsigned int>()->default_value(1000),
+      "Maximum number of steps in propagation");
+  opt("mean-tolerance", value<double>()->default_value(1e-4),
+      "Maximum integration error tolerance in propagation");
+}
+ 
+ActsExamples::MeanCalculator::Config
+readCustomOptions(const ::boost::program_options::variables_map& vars) {
+	ActsExamples::MeanCalculator::Config cfg;
+  cfg.maxStepSize = vars["mean-max-step-size"].as<double>();
+  cfg.maxSteps = vars["mean-max-steps"].as<unsigned int>();
+  cfg.tolerance = vars["mean-tolerance"].as<double>();
+  return cfg;
+}
+      
 int main(int argc, char** argv) {
 	
 	auto detector = std::make_shared<DD4hepDetector>();
@@ -22,6 +47,7 @@ int main(int argc, char** argv) {
   // Declare the supported program options.
   // Setup and parse options
   auto desc = ActsExamples::Options::makeDefaultOptions();
+  addCustomOptions(desc);
   ActsExamples::Options::addSequencerOptions(desc);
   ActsExamples::Options::addInputOptions(desc);
   ActsExamples::Options::addHepMC3ReaderOptions(desc);
@@ -40,7 +66,6 @@ int main(int argc, char** argv) {
       ActsExamples::Options::readSequencerConfig(vm));
 
 // TODO: Bfield? 
-// TODO: Detector?
 
   // The detector
   auto [trackingGeometry, contextDecorators] = ActsExamples::Geometry::build(vm, *detector);
@@ -56,7 +81,7 @@ int main(int argc, char** argv) {
   hepMC3ReaderConfig.outputEvents = "hepmc-events";
 
   // Create the algorithm      
-  ActsExamples::MeanCalculator::Config meanConfig;
+  ActsExamples::MeanCalculator::Config meanConfig = readCustomOptions(vm);
   meanConfig.inputEvents = hepMC3ReaderConfig.outputEvents;
   meanConfig.inputParticles = particleReader.outputParticles;
   meanConfig.trackingGeometry = trackingGeometry;

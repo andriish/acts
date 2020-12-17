@@ -38,7 +38,12 @@ std::vector<ActsExamples::SimParticle>
 collectG4Steps(const HepMC3::GenEvent& event, int trackID) {
 	std::vector<ActsExamples::SimParticle> g4Steps;
 	for (const auto& vertex : event.vertices()) {
-		const auto material = vertex->attribute<HepMC3::StringAttribute>("Material")->value();
+		const auto attribute = vertex->attribute<HepMC3::StringAttribute>("Material");
+		if(attribute == nullptr)
+		{
+			continue;
+		}
+		const auto material = attribute->value();
 		if(material == "NoMaterial" || material == "Vacuum" || material == "Air")
 			continue;
 		for(const auto& particle :vertex->particles_out()) {
@@ -60,15 +65,15 @@ collectG4Steps(const HepMC3::GenEvent& event, int trackID) {
 	return g4Steps;
 }
 
-Acts::BoundVector
-findClosestPoint(const std::vector<ActsExamples::SimParticle>& g4Steps, std::shared_ptr<const Acts::Surface> surface, const Acts::GeometryContext& gctx) {
+std::optional<Acts::BoundVector>
+findClosestPoint(const std::vector<ActsExamples::SimParticle>& g4Steps, const std::shared_ptr<const Acts::Surface> surface, const Acts::GeometryContext& gctx) {
 	std::vector<std::pair<double, Acts::BoundVector>> pathLengthPosition;
 	Acts::BoundaryCheck bCheck(false);
 	for(const ActsExamples::SimParticle& g4Step : g4Steps)
 	{
 		const Acts::SurfaceIntersection intersection = surface->intersect(gctx, g4Step.position(), g4Step.unitDirection(), bCheck);
 		if(intersection)
-		{			
+		{
 			const Acts::Vector3D pos3 = intersection.intersection.position;
 			Acts::FreeVector freeParams;
 			freeParams[Acts::eFreePos0] = pos3[Acts::eX];
@@ -81,16 +86,21 @@ findClosestPoint(const std::vector<ActsExamples::SimParticle>& g4Steps, std::sha
 			freeParams[Acts::eFreeQOverP] = (g4Step.charge() == 0. ? 1. : g4Step.charge()) / g4Step.absoluteMomentum();
 			
 			Acts::BoundVector params = Acts::detail::transformFreeToBoundParameters(freeParams, *surface, gctx);
-			
+		
 			const double pathLength = intersection.intersection.pathLength;
 			pathLengthPosition.push_back(std::make_pair(pathLength, params));
 			// TODO: test posG4 value
 		}
 	}
-	const auto closest = std::min_element(pathLengthPosition.begin(), pathLengthPosition.end(), 
-			[&](const std::pair<double, Acts::BoundVector>& pos1, const std::pair<double, Acts::BoundVector>& pos2) 
-				{ return  pos1.first < pos2.first; });
-	return closest->second;
+	if(!pathLengthPosition.empty())
+	{
+		const auto closest = std::min_element(pathLengthPosition.begin(), pathLengthPosition.end(), 
+				[&](const std::pair<double, Acts::BoundVector>& pos1, const std::pair<double, Acts::BoundVector>& pos2) 
+					{ return  std::abs(pos1.first) < std::abs(pos2.first); });
+
+		return closest->second;
+	} else
+		return std::nullopt;
 }
 
 Acts::BoundVector
@@ -100,7 +110,7 @@ calculateMean(const std::vector<Acts::BoundVector>& positions) {
 	{
 		mean += position;
 	}
-	mean /= positions.size();
+	mean /= (double) positions.size();
 	return mean;
 }
 
@@ -149,7 +159,6 @@ ActsExamples::ProcessCode ActsExamples::MeanCalculator::execute(
   // The stepper
   Acts::NullBField bfield;  
   Acts::EigenStepper stepper(bfield);
-std::cout << "TrackingGeometry: " << m_cfg.trackingGeometry << std::endl;
   
   // The Navigator
   Acts::Navigator navigator(m_cfg.trackingGeometry);
@@ -160,6 +169,9 @@ std::cout << "TrackingGeometry: " << m_cfg.trackingGeometry << std::endl;
   Acts::GeometryContext gctx;
   Acts::MagneticFieldContext mctx;
   Acts::PropagatorOptions<Acts::ActionList<Acts::detail::SteppingLogger>, Acts::AbortList<Acts::EndOfWorldReached>> options(gctx, mctx, Acts::getDummyLogger());
+  options.maxStepSize = m_cfg.maxStepSize;
+  options.maxSteps = m_cfg.maxSteps;
+  options.tolerance = m_cfg.tolerance;
   
   // Loop over initial particles
   for(const ActsExamples::SimParticle& initialParticle : initialParticles)
@@ -171,12 +183,9 @@ std::cout << "TrackingGeometry: " << m_cfg.trackingGeometry << std::endl;
 	    // Propagate the mean
 		Acts::CurvilinearTrackParameters mean(initialParticle.fourPosition(), 
 			initialParticle.unitDirection(), initialParticle.charge(), initialParticle.absoluteMomentum());
-std::cout << "Params: " << initialParticle.fourPosition().transpose() << " | " << initialParticle.unitDirection().transpose()
-	<< " | " << initialParticle.charge() << " | " << initialParticle.absoluteMomentum() << std::endl;
 		const auto& result = propagator.propagate(mean, options).value(); //result.ok()
-std::cout << "Propagation finished" << std::endl;
 		const auto stepperLog = result.get<typename Acts::detail::SteppingLogger::result_type>();
-		
+				
 		/// Find the surfaces first
 		// Walk over each step
 		for(const auto& step : stepperLog.steps)
@@ -184,12 +193,15 @@ std::cout << "Propagation finished" << std::endl;
 			// Only care about surfaces
 			if(!step.surface)
 				continue;
-			
+			const Acts::Vector3D surfaceCenter = step.surface->center(gctx);
+			if(sqrt(surfaceCenter.x() * surfaceCenter.x() + surfaceCenter.y() * surfaceCenter.y())  == 0.)
+				continue;
+
 			ParametersAtSurface surfaceParameters;
 			
 			// Store the corresponding for surface
 			surfaceParameters.surface = step.surface;
-			
+
 			// Calculate the value of the mean on the surface
 			Acts::Vector3D dir = step.momentum.normalized();
 			Acts::FreeVector freeProp;
@@ -200,10 +212,12 @@ std::cout << "Propagation finished" << std::endl;
 			freeProp[Acts::eFreeDir0] = dir[Acts::eMom0];
 			freeProp[Acts::eFreeDir1] = dir[Acts::eMom1];
 			freeProp[Acts::eFreeDir2] = dir[Acts::eMom2];
-			freeProp[Acts::eFreeQOverP] = (mean.charge() == 0. ? 1. : mean.charge()) / step.momentum.norm();		
+			freeProp[Acts::eFreeQOverP] = (mean.charge() == 0. ? 1. : mean.charge()) / step.momentum.norm();
+			surfaceParameters.meanPropagatedFree = freeProp;
+			
 			const Acts::BoundVector localPropagatedMean = Acts::detail::transformFreeToBoundParameters(freeProp, *step.surface, gctx);
 			surfaceParameters.meanPropagated = std::move(localPropagatedMean);
-			
+
 			// Now find the corresponding G4 steps
 			std::vector<Acts::BoundVector> localG4Params;
 			localG4Params.reserve(events.size());
@@ -219,20 +233,29 @@ std::cout << "Propagation finished" << std::endl;
 				// The storage of each step
 				std::vector<ActsExamples::SimParticle> g4Steps = collectG4Steps(event, trackID);
 				
-				localG4Params.push_back(findClosestPoint(g4Steps, step.surface, gctx));
+				const auto closestPoint = findClosestPoint(g4Steps, step.surface, gctx);
+				if(closestPoint.has_value())
+					localG4Params.push_back(closestPoint.value());
 			}
+
+			plot.scatter(localG4Params, localPropagatedMean, surfaceParameters.surface);
 			// Calculate the mean of the G4 data
 			const Acts::BoundVector meanG4 = calculateMean(localG4Params);
 			surfaceParameters.meanG4 = std::move(meanG4);
-			const Acts::BoundSymMatrix covG4 = calculateCovariance(localG4Params, meanG4); 
+			surfaceParameters.meanG4Free = Acts::detail::transformBoundToFreeParameters(*surfaceParameters.surface, gctx, surfaceParameters.meanG4);
+			const Acts::BoundSymMatrix covG4 = calculateCovariance(localG4Params, meanG4);
 			surfaceParameters.covG4 = std::move(covG4);
 			
 			summary.paramAtSurface.push_back(std::move(surfaceParameters));
 		}
 		summaries.push_back(std::move(summary));
 	}
-	// Plot the result
-  plotMean(summaries);
+  // Plot the result
+  plot.mean(summaries);
+
+	plot.tf->cd();
+	plot.tree->Write();
+	plot.tf->Close();
 
   return ActsExamples::ProcessCode::SUCCESS;
 }

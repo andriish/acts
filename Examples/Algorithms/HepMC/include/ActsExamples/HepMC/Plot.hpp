@@ -13,7 +13,9 @@
 #include "TFile.h"
 #include "TTree.h"
 #include "Acts/Surfaces/Surface.hpp"
+#include "Acts/Geometry/GeometryContext.hpp"
 
+struct ParametersAtSurface;
 struct TrackSummary;
 
 namespace ActsExamples {
@@ -24,12 +26,13 @@ struct Plot {
 	~Plot();
 	
 	void mean(const std::vector<TrackSummary>& trackSummaries);
+	void scatter(const std::vector<Acts::BoundVector>& localG4Params, 
+		const Acts::BoundVector& localPropagatedMean, const std::shared_ptr<const Acts::Surface>& surface);
 	
-private:
-	void plotMean(const std::vector<Acts::BoundVector>& props, 
-		const std::vector<Acts::BoundVector>& g4s, const std::vector<std::shared_ptr<const Acts::Surface>>& surfaces) const;
-	void storeMean(const std::vector<Acts::BoundVector>& props, 
-		const std::vector<Acts::BoundVector>& g4s, const std::vector<std::shared_ptr<const Acts::Surface>>& surfaces);
+	void plotMean(const std::vector<ParametersAtSurface>& paramAtSurface) const;
+	void storeMean(const std::vector<ParametersAtSurface>& paramAtSurface);
+	
+	Acts::GeometryContext gctx;
 	
 	TFile* tf{nullptr};
 	TTree* tree{nullptr};

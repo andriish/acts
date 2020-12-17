@@ -72,7 +72,6 @@ struct SteppingLogger {
         stepper.momentum(state.stepping) * stepper.direction(state.stepping);
     step.time = stepper.time(state.stepping);
 
-std::cout << "Logger: " << step.stepSize << " | " << step.position.transpose() << " | " << step.momentum.transpose() << " | " << step.time << std::endl;
     if (state.navigation.currentSurface != nullptr) {
       // hang on to surface
       step.surface = state.navigation.currentSurface->getSharedPtr();

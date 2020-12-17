@@ -162,9 +162,9 @@ Acts::Result<double> Acts::EigenStepper<B, E, A>::step(
                                           std::abs(2. * error_estimate)),
                                          0.25)),
                  4.);
-
+std::cout << "Before: " << state.stepping.stepSize.direction << "\n" << state.stepping.stepSize.toString() << std::endl;
     state.stepping.stepSize = state.stepping.stepSize * stepSizeScaling;
-
+std::cout << "After: " << state.stepping.stepSize.direction << "\n" << state.stepping.stepSize.toString() << std::endl;
     // If step size becomes too small the particle remains at the initial
     // place
     if (state.stepping.stepSize * state.stepping.stepSize <

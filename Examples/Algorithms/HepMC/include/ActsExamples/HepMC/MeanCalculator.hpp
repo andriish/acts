@@ -38,6 +38,10 @@ class MeanCalculator final : public ActsExamples::BareAlgorithm {
 
     /// The detector
     std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry = nullptr;
+    
+    double maxStepSize = std::numeric_limits<double>::max();
+    unsigned int maxSteps = 1000;
+    double tolerance = 1e-4;
   };
 
   /// Constructor

@@ -21,7 +21,10 @@ struct ParametersAtSurface {
 	// The covariance matrix from the obtained G4 simulations
 	Acts::BoundSymMatrix covG4;
 	// The surface
-	std::shared_ptr<const Acts::Surface> surface;	
+	std::shared_ptr<const Acts::Surface> surface;
+	
+	Acts::FreeVector meanPropagatedFree;
+	Acts::FreeVector meanG4Free;
 };
 
 struct TrackSummary {

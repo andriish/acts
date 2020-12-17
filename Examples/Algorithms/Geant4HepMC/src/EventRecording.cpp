@@ -69,8 +69,8 @@ ActsExamples::EventRecording::EventRecording(
   if(m_cfg.covarianceSample)
   {    
 	  Acts::BoundVector stddev = Acts::BoundVector::Zero();
-	  stddev[Acts::eBoundLoc0] = 15. * Acts::UnitConstants::um;
-	  stddev[Acts::eBoundLoc1] = 80. * Acts::UnitConstants::um;
+	  stddev[Acts::eBoundLoc0] = 10. * Acts::UnitConstants::um;
+	  stddev[Acts::eBoundLoc1] = 10. * Acts::UnitConstants::um;
 	  stddev[Acts::eBoundTime] = 0.1 * Acts::UnitConstants::ns;
 	  stddev[Acts::eBoundPhi] = 1. * Acts::UnitConstants::degree;
 	  stddev[Acts::eBoundTheta] = 1.5 * Acts::UnitConstants::degree;
@@ -119,6 +119,7 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
   for (const auto& part : initialParticles) {
 	  for(unsigned int i = 0; i < m_cfg.numSamples; i++)
 	  {
+std::cout << "Starting variation number " << i << std::endl;
 		ACTS_VERBOSE("Starting variation number " << i);
 		 // Prepare the particle gun
 		 if(m_cfg.covarianceSample)
@@ -137,7 +138,8 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
 		}
 
 		// Set event start time
-		HepMC3::GenEvent event = ActsExamples::EventAction::instance()->event();
+		HepMC3::GenEvent& event = ActsExamples::EventAction::instance()->event();
+									
 		HepMC3::FourVector shift(0., 0., 0., part.time() / Acts::UnitConstants::mm);
 		event.shift_position_by(shift);
 
@@ -149,25 +151,57 @@ ActsExamples::ProcessCode ActsExamples::EventRecording::execute(
 		auto beamParticle = event.particles()[0];
 		beamParticle->set_momentum(beamMom4);
 		beamParticle->set_pid(part.pdg());
-
+		beamParticle->add_attribute("TrackID", std::make_shared<HepMC3::IntAttribute>(1));
+				
 		if (m_cfg.processSelect.empty()) {
 			// Add the beam particle
 		  for (const auto& vertex : event.vertices()) {
-//~ std:cout << "Vtx ID: " << vertex->id() << std::endl;
 				if (vertex->id() == -1) {
 				  vertex->add_particle_in(beamParticle);
-//~ std::cout << "Found" << std::endl;
 				  break;
 				}
 			}
-			
+
+			//~ for(const auto& v : event.vertices())
+				//~ if(v->particles_in().empty())
+					//~ std::cout << "Before: " << event.vertices().size() << " | " << v->id() << " | " << "empty"
+					//~ << " | " << v->attribute<HepMC3::StringAttribute>("Material") << " | " <<
+					//~ v->attribute<HepMC3::StringAttribute>("Material")->value() << " | " << std::endl;
+				//~ else
+					//~ std::cout << "Before: " << event.vertices().size() << " | " << v->id() << " | " <<  v->particles_in().size() << " | " 
+					//~ << v->particles_in()[0]->attribute<HepMC3::IntAttribute>("TrackID")->value() 
+					//~ << " | " << v->attribute<HepMC3::StringAttribute>("Material") << " | " <<
+					//~ v->attribute<HepMC3::StringAttribute>("Material")->value() << " | " << std::endl;
+													
 			// Remove vertices without outgoing particles
-			for (auto it = event.vertices().crbegin();
-				 it != event.vertices().crend(); it++) {
+			auto it = event.vertices().crbegin();
+			while(it != event.vertices().crend())
+			{
 			  if ((*it)->particles_out().empty()) {
 				event.remove_vertex(*it);
+				it = event.vertices().crbegin();
+			  } else {
+				  it++;
 			  }
 			}
+			//~ for (auto it = event.vertices().crbegin();
+				 //~ it != event.vertices().crend(); it++) {
+			  //~ if ((*it)->particles_out().empty()) {
+				//~ event.remove_vertex(*it);
+			  //~ }
+			//~ }	
+			
+			//~ for(const auto& v : event.vertices())
+				//~ if(v->particles_in().empty())
+					//~ std::cout << "End: " << event.vertices().size() << " | " << v->id() << " | " << "empty"
+					//~ << " | " << v->attribute<HepMC3::StringAttribute>("Material") << " | " <<
+					//~ v->attribute<HepMC3::StringAttribute>("Material")->value() << " | " << std::endl;
+				//~ else
+					//~ std::cout << "End: " << event.vertices().size() << " | " << v->id() << " | " <<  v->particles_in().size() << " | " 
+					//~ << v->particles_in()[0]->attribute<HepMC3::IntAttribute>("TrackID")->value() 
+					//~ << " | " << v->attribute<HepMC3::StringAttribute>("Material") << " | " <<
+					//~ v->attribute<HepMC3::StringAttribute>("Material")->value() << " | " << std::endl;
+										
 		  // Store the result
 		  events.push_back(std::move(event));
 		} else {

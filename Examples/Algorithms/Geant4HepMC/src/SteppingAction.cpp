@@ -99,10 +99,15 @@ void ActsExamples::SteppingAction::UserSteppingAction(const G4Step* step) {
       vertex->add_attribute("NextProcessOf" + trackId, process);
       
       // Store the material at that point
-	  std::shared_ptr<HepMC3::StringAttribute> materialAtt = std::make_shared<HepMC3::StringAttribute>("NoMaterial");
+	  std::shared_ptr<HepMC3::StringAttribute> materialAtt;
 	  G4Material* material = step->GetPreStepPoint()->GetMaterial();
 	  if (material && material->GetName())
-		materialAtt = std::make_shared<HepMC3::StringAttribute>(material->GetName());
+	  {
+		  std::string name = material->GetName();
+		  materialAtt = std::make_shared<HepMC3::StringAttribute>(name);
+	  }
+	  else
+	    materialAtt = std::make_shared<HepMC3::StringAttribute>("NoMaterial");
 	  vertex->add_attribute("Material", materialAtt);  
     } else
       // Search for an existing vertex
@@ -164,10 +169,15 @@ void ActsExamples::SteppingAction::UserSteppingAction(const G4Step* step) {
   postParticle->set_status(1);
 
   // Store the material at that point
-  std::shared_ptr<HepMC3::StringAttribute> materialAtt = std::make_shared<HepMC3::StringAttribute>("NoMaterial");
+  std::shared_ptr<HepMC3::StringAttribute> materialAtt;
   G4Material* material = step->GetPostStepPoint()->GetMaterial();
   if (material && material->GetName())
-	materialAtt = std::make_shared<HepMC3::StringAttribute>(material->GetName());
+  {
+	  std::string name = material->GetName();
+	  materialAtt = std::make_shared<HepMC3::StringAttribute>(name);
+  }
+  else
+    materialAtt = std::make_shared<HepMC3::StringAttribute>("NoMaterial");
   m_previousVertex->add_attribute("Material", materialAtt);
   
   // Stop tracking the vertex if the particle dies
