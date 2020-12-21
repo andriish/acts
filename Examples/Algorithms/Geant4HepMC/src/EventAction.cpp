@@ -16,7 +16,23 @@
 #include "SteppingAction.hpp"
 
 namespace {
-
+/// @brief This function writes an event to output
+///
+/// @param [in] evt The event to be written
+/// @param [in] outputname The file name (optional)
+///
+inline void save_event(const HepMC3::GenEvent* evt, const std::string outputname="") {
+  std::string filename=outputname;
+  if (filename=="") {
+    std::string thisfile(__FILE__);
+    size_t slash=thisfile.find_last_of("/");
+    filename=thisfile.substr(slash)+"_"+std::to_string(__LINE__)+"_"+std::to_string(evt->event_number())+".hepmc3";
+  }
+  HepMC3::Writer writer(filename);
+  writer.write(evt);
+  writer.close();
+}
+  
 /// @brief This function tests whether a process is available in the record
 ///
 /// @param [in] vertex The vertex that will be tested
@@ -157,9 +173,11 @@ void ActsExamples::EventAction::EndOfEventAction(const G4Event*) {
   if (m_event.vertices().empty()) {
     return;
   }
+  save_event(&m_event);
   // Filter irrelevant processes
   auto currentVertex = m_event.vertices()[0];
   followOutgoingParticles(m_event, currentVertex, m_processFilter);
+  save_event(&m_event);
 }
 
 void ActsExamples::EventAction::clear() {
