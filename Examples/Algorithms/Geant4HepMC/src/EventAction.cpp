@@ -28,7 +28,7 @@ inline void save_event(const HepMC3::GenEvent* evt, const std::string outputname
     size_t slash=thisfile.find_last_of("/");
     filename=thisfile.substr(slash)+"_"+std::to_string(line)+"_"+std::to_string(evt->event_number())+".hepmc3";
   }
-  HepMC3::Writer writer(filename);
+  HepMC3::WriterAscii writer(filename);
   writer.write(evt);
   writer.close();
 }
