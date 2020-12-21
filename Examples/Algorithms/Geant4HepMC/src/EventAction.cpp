@@ -21,12 +21,12 @@ namespace {
 /// @param [in] evt The event to be written
 /// @param [in] outputname The file name (optional)
 ///
-inline void save_event(const HepMC3::GenEvent* evt, const std::string outputname="") {
+inline void save_event(const HepMC3::GenEvent* evt, const std::string outputname="", const int line=0) {
   std::string filename=outputname;
   if (filename=="") {
     std::string thisfile(__FILE__);
     size_t slash=thisfile.find_last_of("/");
-    filename=thisfile.substr(slash)+"_"+std::to_string(__LINE__)+"_"+std::to_string(evt->event_number())+".hepmc3";
+    filename=thisfile.substr(slash)+"_"+std::to_string(line)+"_"+std::to_string(evt->event_number())+".hepmc3";
   }
   HepMC3::Writer writer(filename);
   writer.write(evt);
@@ -173,11 +173,11 @@ void ActsExamples::EventAction::EndOfEventAction(const G4Event*) {
   if (m_event.vertices().empty()) {
     return;
   }
-  save_event(&m_event);
+  save_event(&m_event,__LINE__);
   // Filter irrelevant processes
   auto currentVertex = m_event.vertices()[0];
   followOutgoingParticles(m_event, currentVertex, m_processFilter);
-  save_event(&m_event);
+  save_event(&m_event,__LINE__);
 }
 
 void ActsExamples::EventAction::clear() {
