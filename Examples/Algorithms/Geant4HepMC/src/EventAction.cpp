@@ -169,7 +169,10 @@ void ActsExamples::EventAction::EndOfEventAction(const G4Event*) {
   }
   std::vector<HepMC3::GenVertexPtr> todelete;
   for (HepMC3::GenVertexPtr v: m_event.vertices()) if (v->particles_out().empty()) todelete.push_back(v);
-  for (auto v: todelete) m_event.remove_vertex(v);
+  for (auto v: todelete) {
+    for (auto p: v->particles_in()) p->set_status(1);
+    m_event.remove_vertex(v);
+  }
   if (m_event.vertices().empty()) {
     return;
   }
