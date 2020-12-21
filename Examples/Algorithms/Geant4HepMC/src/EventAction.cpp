@@ -32,7 +32,40 @@ inline void save_event(const HepMC3::GenEvent* evt, const std::string outputname
   writer.write_event(*evt);
   writer.close();
 }
-  
+
+HepMC3::GenParticlePtr findLastParticleTrivialAncestor( HepMC3::GenParticlePtr particle,const std::vector<std::string>& processFilter) {
+  auto endvtx=particle->end_vertex();
+  if (!endvtx) return particle;
+  if (endvtx->particles_in().size()!=1) return particle;
+  if (endvtx->particles_out().size()!=1) return particle;
+  if (!findAttribute(endvtx,processFilter)) return particle;
+  return  findLastParticleTrivialAncestor(endvtx->particles_out()[0], processFilter);
+}
+
+void followOutgoingParticlesTrivialAncestor(HepMC3::GenEvent& event, const std::vector<std::string>& processFilter) {
+   int nupdated=0;    
+   for (;;){
+     nupdated=0;
+     for (auto p: event.particles()) {
+       auto plast=findLastParticleTrivialAncestor(p,processFilter);  
+       if (p==plast) continue;
+       nupdated++;
+       auto vertex_to_remove=p->end_vertex();
+       auto vertex_to_add=plast->end_vertex();   
+       if (vertex_to_add) { 
+         vertex_to_add->add_particle_in(p);
+         vertex_to_add->remove_particle_in(plast);
+       }
+       if (vertex_to_remove) vertex_to_remove->remove_particle_in(p);
+       event.remove_vertex(vertex_to_remove);
+       break;
+   }
+   if (nupdated==0) break;
+   }
+}
+
+
+
 /// @brief This function tests whether a process is available in the record
 ///
 /// @param [in] vertex The vertex that will be tested
@@ -181,7 +214,8 @@ void ActsExamples::EventAction::EndOfEventAction(const G4Event*) {
   save_event(&m_event,"",__LINE__);
   // Filter irrelevant processes
   auto currentVertex = m_event.vertices()[0];
-  followOutgoingParticles(m_event, currentVertex, m_processFilter);
+//  followOutgoingParticles(m_event, currentVertex, m_processFilter);
+  followOutgoingParticlesTrivialAncestor(m_event, m_processFilter);
   save_event(&m_event,"",__LINE__);
 }
 
