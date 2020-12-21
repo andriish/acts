@@ -45,6 +45,7 @@ bool findAttribute(HepMC3::ConstGenVertexPtr vertex,
   // Consider only 1->1 vertices to keep a correct history
   if ((vertex->particles_in().size() == 1) &&
       (vertex->particles_out().size() == 1)) {
+    if (processFilter.empty()) return true;
     // Test for all attributes if one matches the filter pattern
     const std::vector<std::string> vertexAttributes = vertex->attribute_names();
     for (const auto& att : vertexAttributes) {
