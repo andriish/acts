@@ -35,6 +35,8 @@
 #include "Acts/Definitions/Units.hpp"
 #include <TFile.h>
 
+#include <HepMC3/WriterAscii.h>
+
 ActsExamples::EventRecording::~EventRecording() {
   m_runManager = nullptr;
 }
@@ -139,7 +141,9 @@ std::cout << "Starting variation number " << i << std::endl;
 
 		// Set event start time
 		HepMC3::GenEvent& event = ActsExamples::EventAction::instance()->event();
-									
+//~ HepMC3::WriterAscii before1("nachEvent.txt"+std::to_string(event.event_number()));
+//~ before1.write_event(event);
+//~ before1.close();											
 		HepMC3::FourVector shift(0., 0., 0., part.time() / Acts::UnitConstants::mm);
 		event.shift_position_by(shift);
 
@@ -172,22 +176,28 @@ std::cout << "Starting variation number " << i << std::endl;
 					//~ << v->particles_in()[0]->attribute<HepMC3::IntAttribute>("TrackID")->value() 
 					//~ << " | " << v->attribute<HepMC3::StringAttribute>("Material") << " | " <<
 					//~ v->attribute<HepMC3::StringAttribute>("Material")->value() << " | " << std::endl;
-													
-			// Remove vertices without outgoing particles
-			auto it = event.vertices().crbegin();
-			while(it != event.vertices().crend())
-			{
-			  if ((*it)->particles_out().empty()) {
-				event.remove_vertex(*it);
-				it = event.vertices().crbegin();
-			  } else {
-				  it++;
-			  }
-			}
-			//~ for (auto it = event.vertices().crbegin();
-				 //~ it != event.vertices().crend(); it++) {
+//~ HepMC3::WriterAscii before("before.txt"+std::to_string(event.event_number()));
+//~ before.write_event(event);
+//~ before.close();									
+			//~ // Remove vertices without outgoing particles
+			//~ std::vector<HepMC3::GenVertexPtr> todelete;
+			//~ for (HepMC3::GenVertexPtr v: event.vertices())  
+				//~ if(v->particles_out().empty()) 
+					//~ todelete.push_back(v);
+			//~ for (auto v : todelete) 
+				//~ event.remove_vertex(v);
+			//~ todelete.clear();
+//~ HepMC3::WriterAscii after("after.txt"+std::to_string(event.event_number()));
+//~ after.write_event(event);
+//~ after.close();			
+			//~ auto it = event.vertices().crbegin();
+			//~ while(it != event.vertices().crend())
+			//~ {
 			  //~ if ((*it)->particles_out().empty()) {
 				//~ event.remove_vertex(*it);
+				//~ it = event.vertices().crbegin();
+			  //~ } else {
+				  //~ it++;
 			  //~ }
 			//~ }	
 			

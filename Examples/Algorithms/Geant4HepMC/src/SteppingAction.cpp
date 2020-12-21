@@ -124,6 +124,7 @@ void ActsExamples::SteppingAction::UserSteppingAction(const G4Step* step) {
               std::vector<double>{preStepMomentum[0], preStepMomentum[1],
                                   preStepMomentum[2], preStepEnergy});
           vertex->add_attribute("InitialParametersOf-" + trackId, preMom4);
+          break;
         }
       }
     if (track->GetCreatorProcess())

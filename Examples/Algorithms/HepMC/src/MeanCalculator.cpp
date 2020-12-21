@@ -31,6 +31,7 @@
 #include <HepMC3/GenParticle.h>
 #include <HepMC3/GenVertex.h>
 #include "SummaryStruct.hpp"
+#include "Acts/Propagator/StraightLineStepper.hpp"
 
 namespace {
 
@@ -89,7 +90,6 @@ findClosestPoint(const std::vector<ActsExamples::SimParticle>& g4Steps, const st
 		
 			const double pathLength = intersection.intersection.pathLength;
 			pathLengthPosition.push_back(std::make_pair(pathLength, params));
-			// TODO: test posG4 value
 		}
 	}
 	if(!pathLengthPosition.empty())
@@ -126,6 +126,26 @@ calculateCovariance(const std::vector<Acts::BoundVector>& params, const Acts::Bo
   
   return covariance;
 }
+
+std::pair<Acts::BoundVector, Acts::FreeVector>
+convertStepToParameters(Acts::GeometryContext& gctx, const Acts::detail::Step& step, double charge) {
+	// Calculate the value of the mean on the surface
+	Acts::Vector3D dir = step.momentum.normalized();
+	Acts::FreeVector freeProp;
+	freeProp[Acts::eFreePos0] = step.position[Acts::eX];
+	freeProp[Acts::eFreePos1] = step.position[Acts::eY];
+	freeProp[Acts::eFreePos2] = step.position[Acts::eZ];
+	freeProp[Acts::eFreeTime] = step.time;
+	freeProp[Acts::eFreeDir0] = dir[Acts::eMom0];
+	freeProp[Acts::eFreeDir1] = dir[Acts::eMom1];
+	freeProp[Acts::eFreeDir2] = dir[Acts::eMom2];
+	freeProp[Acts::eFreeQOverP] = (charge == 0. ? 1. : charge) / step.momentum.norm();
+	// Build the local parameters
+	const Acts::BoundVector localPropagatedMean = Acts::detail::transformFreeToBoundParameters(freeProp, *step.surface, gctx);
+	
+	return std::make_pair(localPropagatedMean, freeProp);
+}
+
 }  // namespace
 
 ActsExamples::MeanCalculator::~MeanCalculator() {}
@@ -158,14 +178,17 @@ ActsExamples::ProcessCode ActsExamples::MeanCalculator::execute(
   
   // The stepper
   Acts::NullBField bfield;  
-  Acts::EigenStepper stepper(bfield);
+  Acts::EigenStepper eStepper(bfield);
+  Acts::StraightLineStepper slStepper;
   
   // The Navigator
   Acts::Navigator navigator(m_cfg.trackingGeometry);
   
   // The Propagator
-  Acts::Propagator propagator(stepper, navigator);
+  Acts::Propagator ePropagator(eStepper, navigator);
+  Acts::Propagator slPropagator(slStepper, navigator);
   
+  // The options
   Acts::GeometryContext gctx;
   Acts::MagneticFieldContext mctx;
   Acts::PropagatorOptions<Acts::ActionList<Acts::detail::SteppingLogger>, Acts::AbortList<Acts::EndOfWorldReached>> options(gctx, mctx, Acts::getDummyLogger());
@@ -183,12 +206,14 @@ ActsExamples::ProcessCode ActsExamples::MeanCalculator::execute(
 	    // Propagate the mean
 		Acts::CurvilinearTrackParameters mean(initialParticle.fourPosition(), 
 			initialParticle.unitDirection(), initialParticle.charge(), initialParticle.absoluteMomentum());
-		const auto& result = propagator.propagate(mean, options).value(); //result.ok()
-		const auto stepperLog = result.get<typename Acts::detail::SteppingLogger::result_type>();
+		const auto& eResult = ePropagator.propagate(mean, options).value(); //result.ok()
+		const auto eStepperLog = eResult.get<typename Acts::detail::SteppingLogger::result_type>();
+		const auto& slResult = slPropagator.propagate(mean, options).value();
+		const auto slStepperLog = slResult.get<typename Acts::detail::SteppingLogger::result_type>();
 				
 		/// Find the surfaces first
 		// Walk over each step
-		for(const auto& step : stepperLog.steps)
+		for(const auto& step : eStepperLog.steps)
 		{
 			// Only care about surfaces
 			if(!step.surface)
@@ -199,25 +224,26 @@ ActsExamples::ProcessCode ActsExamples::MeanCalculator::execute(
 
 			ParametersAtSurface surfaceParameters;
 			
+			// Get the corresponding mean from the straight line stepper
+			for(const auto& slStep : slStepperLog.steps)
+			{
+				if(step.surface == slStep.surface)
+				{
+					const auto params = convertStepToParameters(gctx, slStep, mean.charge());
+					surfaceParameters.sMeanPropagated = std::move(params.first);
+					surfaceParameters.sMeanPropagatedFree = std::move(params.second);
+				}
+			}
+
+
 			// Store the corresponding for surface
 			surfaceParameters.surface = step.surface;
 
-			// Calculate the value of the mean on the surface
-			Acts::Vector3D dir = step.momentum.normalized();
-			Acts::FreeVector freeProp;
-			freeProp[Acts::eFreePos0] = step.position[Acts::eX];
-			freeProp[Acts::eFreePos1] = step.position[Acts::eY];
-			freeProp[Acts::eFreePos2] = step.position[Acts::eZ];
-			freeProp[Acts::eFreeTime] = step.time;
-			freeProp[Acts::eFreeDir0] = dir[Acts::eMom0];
-			freeProp[Acts::eFreeDir1] = dir[Acts::eMom1];
-			freeProp[Acts::eFreeDir2] = dir[Acts::eMom2];
-			freeProp[Acts::eFreeQOverP] = (mean.charge() == 0. ? 1. : mean.charge()) / step.momentum.norm();
-			surfaceParameters.meanPropagatedFree = freeProp;
+			// Store the EigenStepper parameters at the surface
+			const auto params = convertStepToParameters(gctx, step, mean.charge());
+			surfaceParameters.eMeanPropagated = std::move(params.first);
+			surfaceParameters.eMeanPropagatedFree = std::move(params.second);
 			
-			const Acts::BoundVector localPropagatedMean = Acts::detail::transformFreeToBoundParameters(freeProp, *step.surface, gctx);
-			surfaceParameters.meanPropagated = std::move(localPropagatedMean);
-
 			// Now find the corresponding G4 steps
 			std::vector<Acts::BoundVector> localG4Params;
 			localG4Params.reserve(events.size());
@@ -238,7 +264,8 @@ ActsExamples::ProcessCode ActsExamples::MeanCalculator::execute(
 					localG4Params.push_back(closestPoint.value());
 			}
 
-			plot.scatter(localG4Params, localPropagatedMean, surfaceParameters.surface);
+			plot.scatter(localG4Params, surfaceParameters.eMeanPropagated, surfaceParameters.sMeanPropagated, surfaceParameters.surface);
+			surfaceParameters.parametersG4 = localG4Params;
 			// Calculate the mean of the G4 data
 			const Acts::BoundVector meanG4 = calculateMean(localG4Params);
 			surfaceParameters.meanG4 = std::move(meanG4);
@@ -252,10 +279,6 @@ ActsExamples::ProcessCode ActsExamples::MeanCalculator::execute(
 	}
   // Plot the result
   plot.mean(summaries);
-
-	plot.tf->cd();
-	plot.tree->Write();
-	plot.tf->Close();
 
   return ActsExamples::ProcessCode::SUCCESS;
 }

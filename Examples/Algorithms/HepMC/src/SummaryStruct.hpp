@@ -14,17 +14,24 @@
 #include "ActsExamples/EventData/SimParticle.hpp"
 
 struct ParametersAtSurface {
-	// Mean from propagation, projected onto the surface
-	Acts::BoundVector meanPropagated;
+	// Mean from propagation, projected onto the surface: Bound and Free representation
+	Acts::BoundVector eMeanPropagated;
+	Acts::FreeVector eMeanPropagatedFree;
+	// Same but for StraightLineStepper
+	Acts::BoundVector sMeanPropagated;
+	Acts::FreeVector sMeanPropagatedFree;
+	
 	// Mean from G4 by finding closest points, constructing BoundVectors (by intersecting with the surface and without Cov) and calculating the mean
 	Acts::BoundVector meanG4;
+	Acts::FreeVector meanG4Free;
+	
 	// The covariance matrix from the obtained G4 simulations
 	Acts::BoundSymMatrix covG4;
+	
 	// The surface
 	std::shared_ptr<const Acts::Surface> surface;
 	
-	Acts::FreeVector meanPropagatedFree;
-	Acts::FreeVector meanG4Free;
+	std::vector<Acts::BoundVector> parametersG4;
 };
 
 struct TrackSummary {

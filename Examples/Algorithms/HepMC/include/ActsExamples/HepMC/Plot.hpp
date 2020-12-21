@@ -14,6 +14,8 @@
 #include "TTree.h"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Geometry/GeometryContext.hpp"
+#include <TGraph.h>
+#include <map>
 
 struct ParametersAtSurface;
 struct TrackSummary;
@@ -27,17 +29,32 @@ struct Plot {
 	
 	void mean(const std::vector<TrackSummary>& trackSummaries);
 	void scatter(const std::vector<Acts::BoundVector>& localG4Params, 
-		const Acts::BoundVector& localPropagatedMean, const std::shared_ptr<const Acts::Surface>& surface);
+		const Acts::BoundVector& eMeanPropagated, const Acts::BoundVector& sMeanPropagated, const std::shared_ptr<const Acts::Surface>& surface);
 	
 	void plotMean(const std::vector<ParametersAtSurface>& paramAtSurface) const;
-	void storeMean(const std::vector<ParametersAtSurface>& paramAtSurface);
+	void plotCumulativeMean(const std::vector<TrackSummary>& trackSummaries);
 	
 	Acts::GeometryContext gctx;
 	
 	TFile* tf{nullptr};
-	TTree* tree{nullptr};
 	
-	std::vector<float> propagatedMean;
-	std::vector<float> geant4Mean;
+	std::vector<TGraph*> tgPE1; // PE = per event
+	std::vector<TGraph*> tgPE2;
+	std::vector<TGraph*> tgPE3;
+	TGraph* tgPE12 = new TGraph();
+	
+	std::map<std::shared_ptr<const Acts::Surface>, std::vector<Acts::BoundVector>> parametersG4Cumulative;
+	std::vector<TGraph*> tgCum1;
+	std::vector<TGraph*> tgCum2;
+	TGraph* tgCum12 = new TGraph();
+	
+	TGraph* tgx = new TGraph(); // tgxDiff
+	TGraph* tgy = new TGraph(); // tgDiffGlobalPosition
+	TGraph* tgphi = new TGraph(); // tgRelativeDiffGlobalPosition
+	TGraph* tgtheta = new TGraph();
+	TGraph* tgqop = new TGraph();
+	TGraph* tgt = new TGraph();
+	unsigned int nPoints = 0;
+
 };
 }  // namespace ActsExamples
