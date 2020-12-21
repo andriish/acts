@@ -167,7 +167,7 @@ void ActsExamples::SteppingAction::UserSteppingAction(const G4Step* step) {
                               std::make_shared<HepMC3::DoubleAttribute>(L0));
   postParticle->add_attribute(
       "StepLength", std::make_shared<HepMC3::DoubleAttribute>(stepLength));
-  postParticle->set_status(1);
+  postParticle->set_status(3);
 
   // Store the material at that point
   std::shared_ptr<HepMC3::StringAttribute> materialAtt;
