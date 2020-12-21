@@ -41,6 +41,7 @@ inline void save_event(const HepMC3::GenEvent* evt, const std::string outputname
 /// @return True if the process was found, false if not
 bool findAttribute(HepMC3::ConstGenVertexPtr vertex,
                    const std::vector<std::string>& processFilter) {
+  if (!vertex) return false;
   // Consider only 1->1 vertices to keep a correct history
   if ((vertex->particles_in().size() == 1) &&
       (vertex->particles_out().size() == 1)) {
@@ -65,6 +66,7 @@ bool findAttribute(HepMC3::ConstGenVertexPtr vertex,
 /// @param [in] processFilter List of processes that will be filtered
 void reduceVertex(HepMC3::GenEvent& event, HepMC3::GenVertexPtr vertex,
                   const std::vector<std::string>& processFilter) {
+  if (!vertex) return;
   // Store the particles associated to the vertex
   HepMC3::GenParticlePtr particleIn = vertex->particles_in()[0];
   HepMC3::GenParticlePtr particleOut = vertex->particles_out()[0];
@@ -125,6 +127,7 @@ void reduceVertex(HepMC3::GenEvent& event, HepMC3::GenVertexPtr vertex,
 void followOutgoingParticles(HepMC3::GenEvent& event,
                              HepMC3::GenVertexPtr vertex,
                              const std::vector<std::string>& processFilter) {
+  if (!vertex) return;
   // Replace and reduce vertex if it should be filtered
   if (findAttribute(vertex, processFilter)) {
     reduceVertex(event, vertex, processFilter);
