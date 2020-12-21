@@ -29,7 +29,7 @@ inline void save_event(const HepMC3::GenEvent* evt, const std::string outputname
     filename=thisfile.substr(slash)+"_"+std::to_string(line)+"_"+std::to_string(evt->event_number())+".hepmc3";
   }
   HepMC3::WriterAscii writer(filename);
-  writer.write(evt);
+  writer.write_event(evt);
   writer.close();
 }
   
@@ -173,11 +173,11 @@ void ActsExamples::EventAction::EndOfEventAction(const G4Event*) {
   if (m_event.vertices().empty()) {
     return;
   }
-  save_event(&m_event,__LINE__);
+  save_event(&m_event,"",__LINE__);
   // Filter irrelevant processes
   auto currentVertex = m_event.vertices()[0];
   followOutgoingParticles(m_event, currentVertex, m_processFilter);
-  save_event(&m_event,__LINE__);
+  save_event(&m_event,"",__LINE__);
 }
 
 void ActsExamples::EventAction::clear() {
