@@ -151,6 +151,12 @@ void ActsExamples::EventAction::EndOfEventAction(const G4Event*) {
   if (m_event.vertices().empty()) {
     return;
   }
+  std::vector<HepMC3::GenVertexPtr> todelete;
+  for (HepMC3::GenVertexPtr v: m_event.vertices()) if (v->particles_out().empty()) todelete.push_back(v);
+  for (auto v: todelete) m_event.remove_vertex(v);
+  if (m_event.vertices().empty()) {
+    return;
+  }
   // Filter irrelevant processes
   auto currentVertex = m_event.vertices()[0];
   followOutgoingParticles(m_event, currentVertex, m_processFilter);
