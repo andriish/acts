@@ -97,7 +97,7 @@ void ActsExamples::SteppingAction::UserSteppingAction(const G4Step* step) {
       event.add_vertex(vertex);
       vertex->set_status(1);
       vertex->add_attribute("NextProcessOf" + trackId, process);
-      
+      vertex->add_particle_in(event.beams()[0]);
       // Store the material at that point
 	  std::shared_ptr<HepMC3::StringAttribute> materialAtt;
 	  G4Material* material = step->GetPreStepPoint()->GetMaterial();
