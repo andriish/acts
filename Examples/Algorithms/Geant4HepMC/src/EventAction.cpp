@@ -156,10 +156,11 @@ ActsExamples::EventAction::~EventAction() {
   s_instance = nullptr;
 }
 
-void ActsExamples::EventAction::BeginOfEventAction(const G4Event*) {
+void ActsExamples::EventAction::BeginOfEventAction(const G4Event* e) {
   SteppingAction::instance()->clear();
   m_event = HepMC3::GenEvent(HepMC3::Units::GEV, HepMC3::Units::MM);
   m_event.add_beam_particle(std::make_shared<HepMC3::GenParticle>());
+  m_event.set_event_number(e->GetEventID());
 }
 
 void ActsExamples::EventAction::EndOfEventAction(const G4Event*) {
