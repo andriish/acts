@@ -33,10 +33,6 @@ inline void save_event(const HepMC3::GenEvent* evt, const std::string outputname
   writer.close();
 }
 
-
-
-
-
 /// @brief This function tests whether a process is available in the record
 ///
 /// @param [in] vertex The vertex that will be tested
