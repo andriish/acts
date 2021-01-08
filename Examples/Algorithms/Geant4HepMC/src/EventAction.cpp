@@ -151,11 +151,13 @@ HepMC3::GenParticlePtr findLastParticleTrivialAncestor( HepMC3::GenParticlePtr p
 void followOutgoingParticlesTrivialAncestor(HepMC3::GenEvent& event, const std::vector<std::string>& processFilter) {
    bool updated = false;    
    for (;;){
+     //To make things simpler, we update not more than one particle per pass.
+     //The 'updated' flag signals if any particle was updated.
      updated = false;
      for (auto p: event.particles()) {
        auto plast=findLastParticleTrivialAncestor(p,processFilter);  
        if (p==plast) continue;
-       updated = true ;
+       updated = true;
        auto vertex_to_remove=p->end_vertex();
        auto vertex_to_add=plast->end_vertex();   
        if (vertex_to_add) { 
@@ -166,7 +168,7 @@ void followOutgoingParticlesTrivialAncestor(HepMC3::GenEvent& event, const std::
        event.remove_vertex(vertex_to_remove);
        break;
    }
-   if (!updated) break;
+   if (!updated) break;//If there are no particles to update, break
    }
 }
   
@@ -213,9 +215,12 @@ void ActsExamples::EventAction::EndOfEventAction(const G4Event*) {
   }
   save_event(&m_event,"",__LINE__);
   // Filter irrelevant processes
-  auto currentVertex = m_event.vertices()[0];
-//  followOutgoingParticles(m_event, currentVertex, m_processFilter);
-  followOutgoingParticlesTrivialAncestor(m_event, m_processFilter);
+  if (m_use_trivial_ancestor) {
+    followOutgoingParticlesTrivialAncestor(m_event, m_processFilter);
+  } else {
+    auto currentVertex = m_event.vertices()[0];
+    followOutgoingParticles(m_event, currentVertex, m_processFilter);
+  }
   save_event(&m_event,"",__LINE__);
 }
 
