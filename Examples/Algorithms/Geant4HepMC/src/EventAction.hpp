@@ -51,6 +51,8 @@ class EventAction final : public G4UserEventAction {
   static EventAction* s_instance;
   /// The current HepMC3 event
   HepMC3::GenEvent m_event;
+  /// Algorithm of filtration
+  bool m_use_trivial_ancestor;
   /// List of processes that can be combined to a single vertex
   std::vector<std::string> m_processFilter;
 };
