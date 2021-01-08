@@ -149,13 +149,13 @@ HepMC3::GenParticlePtr findLastParticleTrivialAncestor( HepMC3::GenParticlePtr p
 }
 
 void followOutgoingParticlesTrivialAncestor(HepMC3::GenEvent& event, const std::vector<std::string>& processFilter) {
-   int nupdated=0;    
+   bool updated = false;    
    for (;;){
-     nupdated=0;
+     updated = false;
      for (auto p: event.particles()) {
        auto plast=findLastParticleTrivialAncestor(p,processFilter);  
        if (p==plast) continue;
-       nupdated++;
+       updated = true ;
        auto vertex_to_remove=p->end_vertex();
        auto vertex_to_add=plast->end_vertex();   
        if (vertex_to_add) { 
@@ -166,7 +166,7 @@ void followOutgoingParticlesTrivialAncestor(HepMC3::GenEvent& event, const std::
        event.remove_vertex(vertex_to_remove);
        break;
    }
-   if (nupdated==0) break;
+   if (!updated) break;
    }
 }
   
