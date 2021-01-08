@@ -189,6 +189,7 @@ ActsExamples::EventAction::EventAction(std::vector<std::string> processFilter)
   } else {
     s_instance = this;
   }
+  m_use_trivial_ancestor=true;//one can add setters/getters
 }
 
 ActsExamples::EventAction::~EventAction() {
